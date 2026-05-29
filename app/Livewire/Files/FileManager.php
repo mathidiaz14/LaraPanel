@@ -1,0 +1,311 @@
+<?php
+
+namespace App\Livewire\Files;
+
+use App\Services\FileService;
+use Livewire\Component;
+use Livewire\WithFileUploads;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+
+class FileManager extends Component
+{
+    use WithFileUploads;
+
+    public string $currentPath = ''; // Relative to the user's webroot
+    
+    // File upload
+    public $uploads = [];
+
+    // Modals state
+    public bool $showCreateFolderModal = false;
+    public string $newFolderName = '';
+
+    public bool $showCreateFileModal = false;
+    public string $newFileName = '';
+
+    public ?string $renamingPath = null;
+    public string $newName = '';
+
+    public ?string $chmodPath = null;
+    public string $chmodOctal = '';
+
+    public ?string $editingPath = null;
+    public string $editingContent = '';
+
+    // Success/error alerts
+    public string $successMessage = '';
+    public string $errorMessage = '';
+
+    public function mount(): void
+    {
+        $this->currentPath = '';
+    }
+
+    public function navigate(string $path): void
+    {
+        $this->currentPath = $path;
+        $this->resetErrorAlerts();
+    }
+
+    public function navigateUp(): void
+    {
+        if ($this->currentPath === '' || $this->currentPath === '/') {
+            return;
+        }
+        $parts = explode('/', trim($this->currentPath, '/'));
+        array_pop($parts);
+        $this->currentPath = implode('/', $parts);
+        $this->resetErrorAlerts();
+    }
+
+    protected function resetErrorAlerts(): void
+    {
+        $this->successMessage = '';
+        $this->errorMessage = '';
+        $this->uploads = [];
+    }
+
+    /**
+     * Create Folder.
+     */
+    public function createFolder(FileService $fileService): void
+    {
+        $this->validate([
+            'newFolderName' => 'required|string|min:1|max:64|regex:/^[a-zA-Z0-9_\-\.]+$/',
+        ]);
+
+        try {
+            $fileService->createFolder($this->currentPath, $this->newFolderName);
+            $this->successMessage = "Carpeta '{$this->newFolderName}' creada con éxito.";
+            $this->showCreateFolderModal = false;
+            $this->newFolderName = '';
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Create File.
+     */
+    public function createFile(FileService $fileService): void
+    {
+        $this->validate([
+            'newFileName' => 'required|string|min:1|max:64|regex:/^[a-zA-Z0-9_\-\.]+$/',
+        ]);
+
+        try {
+            $fileService->createFile($this->currentPath, $this->newFileName);
+            $this->successMessage = "Archivo '{$this->newFileName}' creado con éxito.";
+            $this->showCreateFileModal = false;
+            $this->newFileName = '';
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Delete resource.
+     */
+    public function deleteItem(string $name, FileService $fileService): void
+    {
+        $path = $this->currentPath . '/' . $name;
+        try {
+            $fileService->delete($path);
+            $this->successMessage = "Recurso eliminado correctamente.";
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Confirm rename.
+     */
+    public function openRenameModal(string $name): void
+    {
+        $this->renamingPath = $this->currentPath . '/' . $name;
+        $this->newName = $name;
+        $this->resetErrorAlerts();
+    }
+
+    public function renameItem(FileService $fileService): void
+    {
+        $this->validate([
+            'newName' => 'required|string|min:1|max:64|regex:/^[a-zA-Z0-9_\-\.]+$/',
+        ]);
+
+        try {
+            $fileService->rename($this->renamingPath, $this->newName);
+            $this->successMessage = "Cambiado de nombre a '{$this->newName}' con éxito.";
+            $this->renamingPath = null;
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Chmod Modal.
+     */
+    public function openChmodModal(string $name, string $currentPerms): void
+    {
+        $this->chmodPath = $this->currentPath . '/' . $name;
+        $this->chmodOctal = $currentPerms;
+        $this->resetErrorAlerts();
+    }
+
+    public function saveChmod(FileService $fileService): void
+    {
+        $this->validate([
+            'chmodOctal' => 'required|string|regex:/^[0-7]{3,4}$/',
+        ]);
+
+        try {
+            $fileService->chmod($this->chmodPath, $this->chmodOctal);
+            $this->successMessage = "Permisos actualizados con éxito.";
+            $this->chmodPath = null;
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Open Monaco Editor.
+     */
+    public function editFile(string $name, FileService $fileService): void
+    {
+        $this->editingPath = $this->currentPath . '/' . $name;
+        try {
+            $this->editingContent = $fileService->getFileContent($this->editingPath);
+            $this->resetErrorAlerts();
+            $this->dispatch('open-editor', content: $this->editingContent, filename: $name);
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+            $this->editingPath = null;
+        }
+    }
+
+    public function saveFileContent(string $content, FileService $fileService): void
+    {
+        if (!$this->editingPath) {
+            return;
+        }
+
+        try {
+            $fileService->updateFileContent($this->editingPath, $content);
+            $this->successMessage = "Archivo guardado correctamente.";
+            $this->editingPath = null;
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * File Download.
+     */
+    public function downloadItem(string $name, FileService $fileService)
+    {
+        $path = $this->currentPath . '/' . $name;
+        try {
+            $absPath = $fileService->resolvePath($path);
+            if (is_dir($absPath)) {
+                throw new \RuntimeException("No se pueden descargar directorios directamente. Comprímalo primero.");
+            }
+            return response()->download($absPath);
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+            return null;
+        }
+    }
+
+    /**
+     * Compression actions.
+     */
+    public function zipItem(string $name, FileService $fileService): void
+    {
+        $path = $this->currentPath . '/' . $name;
+        $zipName = $name . '.zip';
+        try {
+            $fileService->zip($path, $zipName);
+            $this->successMessage = "Archivo comprimido como {$zipName} con éxito.";
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    public function unzipItem(string $name, FileService $fileService): void
+    {
+        $path = $this->currentPath . '/' . $name;
+        try {
+            $fileService->unzip($path);
+            $this->successMessage = "Archivo descomprimido con éxito.";
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * File upload handler.
+     */
+    public function updatedUploads(FileService $fileService): void
+    {
+        $this->validate([
+            'uploads.*' => 'file|max:51200', // 50MB max file size
+        ]);
+
+        try {
+            foreach ($this->uploads as $upload) {
+                $filename = $upload->getClientOriginalName();
+                $filename = preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $filename);
+                // Subir como archivo temporal
+                $tmpPath = $upload->storeAs('livewire-tmp', $filename);
+                $fullTmpPath = storage_path('app/' . $tmpPath);
+                
+                // Mover al destino real usando el resolvePath para evitar errores de permisos si el directorio webroot es de root
+                $destPath = $fileService->resolvePath($this->currentPath . '/' . $filename);
+                
+                if (app()->isProduction()) {
+                    // Mover usando sudo cp y chown www-data
+                    app(\App\Shell\SudoExecutor::class)->run(['cp', $fullTmpPath, $destPath]);
+                    app(\App\Shell\SudoExecutor::class)->run(['chown', 'www-data:www-data', $destPath]);
+                    unlink($fullTmpPath);
+                } else {
+                    rename($fullTmpPath, $destPath);
+                }
+            }
+            $this->successMessage = "Archivos subidos correctamente.";
+            $this->uploads = [];
+        } catch (\Throwable $e) {
+            $this->errorMessage = "Error al subir archivos: " . $e->getMessage();
+        }
+    }
+
+    public function render(FileService $fileService)
+    {
+        try {
+            $items = $fileService->listDirectory($this->currentPath);
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+            $this->currentPath = '';
+            $items = $fileService->listDirectory($this->currentPath);
+        }
+
+        // Generate breadcrumb links
+        $breadcrumbs = [];
+        $accumulated = '';
+        $parts = array_filter(explode('/', $this->currentPath));
+        foreach ($parts as $part) {
+            $accumulated .= '/' . $part;
+            $breadcrumbs[] = [
+                'name' => $part,
+                'path' => $accumulated
+            ];
+        }
+
+        return view('livewire.files.file-manager', [
+            'items' => $items,
+            'breadcrumbs' => $breadcrumbs,
+        ])->layout('layouts.app', [
+            'title'      => 'Administrador de Archivos',
+            'breadcrumb' => '<span>Hosting</span> / <strong>Administrador de Archivos</strong>',
+        ]);
+    }
+}
