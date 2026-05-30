@@ -47,6 +47,8 @@ return [
         'monitoring' => true,
         'logs'       => true,
         'phpmanager' => true,
+        'docker'     => true,
+        'antivirus'  => true,
         'resellers'  => false,  // Phase 4
         'multiserver'=> false,  // Phase 5
     ],
@@ -76,6 +78,12 @@ return [
             'chown',
             'chmod',
             'crontab',
+            'docker',
+            'clamscan',
+            'freshclam',
+            'clamdscan',
+            'rm',
+            'mv',
         ],
     ],
 
@@ -171,6 +179,34 @@ return [
         'default_php'  => env('LARAPANEL_DEFAULT_PHP', '8.3'),
         'sudo_user'    => env('LARAPANEL_SUDO_USER', 'www-data'),
         'public_ip'    => env('SERVER_PUBLIC_IP', '127.0.0.1'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Docker Configuration
+    |--------------------------------------------------------------------------
+    */
+    'docker' => [
+        'socket'            => '/var/run/docker.sock',
+        'max_log_lines'     => 500,
+        'compose_base_path' => '/var/larapanel/compose',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Antivirus (ClamAV) Configuration
+    |--------------------------------------------------------------------------
+    */
+    'antivirus' => [
+        'quarantine_path'    => env('AV_QUARANTINE_PATH', '/var/larapanel/quarantine'),
+        'max_scan_timeout'   => 300, // seconds (5 min)
+        'allowed_scan_paths' => [
+            '/home',
+            '/var/www',
+            '/tmp',
+            '/var/larapanel',
+            '/uploads',
+        ],
     ],
 
 ];

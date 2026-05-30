@@ -78,12 +78,14 @@ LaraPanel es un panel de control de servidores web de código abierto, **constru
 |---|---|
 | **Firewall (UFW)** | Gestión de reglas de firewall con presets predefinidos (SSH, HTTP, HTTPS, SMTP, etc.). Bloqueo y apertura de puertos con un clic. |
 | **Fail2ban** | Monitoreo de jaulas activas, IPs baneadas, desbaneos manuales y log de eventos en tiempo real. |
+| **Antivirus (ClamAV)** | Escaneo de directorios con ClamAV, cuarentena automática de archivos infectados, historial de escaneos por usuario, actualización de definiciones (freshclam) desde el panel. |
 
 ### 🔧 DevOps
 
 | Módulo | Descripción |
 |---|---|
 | **Git Deploy** | Despliegues automáticos vía webhooks Git. Crea endpoints únicos para cada proyecto, elige rama y ejecuta comandos post-deploy (artisan migrate, npm build, etc.). Log de deploys con salida completa. |
+| **Docker Manager** | Gestión de contenedores (listar, start, stop, restart, delete, ver logs), descargar imágenes (pull) y gestionar stacks de Docker Compose (desplegar con YAML, apagar, ver logs de stacks). |
 | **FTP Manager** | Creación de cuentas FTP aisladas por directorio. Cuotas de espacio y modo solo lectura. |
 | **Cron Jobs** | Gestor visual de tareas programadas con expresiones cron estándar. Selectores de intervalo predefinidos. Ejecución en vivo con captura de salida. Contadores de éxito/fallo. |
 | **Backups Locales** | Creación manual y programada de backups completos (archivos + DB). Historial con fecha, tamaño y estado. Descarga directa y restauración desde el panel. |
@@ -134,6 +136,9 @@ Autenticación: `Bearer Token` vía Laravel Sanctum.
 | Gráficas | Chart.js |
 | Editor de código | Monaco Editor |
 | Gestión SSL | acme.sh + Certbot |
+| Gestión de contenedores | Docker Engine / Docker Compose |
+| Motor Antivirus | ClamAV + freshclam |
+| Motor Antispam | Rspamd + Redis (Bayes) |
 | Interfaz de servidor | sudo + ShellExecutor seguro |
 
 ---
@@ -160,6 +165,7 @@ Autenticación: `Bearer Token` vía Laravel Sanctum.
 - Composer 2.x
 - Node.js 20+
 - SQLite (incluido, no requiere configuración extra)
+- Docker & Docker Compose (opcional, requerido para usar el módulo Docker)
 
 ---
 
@@ -196,17 +202,20 @@ El instalador gestiona automáticamente:
 3. ✅ PHP 8.3 + extensiones + versiones adicionales (8.1, 8.2)
 4. ✅ MySQL 8 + creación de DB y usuario
 5. ✅ Node.js 22 + Composer
-6. ✅ Usuario del sistema `larapanel`
-7. ✅ Despliegue de archivos
-8. ✅ Configuración de `.env` para producción
-9. ✅ Migraciones de base de datos
-10. ✅ Creación del usuario administrador
-11. ✅ Configuración de `sudoers` (permisos de sistema)
-12. ✅ Virtual host Nginx
-13. ✅ SSL con Let's Encrypt (Certbot)
-14. ✅ Supervisor (workers de colas persistentes)
-15. ✅ Firewall UFW
-16. ✅ acme.sh para gestión SSL interna
+6. ✅ Instalación de Docker Engine y Docker Compose
+7. ✅ Instalación de ClamAV + actualización inicial de definiciones + cron diario
+8. ✅ Instalación de Rspamd + Redis + configuración de Bayes y API con contraseña
+9. ✅ Usuario del sistema `larapanel` (asignado a grupos `docker` y `www-data`)
+8. ✅ Despliegue de archivos
+9. ✅ Configuración de `.env` para producción
+10. ✅ Migraciones de base de datos
+11. ✅ Creación del usuario administrador
+12. ✅ Configuración de `sudoers` (permisos de sistema)
+13. ✅ Virtual host Nginx
+14. ✅ SSL con Let's Encrypt (Certbot)
+15. ✅ Supervisor (workers de colas persistentes)
+16. ✅ Firewall UFW
+17. ✅ acme.sh para gestión SSL interna
 
 ---
 
@@ -404,18 +413,6 @@ php artisan tinker             # Consola interactiva de Laravel
 
 ---
 
-## Roadmap
-
-- [ ] **Fase 3 pendiente** — Módulo de Antivirus (ClamAV)
-- [ ] **Fase 5** — Dashboard de Revendedor (Reseller)
-- [ ] **Fase 6** — Integración nativa con WHMCS (plugin)
-- [ ] **Fase 7** — Soporte para múltiples servidores (cluster)
-- [ ] **Fase 8** — Módulo de estadísticas de tráfico web (AWStats/GoAccess)
-- [ ] **Fase 9** — Soporte para Docker y contenedores
-- [ ] **App móvil** — App React Native para monitoreo desde el teléfono
-
----
-
 ## Seguridad
 
 LaraPanel implementa múltiples capas de seguridad:
@@ -427,7 +424,7 @@ LaraPanel implementa múltiples capas de seguridad:
 - **API** — Tokens Sanctum con scopes. Los tokens se muestran una sola vez al crearlos
 - **Cifrado** — Llaves privadas SSL cifradas en base de datos con el APP_KEY de Laravel
 
-Para reportar vulnerabilidades, abre un issue privado o escribe a: `security@larapanel.dev`
+Para reportar vulnerabilidades, abre un issue privado
 
 ---
 

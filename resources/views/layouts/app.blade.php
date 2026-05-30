@@ -99,6 +99,13 @@
                 Antispam
             </a>
 
+            @if(config('larapanel.modules.antivirus'))
+            <a href="{{ route('antivirus.index') }}" class="nav-item {{ request()->routeIs('antivirus.*') ? 'active' : '' }}">
+                <span class="nav-icon"><i class="fa-solid fa-shield-halved"></i></span>
+                Antivirus
+            </a>
+            @endif
+
             @if(config('larapanel.modules.cron'))
             <a href="{{ route('cron.index') }}" class="nav-item {{ request()->routeIs('cron.*') ? 'active' : '' }}">
                 <span class="nav-icon"><i class="fa-solid fa-clock"></i></span>
@@ -117,6 +124,13 @@
                 <span class="nav-icon"><i class="fa-brands fa-git-alt"></i></span>
                 Git Deploy
             </a>
+
+            @if(config('larapanel.modules.docker'))
+            <a href="{{ route('docker.index') }}" class="nav-item {{ request()->routeIs('docker.*') ? 'active' : '' }}">
+                <span class="nav-icon"><i class="fa-brands fa-docker"></i></span>
+                Docker
+            </a>
+            @endif
 
             <a href="{{ route('wordpress.index') }}" class="nav-item {{ request()->routeIs('wordpress.*') ? 'active' : '' }}">
                 <span class="nav-icon"><i class="fa-brands fa-wordpress"></i></span>

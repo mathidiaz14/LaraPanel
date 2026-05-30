@@ -201,6 +201,148 @@ fi
 success "Composer $(composer --version --no-ansi | awk '{print $3}') instalado."
 
 # ══════════════════════════════════════════════════════════════════════════════
+#   FASE 5.5 — INSTALANDO DOCKER Y DOCKER COMPOSE
+# ══════════════════════════════════════════════════════════════════════════════
+step "Fase 5.5 — Instalando Docker y Docker Compose"
+
+if ! command -v docker &>/dev/null; then
+    info "Instalando dependencias de Docker..."
+    apt-get install -y -qq ca-certificates curl gnupg
+    install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg --yes
+    chmod a+r /etc/apt/keyrings/docker.gpg
+
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+      $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+      tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    apt-get update -qq
+    apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+fi
+
+systemctl enable docker
+systemctl start docker
+
+# Crear directorio base para Docker Compose de LaraPanel
+mkdir -p /var/larapanel/compose
+chown -R www-data:www-data /var/larapanel/compose
+chmod -R 775 /var/larapanel/compose
+
+success "Docker y Docker Compose instalados."
+
+# ══════════════════════════════════════════════════════════════════════════════
+#   FASE 5.6 — INSTALANDO CLAMAV (ANTIVIRUS)
+# ══════════════════════════════════════════════════════════════════════════════
+step "Fase 5.6 — Instalando ClamAV (Motor Antivirus)"
+
+apt-get install -y -qq clamav clamav-daemon
+
+# Crear directorio de cuarentena
+mkdir -p /var/larapanel/quarantine
+chown www-data:www-data /var/larapanel/quarantine
+chmod 750 /var/larapanel/quarantine
+
+# Detener clamav-freshclam para poder actualizar manualmente
+systemctl stop clamav-freshclam 2>/dev/null || true
+
+# Descargar definiciones iniciales
+info "Descargando definiciones de virus (puede tardar unos minutos)..."
+freshclam --quiet 2>/dev/null || warn "No se pudieron descargar las definiciones. Ejecuta 'freshclam' manualmente."
+
+# Habilitar y arrancar el daemon
+systemctl enable clamav-daemon
+systemctl start clamav-daemon  || warn "El daemon ClamAV no pudo iniciarse. Verifica con: systemctl status clamav-daemon"
+systemctl enable clamav-freshclam
+systemctl start clamav-freshclam
+
+# Configurar actualizón automática diaria vía cron
+cat > /etc/cron.d/clamav-update << 'CRON_EOF'
+# Actualizar definiciones de ClamAV cada noche a las 2 AM
+0 2 * * * root /usr/bin/freshclam --quiet 2>/dev/null
+CRON_EOF
+
+success "ClamAV instalado y configurado. Cuarentena: /var/larapanel/quarantine"
+
+# ══════════════════════════════════════════════════════════════════════════════
+#   FASE 5.7 — INSTALANDO RSPAMD (ANTISPAM)
+# ══════════════════════════════════════════════════════════════════════════════
+step "Fase 5.7 — Instalando Rspamd (Motor Antispam)"
+
+# Agregar repositorio oficial de Rspamd
+if ! command -v rspamd &>/dev/null; then
+    info "Agregando repositorio oficial de Rspamd..."
+    curl -fsSL https://rspamd.com/apt-stable/gpg.key | gpg --dearmor -o /usr/share/keyrings/rspamd.gpg --yes
+    echo "deb [signed-by=/usr/share/keyrings/rspamd.gpg] https://rspamd.com/apt-stable/ $(lsb_release -cs) main" \
+        > /etc/apt/sources.list.d/rspamd.list
+    apt-get update -qq
+    apt-get install -y -qq rspamd redis-server
+fi
+
+# Asegurarse que Redis está corriendo (Rspamd lo usa para Bayes y rate limiting)
+systemctl enable redis-server
+systemctl start redis-server
+
+# Configurar Rspamd: habilitar la interfaz web y establecer una contraseña
+RSPAMD_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))")
+
+mkdir -p /etc/rspamd/local.d
+
+# Configurar el worker del proxy para escuchar en el socket local
+cat > /etc/rspamd/local.d/worker-controller.inc << 'RSPAMD_CTRL_EOF'
+bind_socket = "localhost:11334";
+password = "$2$";
+Enable = yes;
+RSPAMD_CTRL_EOF
+
+# Configurar Redis como backend de Bayes y estadisticas
+cat > /etc/rspamd/local.d/redis.conf << 'RSPAMD_REDIS_EOF'
+servers = "127.0.0.1:6379";
+RSPAMD_REDIS_EOF
+
+# Habilitar classifier Bayes con Redis
+cat > /etc/rspamd/local.d/classifier-bayes.conf << 'RSPAMD_BAYES_EOF'
+backend = "redis";
+autolearn = true;
+RSPAMD_BAYES_EOF
+
+# Habilitar módulo de historial en Redis (necesario para el módulo del panel)
+cat > /etc/rspamd/local.d/history_redis.conf << 'RSPAMD_HIST_EOF'
+enable = true;
+max_rows = 1000;
+RSPAMD_HIST_EOF
+
+# Generar contraseña con hash para la API web de Rspamd
+info "Generando contraseña para la API de Rspamd..."
+RSPAMD_HASH=$(rspamadm pw -p "${RSPAMD_PASSWORD}" 2>/dev/null || echo "")
+if [[ -n "$RSPAMD_HASH" ]]; then
+    # Reemplazar el placeholder en el archivo de configuracion
+    sed -i "s|password = \"\$2\$\".*|password = \"${RSPAMD_HASH}\";|" /etc/rspamd/local.d/worker-controller.inc
+fi
+
+# Crear directorios de configuracion para reglas del panel
+mkdir -p /etc/rspamd/local.d
+touch /etc/rspamd/local.d/larapanel_whitelist.conf
+touch /etc/rspamd/local.d/larapanel_blacklist.conf
+chmod 644 /etc/rspamd/local.d/larapanel_whitelist.conf
+chmod 644 /etc/rspamd/local.d/larapanel_blacklist.conf
+
+# Habilitar y arrancar
+systemctl enable rspamd
+systemctl restart rspamd
+
+# Guardar la contraseña en el .env de LaraPanel (se sobreescribirá si ya existe)
+if [[ -f "${INSTALL_DIR}/.env" ]]; then
+    if grep -q "RSPAMD_PASSWORD" "${INSTALL_DIR}/.env"; then
+        sed -i "s/RSPAMD_PASSWORD=.*/RSPAMD_PASSWORD=${RSPAMD_PASSWORD}/" "${INSTALL_DIR}/.env"
+    else
+        echo "RSPAMD_PASSWORD=${RSPAMD_PASSWORD}" >> "${INSTALL_DIR}/.env"
+    fi
+fi
+
+success "Rspamd instalado. API local en http://127.0.0.1:11334"
+
+# ══════════════════════════════════════════════════════════════════════════════
 #   FASE 6 — USUARIO DEL SISTEMA
 # ══════════════════════════════════════════════════════════════════════════════
 step "Fase 6 — Creando usuario del sistema '${PANEL_USER}'"
@@ -213,6 +355,8 @@ else
 fi
 
 usermod -aG www-data "$PANEL_USER"
+usermod -aG docker "$PANEL_USER"
+usermod -aG docker www-data
 
 success "Usuario '$PANEL_USER' configurado."
 
@@ -378,6 +522,21 @@ www-data ALL=(ALL) NOPASSWD: /usr/bin/unzip
 # SSL
 www-data ALL=(ALL) NOPASSWD: /usr/bin/certbot
 www-data ALL=(ALL) NOPASSWD: /root/.acme.sh/acme.sh
+
+# Docker
+www-data ALL=(ALL) NOPASSWD: /usr/bin/docker
+
+# ClamAV (Antivirus)
+www-data ALL=(ALL) NOPASSWD: /usr/bin/clamscan
+www-data ALL=(ALL) NOPASSWD: /usr/bin/clamdscan
+www-data ALL=(ALL) NOPASSWD: /usr/bin/freshclam
+
+# Rspamd (Antispam)
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl restart rspamd
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl reload rspamd
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl start rspamd
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl stop rspamd
+www-data ALL=(ALL) NOPASSWD: /usr/bin/rspamadm
 SUDOERS_EOF
 
 chmod 440 /etc/sudoers.d/larapanel
@@ -525,6 +684,8 @@ ufw allow ssh
 ufw allow http
 ufw allow https
 ufw allow 8080/tcp comment 'LaraPanel Reverb WebSockets'
+# Rspamd API — solo acceso local (no abrir al exterior)
+# ufw allow 11334/tcp comment 'Rspamd API (local only)'
 echo "y" | ufw enable
 success "Firewall UFW configurado."
 
@@ -565,6 +726,17 @@ echo -e "  • Aplicación: ${CYAN}${INSTALL_DIR}${NC}"
 echo -e "  • Logs Nginx: ${CYAN}/var/log/nginx/larapanel.error.log${NC}"
 echo -e "  • Logs App:   ${CYAN}${INSTALL_DIR}/storage/logs/laravel.log${NC}"
 echo -e "  • Sudoers:    ${CYAN}/etc/sudoers.d/larapanel${NC}"
+echo -e "  • Cuarentena: ${CYAN}/var/larapanel/quarantine${NC} (ClamAV)"
+echo -e "  • Rspamd API: ${CYAN}http://127.0.0.1:11334${NC}"
+echo ""
+echo -e "${BOLD}  Servicios instalados:${NC}"
+echo -e "  ✓ Nginx + PHP ${PHP_VERSION} + MySQL 8"
+echo -e "  ✓ Docker Engine + Docker Compose"
+echo -e "  ✓ ClamAV (antivirus) + cuarentena automática"
+echo -e "  ✓ Rspamd (antispam) + Redis + Bayes"
+echo -e "  ✓ Fail2ban + UFW"
+echo -e "  ✓ Supervisor (queue workers)"
+echo -e "  ✓ acme.sh + Certbot (SSL)"
 echo ""
 echo -e "${BOLD}  Comandos útiles:${NC}"
 echo -e "  • Ver workers:         ${CYAN}supervisorctl status${NC}"

@@ -22,10 +22,12 @@ use App\Livewire\DNS\DnsZoneEditor;
 use App\Livewire\Antispam\AntispamIndex;
 use App\Livewire\Firewall\FirewallIndex;
 use App\Livewire\Fail2ban\Fail2banIndex;
+use App\Livewire\Antivirus\AntivirusIndex;
 use App\Livewire\Terminal\TerminalIndex;
 use App\Livewire\Git\GitIndex;
 use App\Livewire\Logs\LogIndex;
 use App\Livewire\WordPress\WordPressIndex;
+use App\Livewire\Docker\DockerIndex;
 use App\Livewire\Admin\PlanIndex;
 use App\Livewire\Admin\UserIndex;
 use App\Livewire\Admin\ApiTokens;
@@ -96,6 +98,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/firewall',  FirewallIndex::class)->name('firewall.index');
     Route::get('/fail2ban',  Fail2banIndex::class)->name('fail2ban.index');
 
+    // Antivirus
+    Route::get('/antivirus', AntivirusIndex::class)->name('antivirus.index');
+
     // Antispam
     Route::get('/cron', CronIndex::class)->name('cron.index');
 
@@ -104,6 +109,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Git Deploy
     Route::get('/git', GitIndex::class)->name('git.index');
+
+    // Docker
+    Route::get('/docker', DockerIndex::class)->name('docker.index');
 
     // WordPress
     Route::get('/wordpress', WordPressIndex::class)->name('wordpress.index');
