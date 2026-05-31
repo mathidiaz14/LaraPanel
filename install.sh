@@ -125,7 +125,13 @@ success "Nginx instalado y corriendo."
 # ══════════════════════════════════════════════════════════════════════════════
 step "Fase 3 — Instalando PHP $PHP_VERSION"
 
-add-apt-repository ppa:ondrej/php -y -q 2>/dev/null
+# Agregar el PPA de PHP manualmente con curl para evitar bloqueos del keyserver vía HKP (frecuentes en IPv6)
+if [[ ! -f "/etc/apt/trusted.gpg.d/ondrej-php.gpg" ]]; then
+    info "Descargando clave GPG para PHP..."
+    curl -sS "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x4F4EA0AAE5267A6C" | gpg --dearmor -o /etc/apt/trusted.gpg.d/ondrej-php.gpg
+fi
+echo "deb https://ppa.launchpadcontent.net/ondrej/php/ubuntu $(lsb_release -cs) main" > /etc/apt/sources.list.d/ondrej-php.list
+
 apt-get update -qq
 apt-get install -y -qq \
     "php${PHP_VERSION}-fpm" \
