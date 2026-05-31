@@ -50,7 +50,7 @@ return [
         'docker'     => true,
         'antivirus'  => true,
         'resellers'  => false,  // Phase 4
-        'multiserver'=> false,  // Phase 5
+        'multiserver'=> true,
     ],
 
     /*

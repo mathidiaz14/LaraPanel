@@ -23,6 +23,7 @@ use App\Livewire\Antispam\AntispamIndex;
 use App\Livewire\Firewall\FirewallIndex;
 use App\Livewire\Fail2ban\Fail2banIndex;
 use App\Livewire\Antivirus\AntivirusIndex;
+use App\Livewire\Servers\ServersIndex;
 use App\Livewire\Terminal\TerminalIndex;
 use App\Livewire\Git\GitIndex;
 use App\Livewire\Logs\LogIndex;
@@ -118,6 +119,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Terminal (admin only)
     Route::get('/terminal', TerminalIndex::class)->name('terminal.index');
+
+    // Multi-Server Cluster Management
+    Route::get('/servers', ServersIndex::class)->name('servers.index');
 
     // Logs
     Route::get('/logs', LogIndex::class)->name('logs.index');

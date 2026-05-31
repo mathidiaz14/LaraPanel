@@ -1,14 +1,5 @@
 <div align="center">
 
-```
-  ██╗      █████╗ ██████╗  █████╗ ██████╗  █████╗ ███╗   ██╗███████╗██╗
-  ██║     ██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔══██╗████╗  ██║██╔════╝██║
-  ██║     ███████║██████╔╝███████║██████╔╝███████║██╔██╗ ██║█████╗  ██║
-  ██║     ██╔══██║██╔══██╗██╔══██║██╔═══╝ ██╔══██║██║╚██╗██║██╔══╝  ██║
-  ███████╗██║  ██║██║  ██║██║  ██║██║     ██║  ██║██║ ╚████║███████╗███████╗
-  ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝╚══════╝
-```
-
 **Una alternativa open-source a cPanel, construida con Laravel 13 + Livewire 4**
 
 [![Laravel](https://img.shields.io/badge/Laravel-13.x-FF2D20?style=flat-square&logo=laravel)](https://laravel.com)
@@ -91,6 +82,7 @@ LaraPanel es un panel de control de servidores web de código abierto, **constru
 | **Backups Locales** | Creación manual y programada de backups completos (archivos + DB). Historial con fecha, tamaño y estado. Descarga directa y restauración desde el panel. |
 | **DNS Manager** | Gestión completa de zonas DNS (PowerDNS). Edición de registros A, CNAME, MX, TXT, NS, SRV. |
 | **Terminal Web** | Terminal interactiva en el navegador (solo Admin). Acceso shell seguro sin necesidad de SSH. |
+| **Gestión Cluster (Multi-Servidor)** | Conecta múltiples servidores remotos (nodos) mediante SSH agentless. Selector global en navbar, estadísticas de recursos e interfaz de terminal SSH remota dedicada por nodo. |
 
 ### 📊 Monitoreo y Logs
 
@@ -139,6 +131,7 @@ Autenticación: `Bearer Token` vía Laravel Sanctum.
 | Gestión de contenedores | Docker Engine / Docker Compose |
 | Motor Antivirus | ClamAV + freshclam |
 | Motor Antispam | Rspamd + Redis (Bayes) |
+| Gestión Cluster | phpseclib3 (SSH2 agentless) |
 | Interfaz de servidor | sudo + ShellExecutor seguro |
 
 ---

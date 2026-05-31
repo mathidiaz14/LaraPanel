@@ -11,6 +11,10 @@ class MonitoringService
      */
     public function getSnapshot(): array
     {
+        if (\App\Shell\ServerContext::isRemote()) {
+            return $this->getRemoteSnapshot(\App\Shell\ServerContext::executor());
+        }
+
         if (!app()->isProduction()) {
             return $this->getSimulatedSnapshot();
         }
@@ -48,6 +52,10 @@ class MonitoringService
      */
     public function servicesStatus(): array
     {
+        if (\App\Shell\ServerContext::isRemote()) {
+            return $this->getRemoteServicesStatus(\App\Shell\ServerContext::executor());
+        }
+
         if (!app()->isProduction()) {
             return [
                 'nginx'      => true,
@@ -329,5 +337,85 @@ class MonitoringService
     public static function formatSpeed(int $bytesPerSec): string
     {
         return self::formatBytes($bytesPerSec) . '/s';
+    }
+
+    /**
+     * Fetch resource snapshot metrics from a remote server using SSH executor.
+     */
+    protected function getRemoteSnapshot(\App\Shell\RemoteShellExecutor $executor): array
+    {
+        // Default structure in case of SSH errors
+        $snap = [
+            'cpu' => ['usage' => 0, 'user' => 0, 'system' => 0, 'iowait' => 0, 'cores' => 1, 'model' => 'Unknown CPU (remoto)'],
+            'ram' => ['total' => 0, 'used' => 0, 'free' => 0, 'buffers' => 0, 'cached' => 0, 'percent' => 0, 'swap_total' => 0, 'swap_used' => 0, 'swap_pct' => 0],
+            'disk' => [['device' => '/dev/root', 'size' => 0, 'used' => 0, 'free' => 0, 'percent' => 0, 'mount' => '/']],
+            'net' => [['interface' => 'eth0', 'rx_bytes' => 0, 'tx_bytes' => 0, 'rx_speed' => 0, 'tx_speed' => 0]],
+            'load' => ['1m' => 0, '5m' => 0, '15m' => 0],
+            'uptime' => 'Desconectado',
+            'procs' => [],
+            'ts' => now()->timestamp,
+        ];
+
+        try {
+            // Get active remote stats from the cached stats or call service to fetch live
+            $server = $executor->getServer();
+            
+            // If the server cache is older than 10 seconds, let's trigger a light ping
+            if (!$server->last_ping_at || $server->last_ping_at->diffInSeconds(now()) > 10) {
+                app(\App\Services\ServerService::class)->ping($server);
+                $server->refresh();
+            }
+
+            $os = $server->os_info;
+            if ($os) {
+                $ram = $os['ram'] ?? [];
+                $disk = $os['disk'] ?? [];
+
+                $snap['cpu']['usage'] = $os['cpuPercent'] ?? 0;
+                $snap['cpu']['cores'] = 1;
+                $snap['cpu']['model'] = $os['kernel'] ?? 'Linux remoto';
+
+                $snap['ram']['total'] = (int)(($ram['total'] ?? 0) * 1024 * 1024 * 1024);
+                $snap['ram']['used'] = (int)(($ram['used'] ?? 0) * 1024 * 1024 * 1024);
+                $snap['ram']['free'] = $snap['ram']['total'] - $snap['ram']['used'];
+                $snap['ram']['percent'] = $ram['percent'] ?? 0;
+
+                $snap['disk'] = [[
+                    'device' => '/dev/sda1',
+                    'size' => (int)(($disk['total'] ?? 0) * 1024 * 1024 * 1024),
+                    'used' => (int)(($disk['used'] ?? 0) * 1024 * 1024 * 1024),
+                    'free' => (int)((($disk['total'] ?? 0) - ($disk['used'] ?? 0)) * 1024 * 1024 * 1024),
+                    'percent' => $disk['percent'] ?? 0,
+                    'mount' => '/',
+                ]];
+
+                $snap['uptime'] = $os['uptime'] ?? 'N/A';
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('MonitoringService remote snapshot error', ['error' => $e->getMessage()]);
+        }
+
+        return $snap;
+    }
+
+    /**
+     * Fetch active system service states on remote server.
+     */
+    protected function getRemoteServicesStatus(\App\Shell\RemoteShellExecutor $executor): array
+    {
+        $services = ['nginx', 'mysql', 'php8.3-fpm', 'fail2ban', 'postfix', 'dovecot', 'pdns'];
+        $statuses = [];
+
+        foreach ($services as $svc) {
+            try {
+                // Check status via systemctl
+                $res = $executor->withTimeout(2)->run(['systemctl', 'is-active', $svc], false);
+                $statuses[$svc] = trim($res->stdout) === 'active';
+            } catch (\Throwable) {
+                $statuses[$svc] = false;
+            }
+        }
+
+        return $statuses;
     }
 }

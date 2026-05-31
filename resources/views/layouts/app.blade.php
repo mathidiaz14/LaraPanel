@@ -27,6 +27,17 @@
         </div>
 
         <nav class="sidebar-nav">
+            {{-- Remote server banner indicator --}}
+            @if(App\Shell\ServerContext::isRemote())
+                <div style="background:rgba(137,180,250,0.1);border:1px solid rgba(137,180,250,0.25);border-radius:8px;padding:8px 12px;margin:12px;font-size:11px;color:#89b4fa;display:flex;align-items:center;gap:8px;">
+                    <i class="fa-solid fa-server fa-pulse"></i>
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ App\Shell\ServerContext::server()->name }}</div>
+                        <div style="font-size:9px;opacity:0.7;">Modo Remoto Activo</div>
+                    </div>
+                </div>
+            @endif
+
             <div class="nav-section-title">Principal</div>
 
             <a href="{{ route('dashboard') }}" class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
@@ -132,6 +143,13 @@
             </a>
             @endif
 
+            @if(config('larapanel.modules.multiserver'))
+            <a href="{{ route('servers.index') }}" class="nav-item {{ request()->routeIs('servers.*') ? 'active' : '' }}">
+                <span class="nav-icon"><i class="fa-solid fa-server"></i></span>
+                Servidores
+            </a>
+            @endif
+
             <a href="{{ route('wordpress.index') }}" class="nav-item {{ request()->routeIs('wordpress.*') ? 'active' : '' }}">
                 <span class="nav-icon"><i class="fa-brands fa-wordpress"></i></span>
                 WordPress
@@ -208,6 +226,9 @@
             {!! $breadcrumb ?? $__env->yieldContent('breadcrumb', '<strong>Dashboard</strong>') !!}
         </div>
         <div class="topbar-actions">
+            @if(config('larapanel.modules.multiserver'))
+                <livewire:servers.server-selector />
+            @endif
             <button class="topbar-btn" title="Notificaciones">
                 <i class="fa-solid fa-bell"></i>
             </button>

@@ -38,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\TerminalService::class);
         $this->app->singleton(\App\Services\GitService::class);
         $this->app->singleton(\App\Services\WordPressService::class);
+        $this->app->singleton(\App\Services\ServerService::class);
     }
 
     public function boot(): void
