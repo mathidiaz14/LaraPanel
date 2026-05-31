@@ -426,7 +426,7 @@ BROADCAST_CONNECTION=reverb
 ENV_EOF
 
 info "Instalando dependencias PHP (sin dev)..."
-sudo -u "$PANEL_USER" composer install --no-dev --optimize-autoloader --quiet
+sudo -u "$PANEL_USER" composer install --no-dev --optimize-autoloader --no-scripts --quiet
 
 info "Instalando dependencias JS y compilando assets..."
 sudo -u "$PANEL_USER" npm install --silent
@@ -434,6 +434,7 @@ sudo -u "$PANEL_USER" npm run build
 
 info "Generando clave de aplicación..."
 sudo -u "$PANEL_USER" php artisan key:generate --force
+sudo -u "$PANEL_USER" php artisan package:discover --ansi
 
 info "Ejecutando migraciones..."
 sudo -u "$PANEL_USER" php artisan migrate --force
