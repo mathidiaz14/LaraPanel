@@ -49,7 +49,7 @@ class FirewallService
 
         try {
             $result = $this->sudo->run(['ufw', 'status', 'verbose'], checkExit: false);
-            $output = $result['output'] ?? '';
+            $output = $result->stdout;
 
             return [
                 'enabled'    => str_contains($output, 'Status: active'),
@@ -230,7 +230,7 @@ class FirewallService
     {
         try {
             $result = $this->sudo->run(['ufw', 'status', 'numbered'], checkExit: false);
-            $lines  = array_filter(explode("\n", $result['output'] ?? ''));
+            $lines  = array_filter(explode("\n", $result->stdout));
             $last   = end($lines);
             preg_match('/^\[\s*(\d+)\]/', $last, $matches);
             return isset($matches[1]) ? (int)$matches[1] : null;
@@ -296,7 +296,7 @@ class FirewallService
 
         try {
             $result = $this->sudo->run(['ss', '-s'], checkExit: false);
-            $output = $result['output'] ?? '';
+            $output = $result->stdout;
             return [
                 'established' => $this->parseNetstatCount($output, 'estab'),
                 'time_wait'   => $this->parseNetstatCount($output, 'timewait'),
