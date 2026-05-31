@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monaco Editor Frame</title>
+    <style>
+        html, body, #container {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #1e1e1e;
+        }
+    </style>
+    <!-- Cargar cargador de Monaco desde cdnjs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs/loader.js"></script>
+</head>
+<body>
+    <div id="container"></div>
+    <script>
+        let editor = null;
+
+        // Configurar Monaco
+        require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs' } });
+
+        window.addEventListener('message', function(event) {
+            const data = event.data;
+            if (data.action === 'init') {
+                require(['vs/editor/editor.main'], function() {
+                    const container = document.getElementById('container');
+                    container.innerHTML = '';
+                    editor = monaco.editor.create(container, {
+                        value: data.content,
+                        language: data.language || 'plaintext',
+                        theme: 'vs-dark',
+                        fontSize: 14,
+                        fontFamily: "'Fira Code', 'Courier New', monospace",
+                        fontLigatures: true,
+                        automaticLayout: true,
+                        minimap: { enabled: true },
+                        lineNumbers: 'on',
+                        scrollbar: {
+                            vertical: 'visible',
+                            horizontal: 'visible',
+                            verticalScrollbarSize: 10,
+                            horizontalScrollbarSize: 10
+                        }
+                    });
+
+                    // Comando Ctrl+S dentro del editor
+                    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, function() {
+                        window.parent.postMessage({ action: 'save', content: editor.getValue() }, '*');
+                    });
+                });
+            } else if (data.action === 'changeLanguage') {
+                if (editor) {
+                    const model = editor.getModel();
+                    monaco.editor.setModelLanguage(model, data.language);
+                }
+            } else if (data.action === 'getValue') {
+                if (editor) {
+                    window.parent.postMessage({ action: 'value', content: editor.getValue() }, '*');
+                }
+            }
+        });
+
+        // Notificar que el iframe está listo
+        window.parent.postMessage({ action: 'ready' }, '*');
+    </script>
+</body>
+</html>

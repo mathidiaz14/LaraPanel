@@ -33,7 +33,7 @@
                     @foreach($items as $item)
                         @if($item['is_dir'] && $currentPath === '')
                             @php $hasDomains = true; @endphp
-                            <button wire:click="navigate('{{ $item['name'] }}')" class="btn btn-ghost" style="width:100%;text-align:left;justify-content:flex-start;padding:8px 12px;font-size:13px;color:var(--text-secondary);border-radius:8px;">
+                            <button wire:key="domain-{{ md5($item['name']) }}" wire:click="navigate('{{ $item['name'] }}')" class="btn btn-ghost" style="width:100%;text-align:left;justify-content:flex-start;padding:8px 12px;font-size:13px;color:var(--text-secondary);border-radius:8px;">
                                 <i class="fa-solid fa-globe" style="color:var(--accent-light);width:20px;font-size:14px;"></i> {{ $item['name'] }}
                             </button>
                         @endif
@@ -148,7 +148,7 @@
                     @endif
 
                     @foreach($items as $item)
-                    <tr style="border-bottom:1px solid rgba(255,255,255,0.03);transition:background 0.2s;background:{{ in_array($item['name'], $selectedItems) ? 'rgba(99, 102, 241, 0.05)' : 'transparent' }};" class="file-row">
+                    <tr wire:key="file-row-{{ md5($item['name'] . '-' . $item['updated_at']) }}" style="border-bottom:1px solid rgba(255,255,255,0.03);transition:background 0.2s;background:{{ in_array($item['name'], $selectedItems) ? 'rgba(99, 102, 241, 0.05)' : 'transparent' }};" class="file-row">
                         <td style="padding:12px 20px;text-align:center;vertical-align:middle;">
                             <input type="checkbox" value="{{ $item['name'] }}" wire:model.live="selectedItems" class="file-checkbox" style="width:16px;height:16px;accent-color:var(--accent-light);cursor:pointer;border-radius:4px;">
                         </td>
@@ -443,16 +443,30 @@
 
         {{-- Monaco Editor Container --}}
         <div style="flex:1;position:relative;background:#181818;">
-            <div id="monaco-editor-container" style="position:absolute;inset:0;width:100%;height:100%;"></div>
+            <iframe id="monaco-editor-iframe" src="/monaco-editor-frame.html" style="position:absolute;inset:0;width:100%;height:100%;border:none;"></iframe>
         </div>
     </div>
     @endif
 
     {{-- Monaco Initialization & Ctrl+S --}}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"></script>
     <script>
-        let lpEditor = null;
         let selectedLang = 'plaintext';
+        let editorIframeReady = false;
+        let pendingEditorContent = null;
+        let pendingEditorLang = null;
+
+        // Escuchar mensajes del iframe
+        window.addEventListener('message', function(event) {
+            const data = event.data;
+            if (data.action === 'ready') {
+                editorIframeReady = true;
+                if (pendingEditorContent !== null) {
+                    sendToIframe(pendingEditorContent, pendingEditorLang);
+                }
+            } else if (data.action === 'save') {
+                saveMonacoContent(data.content);
+            }
+        });
 
         window.addEventListener('open-editor', event => {
             const content = event.detail.content;
@@ -472,70 +486,79 @@
 
             selectedLang = lang;
 
-            require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs' } });
-            require(['vs/editor/editor.main'], function() {
-                const container = document.getElementById('monaco-editor-container');
-                if (container) {
-                    container.innerHTML = '';
-                    lpEditor = monaco.editor.create(container, {
-                        value: content,
-                        language: lang,
-                        theme: 'vs-dark',
-                        fontSize: 14,
-                        fontFamily: "'Fira Code', 'Courier New', monospace",
-                        fontLigatures: true,
-                        automaticLayout: true,
-                        minimap: { enabled: true },
-                        scrollbar: {
-                            vertical: 'visible',
-                            horizontal: 'visible',
-                            useShadows: false,
-                            verticalScrollbarSize: 10,
-                            horizontalScrollbarSize: 10
-                        },
-                        lineNumbers: 'on',
-                        roundedSelection: true,
-                        cursorBlinking: 'smooth',
-                        cursorSmoothCaretAnimation: 'on'
-                    });
+            if (editorIframeReady) {
+                sendToIframe(content, lang);
+            } else {
+                pendingEditorContent = content;
+                pendingEditorLang = lang;
+            }
 
-                    // Set select value
-                    const select = document.getElementById('editor-language-select');
-                    if (select) select.value = lang;
-
-                    // Setup Ctrl+S keybind inside Monaco
-                    lpEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, function() {
-                        saveMonacoContent();
-                    });
-                }
-            });
+            // Establecer valor del selector de lenguaje
+            setTimeout(() => {
+                const select = document.getElementById('editor-language-select');
+                if (select) select.value = lang;
+            }, 100);
         });
 
+        function sendToIframe(content, language) {
+            const iframe = document.getElementById('monaco-editor-iframe');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({
+                    action: 'init',
+                    content: content,
+                    language: language
+                }, '*');
+                pendingEditorContent = null;
+                pendingEditorLang = null;
+            }
+        }
+
         function changeEditorLanguage(lang) {
-            if (lpEditor) {
-                const model = lpEditor.getModel();
-                monaco.editor.setModelLanguage(model, lang);
-                selectedLang = lang;
+            selectedLang = lang;
+            const iframe = document.getElementById('monaco-editor-iframe');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({
+                    action: 'changeLanguage',
+                    language: lang
+                }, '*');
             }
         }
 
-        function saveMonacoContent() {
-            if (lpEditor) {
-                const statusDiv = document.getElementById('editor-save-status');
-                statusDiv.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color:var(--warning);"></i> <span style="color:var(--warning);">Guardando...</span>`;
-                
-                @this.call('saveFileContent', lpEditor.getValue()).then(() => {
-                    statusDiv.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#22c55e;"></i> <span style="color:#22c55e;">Guardado con éxito</span>`;
-                    setTimeout(() => {
-                        statusDiv.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#22c55e;"></i> <span style="color:var(--text-muted);">Listo</span>`;
-                    }, 2000);
-                }).catch(err => {
-                    statusDiv.innerHTML = `<i class="fa-solid fa-circle-xmark" style="color:#ef4444;"></i> <span style="color:#ef4444;">Fallo al guardar</span>`;
-                });
+        function saveMonacoContent(content = null) {
+            const statusDiv = document.getElementById('editor-save-status');
+            statusDiv.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color:var(--warning);"></i> <span style="color:var(--warning);">Guardando...</span>`;
+
+            if (content !== null) {
+                executeSave(content);
+            } else {
+                // Solicitar valor al iframe
+                const iframe = document.getElementById('monaco-editor-iframe');
+                if (iframe && iframe.contentWindow) {
+                    const onValueReceived = function(e) {
+                        if (e.data && e.data.action === 'value') {
+                            window.removeEventListener('message', onValueReceived);
+                            executeSave(e.data.content);
+                        }
+                    };
+                    window.addEventListener('message', onValueReceived);
+                    iframe.contentWindow.postMessage({ action: 'getValue' }, '*');
+                }
             }
         }
 
-        // Global keydown handler (backup in case focus is outside editor)
+        function executeSave(value) {
+            const statusDiv = document.getElementById('editor-save-status');
+            @this.call('saveFileContent', value).then(() => {
+                statusDiv.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#22c55e;"></i> <span style="color:#22c55e;">Guardado con éxito</span>`;
+                setTimeout(() => {
+                    statusDiv.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#22c55e;"></i> <span style="color:var(--text-muted);">Listo</span>`;
+                }, 2000);
+            }).catch(err => {
+                statusDiv.innerHTML = `<i class="fa-solid fa-circle-xmark" style="color:#ef4444;"></i> <span style="color:#ef4444;">Fallo al guardar</span>`;
+            });
+        }
+
+        // Global keydown handler (backup)
         window.addEventListener('keydown', e => {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                 const modal = document.getElementById('monaco-full-editor');

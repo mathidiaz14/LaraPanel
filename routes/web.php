@@ -134,7 +134,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/users',   UserIndex::class)->name('users.index');
         Route::get('/plans',   PlanIndex::class)->name('plans.index');
         Route::get('/api-tokens', ApiTokens::class)->name('api-tokens');
-        Route::get('/settings',fn() => view('coming-soon', ['module' => 'Configuración del Panel']))->name('settings');
+        Route::get('/settings',   \App\Livewire\Admin\Settings::class)->name('settings');
     });
 });
 

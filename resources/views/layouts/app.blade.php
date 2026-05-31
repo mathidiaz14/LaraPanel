@@ -12,6 +12,13 @@
     <link rel="stylesheet" href="{{ asset('css/larapanel.css') }}">
     @livewireStyles
     @stack('styles')
+    <style>
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); }
+            70% { transform: scale(1.1); opacity: 0.8; box-shadow: 0 0 0 6px rgba(251, 191, 36, 0); }
+            100% { transform: scale(1); opacity: 1; box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+        }
+    </style>
 </head>
 <body>
 <div class="app-layout">
@@ -191,9 +198,14 @@
                 <span class="nav-icon"><i class="fa-solid fa-layer-group"></i></span>
                 Planes
             </a>
-            <a href="{{ route('admin.settings') }}" class="nav-item {{ request()->routeIs('admin.settings') ? 'active' : '' }}">
-                <span class="nav-icon"><i class="fa-solid fa-gear"></i></span>
-                Configuración
+            <a href="{{ route('admin.settings') }}" class="nav-item {{ request()->routeIs('admin.settings') ? 'active' : '' }}" style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                <span style="display:flex;align-items:center;">
+                    <span class="nav-icon"><i class="fa-solid fa-gear"></i></span>
+                    Configuración
+                </span>
+                @if(\App\Services\UpdateService::isUpdateAvailableCached())
+                    <span title="Actualización de LaraPanel disponible" style="width:8px;height:8px;background:#fbbf24;border-radius:50%;box-shadow:0 0 10px #fbbf24;display:inline-block;margin-right:12px;animation:pulse 2s infinite;"></span>
+                @endif
             </a>
             <a href="{{ route('admin.api-tokens') }}" class="nav-item {{ request()->routeIs('admin.api-tokens') ? 'active' : '' }}">
                 <span class="nav-icon"><i class="fa-solid fa-key"></i></span>

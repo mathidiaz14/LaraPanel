@@ -84,6 +84,7 @@ return [
             'clamdscan',
             'rm',
             'mv',
+            'update.sh',
         ],
     ],
 
