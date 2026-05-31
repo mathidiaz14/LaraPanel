@@ -114,7 +114,19 @@ class ShellExecutor
             throw new \InvalidArgumentException('Command cannot be empty.');
         }
 
-        $binary = basename($command[0]);
+        $cmdIndex = 0;
+        if ($command[0] === 'sudo') {
+            $cmdIndex = 1;
+            while (isset($command[$cmdIndex]) && str_starts_with($command[$cmdIndex], '-')) {
+                if ($command[$cmdIndex] === '-u' && isset($command[$cmdIndex + 1])) {
+                    $cmdIndex += 2;
+                } else {
+                    $cmdIndex++;
+                }
+            }
+        }
+
+        $binary = isset($command[$cmdIndex]) ? basename($command[$cmdIndex]) : '';
         $allowed = config('larapanel.security.allowed_sudo_commands', []);
 
         // In local development, skip whitelist enforcement
