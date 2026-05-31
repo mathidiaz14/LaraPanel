@@ -405,6 +405,7 @@ APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://${PANEL_DOMAIN}
 LARAPANEL_VERSION=0.1.0
+APP_KEY=
 
 LOG_CHANNEL=stack
 LOG_LEVEL=warning
@@ -424,6 +425,10 @@ FILESYSTEM_DISK=local
 
 BROADCAST_CONNECTION=log
 ENV_EOF
+
+# Cambiar el propietario de .env al usuario del panel para que pueda escribir la clave
+chown "${PANEL_USER}:www-data" "${INSTALL_DIR}/.env"
+chmod 640 "${INSTALL_DIR}/.env"
 
 info "Instalando dependencias PHP (sin dev)..."
 sudo -u "$PANEL_USER" composer install --no-dev --optimize-autoloader --no-scripts --quiet

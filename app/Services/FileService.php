@@ -90,11 +90,19 @@ class FileService
             $itemPath = $absolutePath . '/' . $item;
             $isDir = is_dir($itemPath);
             
+            // Resolver owner y group si la extensión posix está instalada
+            $ownerId = @fileowner($itemPath);
+            $groupId = @filegroup($itemPath);
+            $owner = function_exists('posix_getpwuid') && $ownerId !== false ? (@posix_getpwuid($ownerId)['name'] ?? $ownerId) : $ownerId;
+            $group = function_exists('posix_getgrgid') && $groupId !== false ? (@posix_getgrgid($groupId)['name'] ?? $groupId) : $groupId;
+
             $files[] = [
                 'name' => $item,
                 'is_dir' => $isDir,
                 'size' => $isDir ? 0 : filesize($itemPath),
                 'permissions' => substr(sprintf('%o', fileperms($itemPath)), -4),
+                'owner' => $owner ?: 'unknown',
+                'group' => $group ?: 'unknown',
                 'updated_at' => filemtime($itemPath),
                 'mime' => $isDir ? 'directory' : (mime_content_type($itemPath) ?: 'application/octet-stream'),
             ];
@@ -371,5 +379,122 @@ class FileService
             }
         }
         return false;
+    }
+
+    /**
+     * Move file/folder to a new parent directory.
+     */
+    public function move(string $relativeSource, string $relativeDestParent): bool
+    {
+        $source = $this->resolvePath($relativeSource);
+        $name = basename($relativeSource);
+        $dest = $this->resolvePath($relativeDestParent . '/' . $name);
+
+        if (!file_exists($source)) {
+            throw new \RuntimeException("El recurso origen no existe.");
+        }
+        if (file_exists($dest)) {
+            throw new \RuntimeException("El recurso destino ya existe en '{$relativeDestParent}'.");
+        }
+
+        AuditLog::record('filemanager.move', $relativeSource, ['dest' => $relativeDestParent]);
+
+        if (!app()->isProduction()) {
+            return rename($source, $dest);
+        }
+
+        try {
+            $this->sudo->run(['mv', $source, $dest]);
+            return true;
+        } catch (\Throwable $e) {
+            Log::error("FileManager: Failed to move {$source} to {$dest}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Copy file/folder to a new parent directory.
+     */
+    public function copy(string $relativeSource, string $relativeDestParent): bool
+    {
+        $source = $this->resolvePath($relativeSource);
+        $name = basename($relativeSource);
+        $dest = $this->resolvePath($relativeDestParent . '/' . $name);
+
+        if (!file_exists($source)) {
+            throw new \RuntimeException("El recurso origen no existe.");
+        }
+        if (file_exists($dest)) {
+            throw new \RuntimeException("El recurso destino ya existe en '{$relativeDestParent}'.");
+        }
+
+        AuditLog::record('filemanager.copy', $relativeSource, ['dest' => $relativeDestParent]);
+
+        if (!app()->isProduction()) {
+            if (is_dir($source)) {
+                return $this->copyRecursive($source, $dest);
+            }
+            return copy($source, $dest);
+        }
+
+        try {
+            if (is_dir($source)) {
+                $this->sudo->run(['cp', '-r', $source, $dest]);
+            } else {
+                $this->sudo->run(['cp', $source, $dest]);
+            }
+            $this->sudo->run(['chown', '-R', 'www-data:www-data', $dest]);
+            return true;
+        } catch (\Throwable $e) {
+            Log::error("FileManager: Failed to copy {$source} to {$dest}: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    protected function copyRecursive(string $src, string $dst): bool
+    {
+        $dir = opendir($src);
+        @mkdir($dst);
+        while (false !== ($file = readdir($dir))) {
+            if (($file != '.') && ($file != '..')) {
+                if (is_dir($src . '/' . $file)) {
+                    $this->copyRecursive($src . '/' . $file, $dst . '/' . $file);
+                } else {
+                    copy($src . '/' . $file, $dst . '/' . $file);
+                }
+            }
+        }
+        closedir($dir);
+        return true;
+    }
+
+    /**
+     * Delete multiple files/folders.
+     */
+    public function deleteMultiple(array $relativePaths): void
+    {
+        foreach ($relativePaths as $path) {
+            $this->delete($path);
+        }
+    }
+
+    /**
+     * Move multiple files/folders.
+     */
+    public function moveMultiple(array $relativePaths, string $destParent): void
+    {
+        foreach ($relativePaths as $path) {
+            $this->move($path, $destParent);
+        }
+    }
+
+    /**
+     * Copy multiple files/folders.
+     */
+    public function copyMultiple(array $relativePaths, string $destParent): void
+    {
+        foreach ($relativePaths as $path) {
+            $this->copy($path, $destParent);
+        }
     }
 }

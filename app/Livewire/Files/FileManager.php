@@ -16,6 +16,12 @@ class FileManager extends Component
     // File upload
     public $uploads = [];
 
+    // Bulk action state
+    public array $selectedItems = [];
+    public bool $showBulkMoveModal = false;
+    public bool $showBulkCopyModal = false;
+    public string $bulkDestDirectory = '';
+
     // Modals state
     public bool $showCreateFolderModal = false;
     public string $newFolderName = '';
@@ -39,11 +45,13 @@ class FileManager extends Component
     public function mount(): void
     {
         $this->currentPath = '';
+        $this->selectedItems = [];
     }
 
     public function navigate(string $path): void
     {
         $this->currentPath = $path;
+        $this->selectedItems = [];
         $this->resetErrorAlerts();
     }
 
@@ -55,6 +63,7 @@ class FileManager extends Component
         $parts = explode('/', trim($this->currentPath, '/'));
         array_pop($parts);
         $this->currentPath = implode('/', $parts);
+        $this->selectedItems = [];
         $this->resetErrorAlerts();
     }
 
@@ -63,6 +72,7 @@ class FileManager extends Component
         $this->successMessage = '';
         $this->errorMessage = '';
         $this->uploads = [];
+        $this->selectedItems = [];
     }
 
     /**
@@ -275,6 +285,135 @@ class FileManager extends Component
             $this->uploads = [];
         } catch (\Throwable $e) {
             $this->errorMessage = "Error al subir archivos: " . $e->getMessage();
+        }
+    }
+
+    /**
+     * Delete selected items.
+     */
+    public function deleteSelected(FileService $fileService): void
+    {
+        if (empty($this->selectedItems)) {
+            return;
+        }
+
+        try {
+            $paths = array_map(fn($item) => $this->currentPath . '/' . $item, $this->selectedItems);
+            $fileService->deleteMultiple($paths);
+            $this->successMessage = "Elementos seleccionados eliminados correctamente.";
+            $this->selectedItems = [];
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Compress selected items.
+     */
+    public function zipSelected(FileService $fileService): void
+    {
+        if (empty($this->selectedItems)) {
+            return;
+        }
+
+        $this->validate([
+            'newFolderName' => 'required|string|min:1|max:64|regex:/^[a-zA-Z0-9_\-\.]+$/',
+        ]);
+
+        $zipName = $this->newFolderName;
+        if (!str_ends_with(strtolower($zipName), '.zip')) {
+            $zipName .= '.zip';
+        }
+
+        try {
+            $zipPath = $this->currentPath . '/' . $zipName;
+            
+            // Si solo es uno, usamos el zip estándar
+            if (count($this->selectedItems) === 1) {
+                $fileService->zip($this->currentPath . '/' . $this->selectedItems[0], $zipName);
+            } else {
+                $absZipPath = $fileService->resolvePath($zipPath);
+                
+                if (class_exists(\ZipArchive::class)) {
+                    $zip = new \ZipArchive();
+                    if ($zip->open($absZipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
+                        foreach ($this->selectedItems as $item) {
+                            $itemPath = $this->currentPath . '/' . $item;
+                            $absItemPath = $fileService->resolvePath($itemPath);
+                            
+                            if (is_dir($absItemPath)) {
+                                $files = new \RecursiveIteratorIterator(
+                                    new \RecursiveDirectoryIterator($absItemPath),
+                                    \RecursiveIteratorIterator::LEAVES_ONLY
+                                );
+                                foreach ($files as $file) {
+                                    if (!$file->isDir()) {
+                                        $filePath = $file->getRealPath();
+                                        $relativePathInZip = $item . '/' . substr($filePath, strlen($absItemPath) + 1);
+                                        $zip->addFile($filePath, $relativePathInZip);
+                                    }
+                                }
+                            } else {
+                                $zip->addFile($absItemPath, $item);
+                            }
+                        }
+                        $zip->close();
+                    } else {
+                        throw new \RuntimeException("No se pudo crear el archivo zip.");
+                    }
+                } else {
+                    throw new \RuntimeException("La clase ZipArchive no está disponible en PHP.");
+                }
+            }
+
+            $this->successMessage = "Comprimido como {$zipName} con éxito.";
+            $this->selectedItems = [];
+            $this->showCreateFolderModal = false; // Usamos este modal para el prompt del zip
+            $this->newFolderName = '';
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Move selected items.
+     */
+    public function moveSelected(FileService $fileService): void
+    {
+        if (empty($this->selectedItems)) {
+            return;
+        }
+
+        try {
+            $paths = array_map(fn($item) => $this->currentPath . '/' . $item, $this->selectedItems);
+            $fileService->moveMultiple($paths, $this->bulkDestDirectory);
+            $this->successMessage = "Elementos movidos con éxito a '{$this->bulkDestDirectory}'.";
+            $this->selectedItems = [];
+            $this->showBulkMoveModal = false;
+            $this->bulkDestDirectory = '';
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Copy selected items.
+     */
+    public function copySelected(FileService $fileService): void
+    {
+        if (empty($this->selectedItems)) {
+            return;
+        }
+
+        try {
+            $paths = array_map(fn($item) => $this->currentPath . '/' . $item, $this->selectedItems);
+            $fileService->copyMultiple($paths, $this->bulkDestDirectory);
+            $this->successMessage = "Elementos copiados con éxito a '{$this->bulkDestDirectory}'.";
+            $this->selectedItems = [];
+            $this->showBulkCopyModal = false;
+            $this->bulkDestDirectory = '';
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
         }
     }
 
