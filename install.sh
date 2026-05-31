@@ -422,7 +422,7 @@ CACHE_STORE=database
 QUEUE_CONNECTION=database
 FILESYSTEM_DISK=local
 
-BROADCAST_CONNECTION=reverb
+BROADCAST_CONNECTION=log
 ENV_EOF
 
 info "Instalando dependencias PHP (sin dev)..."
