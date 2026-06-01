@@ -85,6 +85,11 @@ return [
             'rm',
             'mv',
             'update.sh',
+            'find',
+            'mkdir',
+            'cp',
+            'ln',
+            'a2ensite',
         ],
     ],
 
