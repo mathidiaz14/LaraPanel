@@ -121,7 +121,7 @@ class DomainService
 
         AuditLog::record('domain.deleted', $domain->name, ['files_deleted' => $deleteFiles]);
 
-        $domain->delete();
+        $domain->forceDelete();
     }
 
     /**
