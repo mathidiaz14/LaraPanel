@@ -43,6 +43,7 @@ LaraPanel es un panel de control de servidores web de código abierto, **constru
 | Módulo | Descripción |
 |---|---|
 | **Email Completo** | Creación y gestión de cuentas de correo virtual (Postfix + Dovecot). Cuotas de almacenamiento, suspensión instantánea, generador de contraseñas seguras. |
+| **Webmail (Roundcube)** | Acceso web integrado a correos mediante Roundcube Webmail configurado automáticamente para cada dominio bajo la URL `webmail.tudominio.com`. |
 | **Alias y Reenvíos** | Gestión de redirecciones múltiples con validación de destinos. |
 | **Autoresponders** | Respuestas automáticas programables por fechas. |
 | **DKIM Manager** | Generación automática de llaves DKIM, publicación en DNS y configuración de políticas SPF/DMARC. |
@@ -131,6 +132,8 @@ Autenticación: `Bearer Token` vía Laravel Sanctum.
 | Gestión de contenedores | Docker Engine / Docker Compose |
 | Motor Antivirus | ClamAV + freshclam |
 | Motor Antispam | Rspamd + Redis (Bayes) |
+| Servidor DNS | PowerDNS Authoritative Server + SQLite3 |
+| Cliente Webmail | Roundcube Webmail + SQLite3 |
 | Gestión Cluster | phpseclib3 (SSH2 agentless) |
 | Interfaz de servidor | sudo + ShellExecutor seguro |
 

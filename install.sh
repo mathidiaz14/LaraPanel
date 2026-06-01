@@ -291,6 +291,7 @@ systemctl start redis-server
 
 # Configurar Rspamd: habilitar la interfaz web y establecer una contraseña
 RSPAMD_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))")
+PDNS_API_KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(24))" 2>/dev/null || echo "larapanel_pdns_secret")
 
 mkdir -p /etc/rspamd/local.d
 
@@ -424,6 +425,10 @@ QUEUE_CONNECTION=database
 FILESYSTEM_DISK=local
 
 BROADCAST_CONNECTION=log
+
+# DNS (PowerDNS)
+PDNS_ENABLED=true
+PDNS_API_KEY=${PDNS_API_KEY}
 ENV_EOF
 
 # Cambiar el propietario de .env al usuario del panel para que pueda escribir la clave
@@ -717,6 +722,156 @@ fi
 ln -sf /root/.acme.sh/acme.sh /usr/local/bin/acme.sh 2>/dev/null || true
 
 # ══════════════════════════════════════════════════════════════════════════════
+#   FASE 16 — DNS (POWERDNS)
+# ══════════════════════════════════════════════════════════════════════════════
+step "Fase 16 — Instalando y configurando PowerDNS (servidor DNS propio)"
+
+# Desactivar stub listener de systemd-resolved en puerto 53
+if [ -f /etc/systemd/resolved.conf ]; then
+    info "Desactivando systemd-resolved en puerto 53 para liberar consultas..."
+    sed -i 's/^#DNSStubListener=.*/DNSStubListener=no/' /etc/systemd/resolved.conf || true
+    sed -i 's/^DNSStubListener=.*/DNSStubListener=no/' /etc/systemd/resolved.conf || true
+    if ! grep -q "^DNS=" /etc/systemd/resolved.conf; then
+        echo "DNS=1.1.1.1 8.8.8.8" >> /etc/systemd/resolved.conf
+    fi
+    rm -f /etc/resolv.conf
+    ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
+    systemctl restart systemd-resolved
+fi
+
+# Instalar paquetes
+apt-get install -y -qq pdns-server pdns-backend-sqlite3 sqlite3
+systemctl stop pdns || true
+
+# Inicializar Base de Datos SQLite3 para PowerDNS
+PDNS_DB_DIR="/var/spool/powerdns"
+PDNS_DB_FILE="${PDNS_DB_DIR}/pdns.sqlite3"
+mkdir -p "$PDNS_DB_DIR"
+
+if [ ! -f "$PDNS_DB_FILE" ]; then
+    sqlite3 "$PDNS_DB_FILE" <<SQL_EOF
+CREATE TABLE domains (id INTEGER PRIMARY KEY, name VARCHAR(255) NOT NULL COLLATE NOCASE, master VARCHAR(128) DEFAULT NULL, last_check INTEGER DEFAULT NULL, type VARCHAR(6) NOT NULL, notified_serial INTEGER DEFAULT NULL, account VARCHAR(40) DEFAULT NULL);
+CREATE UNIQUE INDEX name_index ON domains(name);
+CREATE TABLE records (id INTEGER PRIMARY KEY, domain_id INTEGER DEFAULT NULL, name VARCHAR(255) DEFAULT NULL COLLATE NOCASE, type VARCHAR(10) DEFAULT NULL, content VARCHAR(65535) DEFAULT NULL, ttl INTEGER DEFAULT NULL, prio INTEGER DEFAULT NULL, disabled BOOLEAN DEFAULT 0, ordername VARCHAR(255) COLLATE NOCASE, auth BOOLEAN DEFAULT 1, FOREIGN KEY(domain_id) REFERENCES domains(id) ON DELETE CASCADE);
+CREATE INDEX rec_name_index ON records(name);
+CREATE INDEX nametype_index ON records(name,type);
+CREATE INDEX domain_id ON records(domain_id);
+CREATE INDEX ordername ON records(ordername);
+CREATE TABLE supermasters (ip VARCHAR(64) NOT NULL, nameserver VARCHAR(255) NOT NULL COLLATE NOCASE, account VARCHAR(40) DEFAULT NULL);
+CREATE UNIQUE INDEX ip_nameserver_idx ON supermasters(ip, nameserver);
+CREATE TABLE comments (id INTEGER PRIMARY KEY, domain_id INTEGER NOT NULL, name VARCHAR(255) NOT NULL COLLATE NOCASE, type VARCHAR(10) NOT NULL, modified_at INTEGER NOT NULL, account VARCHAR(40) DEFAULT NULL, comment VARCHAR(65535) NOT NULL, FOREIGN KEY(domain_id) REFERENCES domains(id) ON DELETE CASCADE);
+CREATE INDEX comments_domain_id_idx ON comments(domain_id);
+CREATE INDEX comments_name_type_idx ON comments(name, type);
+CREATE INDEX comments_order_idx ON comments(domain_id, modified_at);
+CREATE TABLE domainmetadata (id INTEGER PRIMARY KEY, domain_id INTEGER NOT NULL, kind VARCHAR(32) COLLATE NOCASE, content TEXT, FOREIGN KEY(domain_id) REFERENCES domains(id) ON DELETE CASCADE);
+CREATE INDEX domainmetaidindex ON domainmetadata(domain_id);
+CREATE TABLE cryptokeys (id INTEGER PRIMARY KEY, domain_id INTEGER NOT NULL, flags INTEGER NOT NULL, active BOOLEAN, published BOOLEAN DEFAULT 1, content TEXT, FOREIGN KEY(domain_id) REFERENCES domains(id) ON DELETE CASCADE);
+CREATE INDEX domainidindex ON cryptokeys(domain_id);
+CREATE TABLE tsigkeys (id INTEGER PRIMARY KEY, name VARCHAR(255) COLLATE NOCASE, algorithm VARCHAR(50) COLLATE NOCASE, secret VARCHAR(255));
+CREATE UNIQUE INDEX namealgoindex ON tsigkeys(name, algorithm);
+SQL_EOF
+fi
+
+chown -R pdns:pdns "$PDNS_DB_DIR"
+chmod 770 "$PDNS_DB_DIR"
+chmod 660 "$PDNS_DB_FILE"
+
+# Guardar configuración pdns.conf
+cat > /etc/powerdns/pdns.conf <<CONF_EOF
+launch=gsqlite3
+gsqlite3-database=${PDNS_DB_FILE}
+local-address=0.0.0.0, ::
+local-port=53
+webserver=yes
+webserver-address=127.0.0.1
+webserver-port=8053
+webserver-allow-from=127.0.0.1, ::1
+api=yes
+api-key=${PDNS_API_KEY}
+security-poll-suffix=
+CONF_EOF
+
+systemctl daemon-reload
+systemctl enable pdns
+systemctl start pdns
+
+# Habilitar puertos en Firewall (UFW)
+ufw allow 53/tcp comment 'LaraPanel DNS TCP' || true
+ufw allow 53/udp comment 'LaraPanel DNS UDP' || true
+ufw reload || true
+success "PowerDNS instalado y corriendo."
+
+# ══════════════════════════════════════════════════════════════════════════════
+#   FASE 17 — WEBMAIL (ROUNDCUBE)
+# ══════════════════════════════════════════════════════════════════════════════
+step "Fase 17 — Instalando y configurando Webmail (Roundcube)"
+
+debconf-set-selections <<< "roundcube-core roundcube/dbconfig-install boolean true"
+debconf-set-selections <<< "roundcube-core roundcube/database-type select sqlite3"
+
+apt-get install -y -qq roundcube roundcube-core roundcube-sqlite3 roundcube-plugins sqlite3 php-net-idna2 php-mail-mime
+
+# Configurar Roundcube
+ROUNDCUBE_DB_PATH="/var/lib/dbconfig-common/sqlite3/roundcube/roundcube"
+mkdir -p "$(dirname "$ROUNDCUBE_DB_PATH")"
+touch "$ROUNDCUBE_DB_PATH"
+chown -R www-data:www-data "$(dirname "$ROUNDCUBE_DB_PATH")"
+chmod -R 770 "$(dirname "$ROUNDCUBE_DB_PATH")"
+
+cat > /etc/roundcube/config.inc.php <<CONF_EOF
+<?php
+\$config = array();
+\$config['db_dsnw'] = 'sqlite:///${ROUNDCUBE_DB_PATH}?mode=0660';
+\$config['imap_host'] = 'localhost:143';
+\$config['smtp_host'] = 'localhost:25';
+\$config['username_domain'] = '';
+\$config['product_name'] = 'LaraPanel Webmail';
+\$config['language'] = 'es_ES';
+\$config['plugins'] = array('archive', 'zipdownload', 'managesieve', 'password');
+\$config['skin'] = 'elastic';
+CONF_EOF
+
+chown -R root:www-data /etc/roundcube
+chmod 640 /etc/roundcube/config.inc.php
+
+# Detectar socket de PHP-FPM
+PHP_FPM_SOCK="/var/run/php/php8.3-fpm.sock"
+for V in 8.3 8.2 8.1; do
+    if [ -S "/var/run/php/php${V}-fpm.sock" ]; then
+        PHP_FPM_SOCK="/var/run/php/php${V}-fpm.sock"
+        break
+    fi
+done
+
+# Crear VirtualHost comodín de Nginx para webmail
+cat > /etc/nginx/sites-available/larapanel_webmail <<CONF_EOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ~^webmail\.(?<domain_name>.+)$;
+    root /usr/share/roundcube;
+    index index.php index.html index.htm;
+    location / {
+        try_files \$uri \$uri/ /index.php?\$args;
+    }
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:${PHP_FPM_SOCK};
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        include fastcgi_params;
+    }
+    location ~ /\. {
+        deny all;
+    }
+}
+CONF_EOF
+
+rm -f /etc/nginx/sites-enabled/larapanel_webmail
+ln -sf /etc/nginx/sites-available/larapanel_webmail /etc/nginx/sites-enabled/larapanel_webmail
+nginx -t && systemctl reload nginx
+success "Webmail (Roundcube) configurado."
+
+# ══════════════════════════════════════════════════════════════════════════════
 #   RESUMEN FINAL
 # ══════════════════════════════════════════════════════════════════════════════
 echo ""
@@ -746,9 +901,11 @@ echo -e "  ✓ Nginx + PHP ${PHP_VERSION} + MySQL 8"
 echo -e "  ✓ Docker Engine + Docker Compose"
 echo -e "  ✓ ClamAV (antivirus) + cuarentena automática"
 echo -e "  ✓ Rspamd (antispam) + Redis + Bayes"
-echo -e "  ✓ Fail2ban + UFW"
-echo -e "  ✓ Supervisor (queue workers)"
-echo -e "  ✓ acme.sh + Certbot (SSL)"
+echo -e "  ✓ Fail2ban + UFW
+  ✓ Supervisor (queue workers)
+  ✓ acme.sh + Certbot (SSL)
+  ✓ PowerDNS Authoritative Server (DNS)
+  ✓ Roundcube Webmail (webmail.*)"
 echo ""
 echo -e "${BOLD}  Comandos útiles:${NC}"
 echo -e "  • Ver workers:         ${CYAN}supervisorctl status${NC}"
