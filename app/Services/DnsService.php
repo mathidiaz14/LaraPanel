@@ -30,8 +30,8 @@ class DnsService
 
     protected function pdnsRequest(string $method, string $path, array $data = [])
     {
-        if (!app()->isProduction()) {
-            return null; // Simulated in dev
+        if (!app()->isProduction() || !config('larapanel.powerdns.enabled', true)) {
+            return null; // Simulated in dev or if PowerDNS is disabled
         }
 
         try {

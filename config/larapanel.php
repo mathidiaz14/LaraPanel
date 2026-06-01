@@ -144,6 +144,7 @@ return [
     */
 
     'powerdns' => [
+        'enabled'  => env('PDNS_ENABLED', true),
         'api_url'  => env('PDNS_API_URL', 'http://127.0.0.1:8053/api/v1'),
         'api_key'  => env('PDNS_API_KEY', 'larapanel_pdns_secret'),
         'server'   => env('PDNS_SERVER', 'localhost'),
