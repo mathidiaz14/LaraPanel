@@ -212,8 +212,8 @@ class BackupService
         $tmpSql = sys_get_temp_dir() . '/lp_sql_' . uniqid() . '.sql';
 
         $this->sudo->run(['mysqldump', '--databases', ...$databases, '--result-file=' . $tmpSql]);
-        $this->sudo->run(['gzip', '-c', $tmpSql, '>', $destPath]);
-        @unlink($tmpSql);
+        $this->sudo->run(['gzip', $tmpSql]);
+        $this->sudo->run(['mv', $tmpSql . '.gz', $destPath]);
     }
 
     /**
