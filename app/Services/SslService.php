@@ -130,6 +130,10 @@ class SslService
             '--reloadcmd',      'systemctl reload nginx',
         ]);
 
+        // Asegurar que PHP pueda leer los archivos generados por root (acme.sh)
+        $this->sudo->run(['chown', '-R', 'www-data:www-data', $certDir]);
+        $this->sudo->run(['chmod', '600', $keyFile]);
+
         // Read the issued cert to extract expiry
         $certContent  = file_get_contents($certFile);
         $keyContent   = file_get_contents($keyFile);
@@ -257,6 +261,10 @@ class SslService
             '-addext', "subjectAltName=DNS:{$domain->name},DNS:www.{$domain->name}",
         ]);
 
+        // Asegurar que PHP pueda leer los archivos generados por root (openssl)
+        $this->sudo->run(['chown', '-R', 'www-data:www-data', $certDir]);
+        $this->sudo->run(['chmod', '600', "{$certDir}/privkey.pem"]);
+
         $certContent = file_get_contents("{$certDir}/fullchain.pem");
         $keyContent  = file_get_contents("{$certDir}/privkey.pem");
 
@@ -295,15 +303,15 @@ class SslService
             ], checkExit: false);
         }
 
-        // Revert to plain HTTP nginx config
-        $this->domains->deployNginxConfig($domain); // re-generates HTTP-only config
-
         $cert->update(['status' => 'revoked']);
         $domain->update([
             'ssl_enabled'    => false,
             'ssl_expires_at' => null,
             'ssl_provider'   => null,
         ]);
+
+        // Revert to plain HTTP config and reload webserver
+        $this->domains->deployConfigs($domain);
 
         AuditLog::record('ssl.revoked', $domain->name);
     }
@@ -379,6 +387,7 @@ class SslService
         $this->sudo->run(['cp', "/tmp/lp_cert_{$domain->name}.pem",  "{$certDir}/fullchain.pem"]);
         $this->sudo->run(['cp', "/tmp/lp_key_{$domain->name}.pem",   "{$certDir}/privkey.pem"]);
         $this->sudo->run(['cp', "/tmp/lp_chain_{$domain->name}.pem", "{$certDir}/chain.pem"]);
+        $this->sudo->run(['chown', '-R', 'www-data:www-data', $certDir]);
         $this->sudo->run(['chmod', '600', "{$certDir}/privkey.pem"]);
     }
 
