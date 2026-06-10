@@ -38,7 +38,7 @@ class AntivirusScan extends Model
         return $this->hasMany(QuarantineFile::class, 'scan_id');
     }
 
-    public function isClean(): bool
+    public function isVirusFree(): bool
     {
         return $this->status === 'clean';
     }

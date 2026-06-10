@@ -515,6 +515,9 @@ www-data ALL=(ALL) NOPASSWD: /usr/bin/mysql
 
 # Fail2ban
 www-data ALL=(ALL) NOPASSWD: /bin/systemctl restart fail2ban
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl status fail2ban
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl start fail2ban
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl stop fail2ban
 www-data ALL=(ALL) NOPASSWD: /usr/bin/fail2ban-client
 
 # Firewall
@@ -544,6 +547,11 @@ www-data ALL=(ALL) NOPASSWD: /root/.acme.sh/acme.sh
 www-data ALL=(ALL) NOPASSWD: /usr/bin/docker
 
 # ClamAV (Antivirus)
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl restart clamav-daemon
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl status clamav-daemon
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl is-active clamav-daemon
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl start clamav-daemon
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl stop clamav-daemon
 www-data ALL=(ALL) NOPASSWD: /usr/bin/clamscan
 www-data ALL=(ALL) NOPASSWD: /usr/bin/clamdscan
 www-data ALL=(ALL) NOPASSWD: /usr/bin/freshclam
