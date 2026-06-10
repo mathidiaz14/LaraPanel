@@ -71,10 +71,16 @@
 
         {{-- Email Accounts List --}}
         <div class="glass" style="padding:24px;">
-            <h2 style="font-size:15px;font-weight:700;margin-bottom:14px;color:var(--text-primary);">
-                <i class="fa-solid fa-list" style="color:var(--accent-light);margin-right:8px;"></i>
-                Cuentas de Correo Activas
-            </h2>
+        <div class="glass" style="padding:24px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <h2 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:0;">
+                    <i class="fa-solid fa-list" style="color:var(--accent-light);margin-right:8px;"></i>
+                    Cuentas de Correo Activas
+                </h2>
+                <button wire:click="openImportModal" class="btn btn-ghost btn-sm" style="color:var(--accent-light);">
+                    <i class="fa-solid fa-file-zipper"></i> Importar desde ZIP
+                </button>
+            </div>
 
             @if($emails->isEmpty())
             <div style="text-align:center;padding:60px 20px;color:var(--text-secondary);">
@@ -218,6 +224,64 @@
                 <button wire:click="$set('editingForwardersId', null)" class="btn btn-ghost btn-sm">Cancelar</button>
                 <button wire:click="saveForwarders" class="btn btn-primary btn-sm">Guardar Destinos</button>
             </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Import Modal --}}
+    @if($showImportModal)
+    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
+        <div class="glass-elevated" style="max-width:440px;width:100%;padding:28px;margin:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
+                <h3 style="font-size:16px;font-weight:700;margin:0;">
+                    <i class="fa-solid fa-file-zipper" style="color:var(--accent-light);margin-right:8px;"></i>
+                    Importar Correos (ZIP)
+                </h3>
+                <button wire:click="closeImportModal" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;margin-left:auto;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <p style="color:var(--text-secondary);font-size:12px;margin-bottom:16px;">
+                Sube un archivo <code>.zip</code> (ej. de cPanel) que contenga las carpetas Maildir de los usuarios. Las cuentas se crearán automáticamente y los correos se migrarán.
+            </p>
+
+            <form wire:submit.prevent="importFromZip">
+                <div class="form-group">
+                    <label class="form-label">Dominio Destino</label>
+                    <select wire:model="importDomainId" class="form-input" required>
+                        <option value="">Seleccione dominio...</option>
+                        @foreach($domains as $dom)
+                        <option value="{{ $dom->id }}">{{ $dom->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('importDomainId') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Contraseña por defecto</label>
+                    <input type="text" wire:model="defaultImportPassword" class="form-input" placeholder="Para todas las cuentas" required>
+                    <span style="font-size:11px;color:var(--text-muted);">Se asignará a todas las cuentas importadas.</span>
+                    @error('defaultImportPassword') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Archivo ZIP (máx. 500MB)</label>
+                    <input type="file" wire:model="zipFile" class="form-input" accept=".zip" required>
+                    @error('zipFile') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                    
+                    <div wire:loading wire:target="zipFile" style="font-size:11px;color:var(--accent-light);margin-top:4px;">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Subiendo archivo...
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+                    <button type="button" wire:click="closeImportModal" class="btn btn-ghost btn-sm">Cancelar</button>
+                    <button type="submit" class="btn btn-primary btn-sm" wire:loading.attr="disabled" wire:target="importFromZip">
+                        <i class="fa-solid fa-upload"></i> Comenzar Importación
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
     @endif

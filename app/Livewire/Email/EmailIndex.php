@@ -6,10 +6,13 @@ use App\Models\EmailAccount;
 use App\Models\Domain;
 use App\Services\EmailService;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Illuminate\Support\Str;
 
 class EmailIndex extends Component
 {
+    use WithFileUploads;
+
     // Form fields
     public string $username = '';
     public ?int $domainId = null;
@@ -22,6 +25,11 @@ class EmailIndex extends Component
 
     public ?int $editingForwardersId = null;
     public string $forwarderInput = ''; // comma-separated emails
+
+    public $zipFile;
+    public string $defaultImportPassword = '';
+    public ?int $importDomainId = null;
+    public bool $showImportModal = false;
 
     // Success/error alerts
     public string $successMessage = '';
@@ -138,6 +146,55 @@ class EmailIndex extends Component
             $this->editingForwardersId = null;
         } catch (\Throwable $e) {
             $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    public function openImportModal(): void
+    {
+        $this->showImportModal = true;
+        $this->zipFile = null;
+        $this->defaultImportPassword = Str::random(12);
+        $this->importDomainId = null;
+        $this->successMessage = '';
+        $this->errorMessage = '';
+    }
+
+    public function closeImportModal(): void
+    {
+        $this->showImportModal = false;
+        $this->zipFile = null;
+    }
+
+    public function importFromZip(EmailService $emailService): void
+    {
+        $this->validate([
+            'zipFile' => 'required|file|mimes:zip|max:512000', // max 500MB
+            'defaultImportPassword' => 'required|string|min:8|max:64',
+            'importDomainId' => 'required|integer|exists:domains,id',
+        ]);
+
+        $this->successMessage = '';
+        $this->errorMessage = '';
+
+        try {
+            $domain = Domain::where('id', $this->importDomainId)
+                ->where('user_id', auth()->id())
+                ->firstOrFail();
+
+            // Store the zip temporarily
+            $path = $this->zipFile->store('email_imports');
+            $fullPath = storage_path('app/' . $path);
+
+            $importedCount = $emailService->importFromZip($fullPath, auth()->user(), $domain, $this->defaultImportPassword);
+
+            $this->successMessage = "¡Importación exitosa! Se importaron {$importedCount} cuentas de correo y sus mensajes.";
+            $this->showImportModal = false;
+            $this->zipFile = null;
+            
+            // Clean up
+            @unlink($fullPath);
+        } catch (\Throwable $e) {
+            $this->errorMessage = "Error en la importación: " . $e->getMessage();
         }
     }
 
