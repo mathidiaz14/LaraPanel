@@ -342,6 +342,14 @@ class DomainService
         $this->sudo->run(['mkdir', '-p', $path]);
         $this->sudo->run(['chown', '-R', "www-data:www-data", $path]);
         $this->sudo->run(['chmod', '755', $path]);
+
+        // Crear un index.html por defecto para que no de error 404 al inicio
+        $defaultHtml = '<html><head><title>Dominio Creado</title><style>body{font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;background:#f3f4f6;margin:0;}div{text-align:center;padding:2rem;background:#fff;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);}</style></head><body><div><h1>¡Tu dominio está listo!</h1><p>El dominio ha sido configurado correctamente en LaraPanel.</p></div></body></html>';
+        $tmpFile = sys_get_temp_dir() . '/lp_index_' . uniqid() . '.html';
+        file_put_contents($tmpFile, $defaultHtml);
+        $this->sudo->run(['cp', $tmpFile, $path . '/index.html']);
+        $this->sudo->run(['chown', 'www-data:www-data', $path . '/index.html']);
+        @unlink($tmpFile);
     }
 
     protected function removeDocumentRoot(string $path): void
