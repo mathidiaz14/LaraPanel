@@ -44,7 +44,7 @@ debconf-set-selections <<< "roundcube-core roundcube/dbconfig-install boolean tr
 debconf-set-selections <<< "roundcube-core roundcube/database-type select sqlite3"
 
 apt-get update -qq
-apt-get install -y -qq roundcube roundcube-core roundcube-sqlite3 roundcube-plugins sqlite3 php-net-idna2 php-mail-mime
+apt-get install -y -qq roundcube roundcube-core roundcube-sqlite3 roundcube-plugins sqlite3 php-intl php-mail-mime
 
 success "Roundcube instalado."
 
