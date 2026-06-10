@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+            #!/usr/bin/env bash
 # ==============================================================================
 #  LaraPanel — Instalador y Configurado Automático de Webmail (Roundcube)
 #  Uso: sudo bash install-webmail.sh

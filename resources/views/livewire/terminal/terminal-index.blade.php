@@ -27,7 +27,7 @@
         </div>
 
         {{-- Xterm Container --}}
-        <div id="terminal-container" style="flex:1;padding:12px;background:#000;"></div>
+        <div id="terminal-container" wire:ignore style="flex:1;padding:12px;background:#000;"></div>
 
         {{-- Hidden Livewire Form --}}
         <form wire:submit="runCommand" style="display:none;">
