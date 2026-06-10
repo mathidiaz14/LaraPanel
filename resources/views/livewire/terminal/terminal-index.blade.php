@@ -41,87 +41,119 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+    <style>
+        /* Fix for xterm.js layout stretching */
+        #terminal-container {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+        .xterm .xterm-viewport {
+            overflow-y: auto !important;
+        }
+    </style>
     @endassets
 
     @script
     <script>
-        // Use Livewire 3 component context ($wire) instead of global event if we want,
-        // but since we are in @script, the script runs when the component is initialized.
-        const term = new Terminal({
-            cursorBlink: true,
-            theme: { background: '#000000', foreground: '#cdd6f4' },
-            fontFamily: 'monospace',
-            fontSize: 13,
-            scrollback: 1000
-        });
+        function initTerminal() {
+            // Wait for Xterm.js to be downloaded and parsed by the browser
+            if (typeof window.Terminal === 'undefined' || typeof window.FitAddon === 'undefined') {
+                setTimeout(initTerminal, 50);
+                return;
+            }
 
-        const fitAddon = new FitAddon.FitAddon();
-        term.loadAddon(fitAddon);
-        
-        term.open(document.getElementById('terminal-container'));
-        fitAddon.fit();
+            // Clean up any existing terminal instance if Livewire re-inits
+            document.getElementById('terminal-container').innerHTML = '';
 
-        window.addEventListener('resize', () => fitAddon.fit());
+            const term = new Terminal({
+                cursorBlink: true,
+                theme: { background: '#000000', foreground: '#cdd6f4' },
+                fontFamily: 'monospace',
+                fontSize: 13,
+                scrollback: 1000
+            });
 
-        let currentLine = '';
-        let livewireCwd = '{{ $cwd }}';
+            const fitAddon = new FitAddon.FitAddon();
+            term.loadAddon(fitAddon);
+            
+            term.open(document.getElementById('terminal-container'));
+            
+            // Give it a tiny delay to ensure DOM is fully painted before fitting
+            setTimeout(() => {
+                fitAddon.fit();
+            }, 50);
 
-        function writePrompt() {
+            window.addEventListener('resize', () => {
+                if (document.getElementById('terminal-container').offsetParent !== null) {
+                    fitAddon.fit();
+                }
+            });
+
+            let currentLine = '';
+            let livewireCwd = '{{ $cwd }}';
+
+            function writePrompt() {
+                term.write('\r\n\x1b[1;32mroot@larapanel\x1b[0m:\x1b[1;34m' + livewireCwd + '\x1b[0m# ');
+            }
+
+            term.writeln('Welcome to LaraPanel Web Terminal (Pseudo-TTY mode).');
+            term.writeln('Type commands and press Enter. Interactive commands are not supported.');
             term.write('\r\n\x1b[1;32mroot@larapanel\x1b[0m:\x1b[1;34m' + livewireCwd + '\x1b[0m# ');
+
+            term.onKey(e => {
+                const printable = !e.domEvent.altKey && !e.domEvent.altGraphKey && !e.domEvent.ctrlKey && !e.domEvent.metaKey;
+                
+                if (e.domEvent.keyCode === 13) { // Enter
+                    if (currentLine.trim() === 'clear') {
+                        term.clear();
+                        currentLine = '';
+                        writePrompt();
+                        return;
+                    }
+                    if (currentLine.trim() !== '') {
+                        term.write('\r\n');
+                        // Execute via Livewire 3 $wire
+                        $wire.set('command', currentLine);
+                        $wire.call('runCommand');
+                        currentLine = '';
+                    } else {
+                        writePrompt();
+                    }
+                } else if (e.domEvent.keyCode === 8) { // Backspace
+                    if (currentLine.length > 0) {
+                        currentLine = currentLine.substring(0, currentLine.length - 1);
+                        term.write('\b \b');
+                    }
+                } else if (printable) {
+                    currentLine += e.key;
+                    term.write(e.key);
+                }
+            });
+
+            $wire.on('terminal-output', (events) => {
+                const data = events[0];
+                livewireCwd = data.cwd;
+                
+                const lines = data.output.split('\n');
+                for (let i = 0; i < lines.length; i++) {
+                    if (lines[i] !== '') {
+                        term.writeln(lines[i].replace(/\r/g, ''));
+                    }
+                }
+                
+                writePrompt();
+            });
+
+            $wire.on('terminal-clear', () => {
+                term.clear();
+                writePrompt();
+            });
         }
 
-        term.writeln('Welcome to LaraPanel Web Terminal (Pseudo-TTY mode).');
-        term.writeln('Type commands and press Enter. Interactive commands are not supported.');
-        term.write('\r\n\x1b[1;32mroot@larapanel\x1b[0m:\x1b[1;34m' + livewireCwd + '\x1b[0m# ');
-
-        term.onKey(e => {
-            const printable = !e.domEvent.altKey && !e.domEvent.altGraphKey && !e.domEvent.ctrlKey && !e.domEvent.metaKey;
-            
-            if (e.domEvent.keyCode === 13) { // Enter
-                if (currentLine.trim() === 'clear') {
-                    term.clear();
-                    currentLine = '';
-                    writePrompt();
-                    return;
-                }
-                if (currentLine.trim() !== '') {
-                    term.write('\r\n');
-                    // Execute via Livewire 3 $wire
-                    $wire.set('command', currentLine);
-                    $wire.call('runCommand');
-                    currentLine = '';
-                } else {
-                    writePrompt();
-                }
-            } else if (e.domEvent.keyCode === 8) { // Backspace
-                if (currentLine.length > 0) {
-                    currentLine = currentLine.substring(0, currentLine.length - 1);
-                    term.write('\b \b');
-                }
-            } else if (printable) {
-                currentLine += e.key;
-                term.write(e.key);
-            }
-        });
-
-        $wire.on('terminal-output', (events) => {
-            const data = events[0];
-            livewireCwd = data.cwd;
-            
-            const lines = data.output.split('\n');
-            for (let i = 0; i < lines.length; i++) {
-                if (lines[i] !== '') {
-                    term.writeln(lines[i].replace(/\r/g, ''));
-                }
-            }
-            
-            writePrompt();
-        });
-
-        $wire.on('terminal-clear', () => {
-            term.clear();
-            writePrompt();
-        });
+        // Boot
+        initTerminal();
     </script>
     @endscript
 </div>
