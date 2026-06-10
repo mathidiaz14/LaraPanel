@@ -37,89 +37,91 @@
     </div>
 
     {{-- CDN for Xterm.js --}}
+    @assets
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+    @endassets
 
+    @script
     <script>
-        document.addEventListener('livewire:initialized', () => {
-            const term = new Terminal({
-                cursorBlink: true,
-                theme: { background: '#000000', foreground: '#cdd6f4' },
-                fontFamily: 'monospace',
-                fontSize: 13,
-                scrollback: 1000
-            });
+        // Use Livewire 3 component context ($wire) instead of global event if we want,
+        // but since we are in @script, the script runs when the component is initialized.
+        const term = new Terminal({
+            cursorBlink: true,
+            theme: { background: '#000000', foreground: '#cdd6f4' },
+            fontFamily: 'monospace',
+            fontSize: 13,
+            scrollback: 1000
+        });
 
-            const fitAddon = new FitAddon.FitAddon();
-            term.loadAddon(fitAddon);
-            
-            term.open(document.getElementById('terminal-container'));
-            fitAddon.fit();
+        const fitAddon = new FitAddon.FitAddon();
+        term.loadAddon(fitAddon);
+        
+        term.open(document.getElementById('terminal-container'));
+        fitAddon.fit();
 
-            window.addEventListener('resize', () => fitAddon.fit());
+        window.addEventListener('resize', () => fitAddon.fit());
 
-            let currentLine = '';
-            let prompt = `\x1b[1;32mroot@larapanel\x1b[0m:\x1b[1;34m@this.cwd\x1b[0m# `;
-            let livewireCwd = '{{ $cwd }}';
+        let currentLine = '';
+        let livewireCwd = '{{ $cwd }}';
 
-            function writePrompt() {
-                term.write('\r\n\x1b[1;32mroot@larapanel\x1b[0m:\x1b[1;34m' + livewireCwd + '\x1b[0m# ');
-            }
-
-            term.writeln('Welcome to LaraPanel Web Terminal (Pseudo-TTY mode).');
-            term.writeln('Type commands and press Enter. Interactive commands are not supported.');
+        function writePrompt() {
             term.write('\r\n\x1b[1;32mroot@larapanel\x1b[0m:\x1b[1;34m' + livewireCwd + '\x1b[0m# ');
+        }
 
-            term.onKey(e => {
-                const printable = !e.domEvent.altKey && !e.domEvent.altGraphKey && !e.domEvent.ctrlKey && !e.domEvent.metaKey;
-                
-                if (e.domEvent.keyCode === 13) { // Enter
-                    if (currentLine.trim() === 'clear') {
-                        term.clear();
-                        currentLine = '';
-                        writePrompt();
-                        return;
-                    }
-                    if (currentLine.trim() !== '') {
-                        term.write('\r\n');
-                        // Execute via Livewire
-                        @this.set('command', currentLine);
-                        @this.call('runCommand');
-                        currentLine = '';
-                    } else {
-                        writePrompt();
-                    }
-                } else if (e.domEvent.keyCode === 8) { // Backspace
-                    if (currentLine.length > 0) {
-                        currentLine = currentLine.substring(0, currentLine.length - 1);
-                        term.write('\b \b');
-                    }
-                } else if (printable) {
-                    currentLine += e.key;
-                    term.write(e.key);
+        term.writeln('Welcome to LaraPanel Web Terminal (Pseudo-TTY mode).');
+        term.writeln('Type commands and press Enter. Interactive commands are not supported.');
+        term.write('\r\n\x1b[1;32mroot@larapanel\x1b[0m:\x1b[1;34m' + livewireCwd + '\x1b[0m# ');
+
+        term.onKey(e => {
+            const printable = !e.domEvent.altKey && !e.domEvent.altGraphKey && !e.domEvent.ctrlKey && !e.domEvent.metaKey;
+            
+            if (e.domEvent.keyCode === 13) { // Enter
+                if (currentLine.trim() === 'clear') {
+                    term.clear();
+                    currentLine = '';
+                    writePrompt();
+                    return;
                 }
-            });
-
-            Livewire.on('terminal-output', (events) => {
-                const data = events[0];
-                livewireCwd = data.cwd;
-                
-                // Write output line by line handling CRLF
-                const lines = data.output.split('\n');
-                for (let i = 0; i < lines.length; i++) {
-                    if (lines[i] !== '') {
-                        term.writeln(lines[i].replace(/\r/g, ''));
-                    }
+                if (currentLine.trim() !== '') {
+                    term.write('\r\n');
+                    // Execute via Livewire 3 $wire
+                    $wire.set('command', currentLine);
+                    $wire.call('runCommand');
+                    currentLine = '';
+                } else {
+                    writePrompt();
                 }
-                
-                writePrompt();
-            });
+            } else if (e.domEvent.keyCode === 8) { // Backspace
+                if (currentLine.length > 0) {
+                    currentLine = currentLine.substring(0, currentLine.length - 1);
+                    term.write('\b \b');
+                }
+            } else if (printable) {
+                currentLine += e.key;
+                term.write(e.key);
+            }
+        });
 
-            Livewire.on('terminal-clear', () => {
-                term.clear();
-                writePrompt();
-            });
+        $wire.on('terminal-output', (events) => {
+            const data = events[0];
+            livewireCwd = data.cwd;
+            
+            const lines = data.output.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i] !== '') {
+                    term.writeln(lines[i].replace(/\r/g, ''));
+                }
+            }
+            
+            writePrompt();
+        });
+
+        $wire.on('terminal-clear', () => {
+            term.clear();
+            writePrompt();
         });
     </script>
+    @endscript
 </div>
