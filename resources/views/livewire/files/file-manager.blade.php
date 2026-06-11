@@ -50,13 +50,13 @@
             <div style="margin-top:auto;background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);border-radius:12px;padding:16px;">
                 <div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
                     <span>Almacenamiento VPS</span>
-                    <i class="fa-solid fa-circle-info" style="color:var(--text-muted);"></i>
+                    <i class="fa-solid fa-circle-info" style="color:var(--text-muted);" title="{{ \App\Services\MonitoringService::formatBytes($diskInfo['used'] ?? 0) }} usados de {{ \App\Services\MonitoringService::formatBytes($diskInfo['total'] ?? 0) }}"></i>
                 </div>
                 <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;margin-bottom:8px;">
-                    <div style="height:100%;background:linear-gradient(90deg, var(--accent-light), #818cf8);width:45%;border-radius:3px;"></div>
+                    <div style="height:100%;background:linear-gradient(90deg, var(--accent-light), #818cf8);width:{{ $diskInfo['usage'] ?? 0 }}%;border-radius:3px;"></div>
                 </div>
                 <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);">
-                    <span>Uso aprox: 45%</span>
+                    <span>Uso aprox: {{ $diskInfo['usage'] ?? 0 }}%</span>
                     <span>Hetzner VPS</span>
                 </div>
             </div>

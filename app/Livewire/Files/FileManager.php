@@ -3,6 +3,7 @@
 namespace App\Livewire\Files;
 
 use App\Services\FileService;
+use App\Services\MonitoringService;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -417,7 +418,7 @@ class FileManager extends Component
         }
     }
 
-    public function render(FileService $fileService)
+    public function render(FileService $fileService, MonitoringService $monitoringService)
     {
         try {
             $items = $fileService->listDirectory($this->currentPath);
@@ -439,9 +440,13 @@ class FileManager extends Component
             ];
         }
 
+        $snapshot = $monitoringService->snapshot();
+        $diskInfo = $snapshot['disk'] ?? ['usage' => 0, 'total' => 0, 'used' => 0, 'free' => 0];
+
         return view('livewire.files.file-manager', [
             'items' => $items,
             'breadcrumbs' => $breadcrumbs,
+            'diskInfo' => $diskInfo,
         ])->layout('layouts.app', [
             'title'      => 'Administrador de Archivos',
             'breadcrumb' => '<span>Hosting</span> / <strong>Administrador de Archivos</strong>',

@@ -813,11 +813,186 @@ success "PowerDNS instalado y corriendo."
 #   FASE 16.5 — SERVIDOR DE CORREO (POSTFIX + DOVECOT)
 # ══════════════════════════════════════════════════════════════════════════════
 step "Fase 16.5 — Instalando Motor de Correo (Postfix + Dovecot)"
-if [ -f "\${INSTALL_DIR}/install-mailserver.sh" ]; then
-    bash "\${INSTALL_DIR}/install-mailserver.sh"
-else
-    warn "No se encontró install-mailserver.sh, omitiendo instalación del motor de correo."
+
+debconf-set-selections <<< "postfix postfix/mailname string $(hostname -f)"
+debconf-set-selections <<< "postfix postfix/main_mailer_type string 'Internet Site'"
+
+apt-get install -y -qq postfix postfix-mysql dovecot-core dovecot-imapd dovecot-pop3d dovecot-lmtpd dovecot-mysql
+
+if ! id -u vmail > /dev/null 2>&1; then
+    groupadd -g 5000 vmail
+    useradd -g vmail -u 5000 vmail -d /var/vmail -m -s /usr/sbin/nologin
 fi
+
+mkdir -p /var/vmail
+chown -R vmail:vmail /var/vmail
+chmod -R 770 /var/vmail
+
+if [ ! -f "/etc/dovecot/dovecot.conf.bak" ]; then
+    cp -r /etc/dovecot /etc/dovecot.bak
+fi
+
+sed -i 's/#protocols = imap pop3 lmtp submission/protocols = imap pop3 lmtp/g' /etc/dovecot/dovecot.conf
+
+cat > /etc/dovecot/conf.d/10-mail.conf <<EOF
+mail_location = maildir:/var/vmail/%d/%n
+namespace inbox {
+  inbox = yes
+}
+mail_privileged_group = vmail
+mail_uid = 5000
+mail_gid = 5000
+EOF
+
+cat > /etc/dovecot/conf.d/10-auth.conf <<EOF
+disable_plaintext_auth = no
+auth_mechanisms = plain login
+#!include auth-system.conf.ext
+!include auth-sql.conf.ext
+EOF
+
+cat > /etc/dovecot/conf.d/auth-sql.conf.ext <<EOF
+passdb {
+  driver = sql
+  args = /etc/dovecot/dovecot-sql.conf.ext
+}
+userdb {
+  driver = static
+  args = uid=vmail gid=vmail home=/var/vmail/%d/%n
+}
+EOF
+
+cat > /etc/dovecot/dovecot-sql.conf.ext <<EOF
+driver = mysql
+connect = host=127.0.0.1 dbname=${DB_DATABASE} user=${DB_USERNAME} password=${DB_PASSWORD}
+default_pass_scheme = BLF-CRYPT
+password_query = SELECT email as user, password_hash as password FROM email_accounts WHERE email = '%u' AND is_active = 1;
+EOF
+
+chown root:root /etc/dovecot/dovecot-sql.conf.ext
+chmod 600 /etc/dovecot/dovecot-sql.conf.ext
+
+cat > /etc/dovecot/conf.d/10-master.conf <<EOF
+service imap-login {
+  inet_listener imap {
+    port = 143
+  }
+  inet_listener imaps {
+    port = 993
+    ssl = yes
+  }
+}
+service pop3-login {
+  inet_listener pop3 {
+    port = 110
+  }
+  inet_listener pop3s {
+    port = 995
+    ssl = yes
+  }
+}
+service lmtp {
+  unix_listener /var/spool/postfix/private/dovecot-lmtp {
+    mode = 0600
+    user = postfix
+    group = postfix
+  }
+}
+service auth {
+  unix_listener /var/spool/postfix/private/auth {
+    mode = 0666
+    user = postfix
+    group = postfix
+  }
+  unix_listener auth-userdb {
+    mode = 0600
+    user = vmail
+  }
+  user = dovecot
+}
+service auth-worker {
+  user = vmail
+}
+EOF
+
+cat > /etc/dovecot/conf.d/10-ssl.conf <<EOF
+ssl = yes
+ssl_cert = </etc/ssl/certs/ssl-cert-snakeoil.pem
+ssl_key = </etc/ssl/private/ssl-cert-snakeoil.key
+ssl_min_protocol = TLSv1.2
+ssl_cipher_list = HIGH:!aNULL:!kRSA:!PSK:!SRP:!MD5:!RC4
+EOF
+
+if [ ! -f "/etc/postfix/main.cf.bak" ]; then
+    cp /etc/postfix/main.cf /etc/postfix/main.cf.bak
+fi
+
+cat > /etc/postfix/mysql-virtual-mailbox-domains.cf <<EOF
+user = ${DB_USERNAME}
+password = ${DB_PASSWORD}
+hosts = 127.0.0.1
+dbname = ${DB_DATABASE}
+query = SELECT 1 FROM domains WHERE name='%s' AND is_active=1
+EOF
+
+cat > /etc/postfix/mysql-virtual-mailbox-maps.cf <<EOF
+user = ${DB_USERNAME}
+password = ${DB_PASSWORD}
+hosts = 127.0.0.1
+dbname = ${DB_DATABASE}
+query = SELECT 1 FROM email_accounts WHERE email='%s' AND is_active=1
+EOF
+
+cat > /etc/postfix/mysql-virtual-alias-maps.cf <<EOF
+user = ${DB_USERNAME}
+password = ${DB_PASSWORD}
+hosts = 127.0.0.1
+dbname = ${DB_DATABASE}
+query = SELECT REPLACE(REPLACE(REPLACE(forwarders, ']', ''), '[', ''), '"', '') FROM email_accounts WHERE email='%s' AND is_active=1 AND forwarders IS NOT NULL AND JSON_LENGTH(forwarders) > 0
+EOF
+
+chown root:postfix /etc/postfix/mysql-virtual-*.cf
+chmod 640 /etc/postfix/mysql-virtual-*.cf
+
+postconf -e "myhostname = $(hostname -f)"
+postconf -e "smtpd_banner = \$myhostname ESMTP LaraPanel"
+postconf -e "biff = no"
+postconf -e "append_dot_mydomain = no"
+postconf -e "readme_directory = no"
+
+postconf -e "virtual_mailbox_domains = proxy:mysql:/etc/postfix/mysql-virtual-mailbox-domains.cf"
+postconf -e "virtual_mailbox_maps = proxy:mysql:/etc/postfix/mysql-virtual-mailbox-maps.cf"
+postconf -e "virtual_alias_maps = proxy:mysql:/etc/postfix/mysql-virtual-alias-maps.cf"
+postconf -e "virtual_transport = lmtp:unix:private/dovecot-lmtp"
+
+postconf -e "smtpd_sasl_type = dovecot"
+postconf -e "smtpd_sasl_path = private/auth"
+postconf -e "smtpd_sasl_auth_enable = yes"
+postconf -e "smtpd_recipient_restrictions = permit_mynetworks, permit_sasl_authenticated, reject_unauth_destination"
+
+postconf -e "smtpd_tls_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem"
+postconf -e "smtpd_tls_key_file=/etc/ssl/private/ssl-cert-snakeoil.key"
+postconf -e "smtpd_tls_security_level=may"
+postconf -e "smtp_tls_security_level=may"
+
+if systemctl is-active --quiet rspamd; then
+    postconf -e "smtpd_milters = inet:127.0.0.1:11332"
+    postconf -e "non_smtpd_milters = inet:127.0.0.1:11332"
+    postconf -e "milter_protocol = 6"
+    postconf -e "milter_mail_macros = i {mail_addr} {client_addr} {client_name} {auth_authen}"
+    postconf -e "milter_default_action = accept"
+fi
+
+sed -i '/^#submission/s/^#//g' /etc/postfix/master.cf
+sed -i '/^submission/a \  -o syslog_name=postfix/submission\n  -o smtpd_tls_security_level=encrypt\n  -o smtpd_sasl_auth_enable=yes\n  -o smtpd_relay_restrictions=permit_sasl_authenticated,reject' /etc/postfix/master.cf
+
+sed -i '/^#smtps/s/^#//g' /etc/postfix/master.cf
+sed -i '/^smtps/a \  -o syslog_name=postfix/smtps\n  -o smtpd_tls_wrappermode=yes\n  -o smtpd_sasl_auth_enable=yes\n  -o smtpd_relay_restrictions=permit_sasl_authenticated,reject' /etc/postfix/master.cf
+
+systemctl restart dovecot
+systemctl enable dovecot
+systemctl restart postfix
+systemctl enable postfix
 
 # ══════════════════════════════════════════════════════════════════════════════
 #   FASE 17 — WEBMAIL (ROUNDCUBE)
@@ -845,9 +1020,114 @@ cat > /etc/roundcube/config.inc.php <<CONF_EOF
 \$config['username_domain'] = '';
 \$config['product_name'] = 'LaraPanel Webmail';
 \$config['language'] = 'es_ES';
-\$config['plugins'] = array('archive', 'zipdownload', 'managesieve', 'password');
+\$config['plugins'] = array('archive', 'zipdownload', 'managesieve', 'password', 'larapanel_autologin');
 \$config['skin'] = 'elastic';
 CONF_EOF
+
+# ══════════════════════════════════════════════════════════════════════════════
+#   FASE 17.5 — WEBMAIL AUTO-LOGIN (ROUNDCUBE + DOVECOT MASTER USER)
+# ══════════════════════════════════════════════════════════════════════════════
+step "Fase 17.5 — Configurando Auto-Login (Master User) para Webmail..."
+
+MASTER_PWD_FILE="/etc/dovecot/master-users"
+ROUNDCUBE_PWD_FILE="/etc/roundcube/larapanel_master_pwd"
+
+MASTER_PWD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)
+echo "*larapanel:{PLAIN}\$MASTER_PWD" > "\$MASTER_PWD_FILE"
+chmod 600 "\$MASTER_PWD_FILE"
+chown root:root "\$MASTER_PWD_FILE"
+
+echo "\$MASTER_PWD" > "\$ROUNDCUBE_PWD_FILE"
+chmod 640 "\$ROUNDCUBE_PWD_FILE"
+chown root:www-data "\$ROUNDCUBE_PWD_FILE"
+
+DOVECOT_CONF="/etc/dovecot/conf.d/10-auth.conf"
+sed -i '1s/^/auth_master_user_separator = \*\n/' "\$DOVECOT_CONF"
+cat >> "\$DOVECOT_CONF" << 'EOF'
+
+# LaraPanel Master User Auth
+passdb {
+  driver = passwd-file
+  args = /etc/dovecot/master-users
+  master = yes
+  pass = yes
+}
+EOF
+
+systemctl restart dovecot || true
+
+PLUGIN_DIR="/usr/share/roundcube/plugins/larapanel_autologin"
+mkdir -p "\$PLUGIN_DIR"
+
+cat > "\$PLUGIN_DIR/larapanel_autologin.php" << 'EOF'
+<?php
+/**
+ * LaraPanel AutoLogin Plugin
+ */
+class larapanel_autologin extends rcube_plugin
+{
+    public $task = 'login';
+
+    function init()
+    {
+        $this->add_hook('authenticate', array($this, 'authenticate'));
+        $this->add_hook('storage_connect', array($this, 'override_imap'));
+        $this->add_hook('smtp_connect', array($this, 'override_smtp'));
+    }
+
+    function authenticate($args)
+    {
+        $token = rcube_utils::get_input_value('_autologin_token', rcube_utils::INPUT_GET);
+
+        if (!empty($token) && preg_match('/^[a-zA-Z0-9]+$/', $token)) {
+            $token_file = '/tmp/larapanel_autologin/' . $token;
+            if (file_exists($token_file)) {
+                $email = trim(file_get_contents($token_file));
+                if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $args['user'] = $email;
+                    $args['pass'] = 'autologin'; // Fake password to pass validation
+                    $args['cookiecheck'] = false;
+                    $args['valid'] = true;
+                    $args['abort'] = false;
+                    $_SESSION['larapanel_master_login'] = true;
+                    @unlink($token_file);
+                }
+            }
+        }
+        return $args;
+    }
+
+    function override_imap($args)
+    {
+        if (!empty($_SESSION['larapanel_master_login'])) {
+            $master_pwd = trim(@file_get_contents('/etc/roundcube/larapanel_master_pwd'));
+            if ($master_pwd) {
+                $args['user'] = $args['user'] . '*larapanel';
+                $args['pass'] = $master_pwd;
+            }
+        }
+        return $args;
+    }
+
+    function override_smtp($args)
+    {
+        if (!empty($_SESSION['larapanel_master_login'])) {
+            $master_pwd = trim(@file_get_contents('/etc/roundcube/larapanel_master_pwd'));
+            if ($master_pwd) {
+                $args['smtp_user'] = $args['smtp_user'] . '*larapanel';
+                $args['smtp_pass'] = $master_pwd;
+            }
+        }
+        return $args;
+    }
+}
+EOF
+
+chown -R root:root "\$PLUGIN_DIR"
+chmod -R 755 "\$PLUGIN_DIR"
+
+mkdir -p /tmp/larapanel_autologin
+chmod 777 /tmp/larapanel_autologin
 
 chown -R root:www-data /etc/roundcube
 chmod 640 /etc/roundcube/config.inc.php

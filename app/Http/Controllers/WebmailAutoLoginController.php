@@ -23,15 +23,21 @@ class WebmailAutoLoginController extends Controller
             abort(410, 'Este enlace de acceso automático ya fue utilizado o expiró.');
         }
 
-        // Retrieve the account to get its plain password (we cannot — passwords are hashed).
-        // Instead we redirect to webmail with a warning that the user must enter their password,
-        // OR we implement a temporary pass bypass via Roundcube's internal plugin.
-        // For now: redirect to webmail pre-filling the username in the URL parameter.
+        // We write the token to a secure shared location that Roundcube can read.
+        $tokenDir = '/tmp/larapanel_autologin';
+        if (!is_dir($tokenDir)) {
+            @mkdir($tokenDir, 0777, true);
+            @chmod($tokenDir, 0777);
+        }
+        
+        $roundcubeToken = \Illuminate\Support\Str::random(40);
+        file_put_contents("$tokenDir/$roundcubeToken", $email);
+        @chmod("$tokenDir/$roundcubeToken", 0666);
+
         $webmailHost = 'webmail.' . explode('@', $email)[1];
         $webmailUrl  = 'https://' . $webmailHost;
 
-        // Roundcube supports _user param for pre-filling the username field
-        return redirect()->away($webmailUrl . '/?_user=' . urlencode($email));
+        return redirect()->away($webmailUrl . '/?_autologin_token=' . $roundcubeToken);
     }
 
     /**
