@@ -8,6 +8,8 @@ use App\Services\EmailService;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\URL;
 
 class EmailIndex extends Component
 {
@@ -18,6 +20,9 @@ class EmailIndex extends Component
     public ?int $domainId = null;
     public string $password = '';
     public int $quotaMb = 500;
+
+    // Search
+    public string $search = '';
 
     // Modals
     public ?int $changingPasswordId = null;
@@ -198,12 +203,34 @@ class EmailIndex extends Component
         }
     }
 
+    /**
+     * Generate a temporary signed auto-login URL for Roundcube webmail.
+     */
+    public function openWebmail(int $id): void
+    {
+        $account = EmailAccount::where('id', $id)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
+
+        // Store the email in cache for 90 seconds for the intermediary to pick up
+        $token = Str::random(40);
+        Cache::put('webmail_autologin_' . $token, $account->email, 90);
+
+        // Generate a signed URL that expires in 90 seconds
+        $url = URL::temporarySignedRoute('webmail.autologin', now()->addSeconds(90), ['token' => $token]);
+
+        // Redirect browser to auto-login intermediary
+        $this->dispatch('open-url', url: $url);
+    }
+
     public function render()
     {
         $emails = EmailAccount::with('domain')
             ->where('user_id', auth()->id())
+            ->when($this->search, fn($q) => $q->where('email', 'like', "%{$this->search}%"))
             ->orderBy('email')
-            ->get();
+            ->get()
+            ->groupBy('domain_id');
 
         $domains = Domain::where('user_id', auth()->id())
             ->where('is_active', true)
@@ -211,10 +238,10 @@ class EmailIndex extends Component
             ->get();
 
         return view('livewire.email.email-index', [
-            'emails' => $emails,
-            'domains' => $domains,
+            'emailsByDomain' => $emails,
+            'domains'        => $domains,
         ])->layout('layouts.app', [
-            'title' => 'Cuentas de Correo',
+            'title'      => 'Cuentas de Correo',
             'breadcrumb' => '<span>Hosting</span> / <strong>Cuentas de Correo</strong>',
         ]);
     }

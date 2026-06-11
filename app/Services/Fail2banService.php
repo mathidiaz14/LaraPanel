@@ -38,24 +38,34 @@ class Fail2banService
             return $this->getSimulatedStatus();
         }
 
+        // Use systemctl as authoritative source for running state
         try {
-            $result = $this->sudo->run(['fail2ban-client', 'status'], checkExit: false);
-            $output = $result['output'] ?? '';
-
-            $jails = [];
-            if (preg_match('/Jail list:\s+(.+)/i', $output, $m)) {
-                $jails = array_map('trim', explode(',', $m[1]));
-                $jails = array_filter($jails);
-            }
-
-            return [
-                'running'     => $result['exit_code'] === 0,
-                'jails'       => array_values($jails),
-                'raw_output'  => $output,
-            ];
-        } catch (\Throwable $e) {
-            return ['running' => false, 'jails' => [], 'raw_output' => $e->getMessage()];
+            $svcResult = $this->sudo->run(['systemctl', 'is-active', 'fail2ban'], checkExit: false);
+            $isRunning = trim($svcResult['output'] ?? '') === 'active';
+        } catch (\Throwable) {
+            $isRunning = false;
         }
+
+        // Separately query jails (only possible if daemon is actually running)
+        $jails = [];
+        $rawOutput = '';
+        if ($isRunning) {
+            try {
+                $result = $this->sudo->run(['fail2ban-client', 'status'], checkExit: false);
+                $rawOutput = $result['output'] ?? '';
+                if (preg_match('/Jail list:\s+(.+)/i', $rawOutput, $m)) {
+                    $jails = array_values(array_filter(array_map('trim', explode(',', $m[1]))));
+                }
+            } catch (\Throwable $e) {
+                $rawOutput = $e->getMessage();
+            }
+        }
+
+        return [
+            'running'    => $isRunning,
+            'jails'      => $jails,
+            'raw_output' => $rawOutput,
+        ];
     }
 
     /**

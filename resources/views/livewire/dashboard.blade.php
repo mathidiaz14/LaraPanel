@@ -7,7 +7,7 @@
     </div>
 
     {{-- Resumen Rápido (Top Widgets) --}}
-    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:20px;margin-bottom:24px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:20px;margin-bottom:24px;">
         <div class="glass-elevated" style="padding:20px;display:flex;align-items:center;gap:16px;">
             <div style="width:48px;height:48px;border-radius:12px;background:rgba(99,102,241,0.1);color:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:24px;">
                 <i class="fa-solid fa-globe"></i>
@@ -20,11 +20,11 @@
 
         <div class="glass-elevated" style="padding:20px;display:flex;align-items:center;gap:16px;">
             <div style="width:48px;height:48px;border-radius:12px;background:rgba(39,201,63,0.1);color:var(--success);display:flex;align-items:center;justify-content:center;font-size:24px;">
-                <i class="fa-solid fa-network-wired"></i>
+                <i class="fa-solid fa-clock-rotate-left"></i>
             </div>
             <div>
                 <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;">Uptime</div>
-                <div style="font-size:24px;font-weight:800;">{{ $metrics['uptime'] ?? 'N/A' }}</div>
+                <div style="font-size:20px;font-weight:800;">{{ $metrics['uptime'] ?? 'N/A' }}</div>
             </div>
         </div>
 
@@ -32,12 +32,33 @@
             <div style="width:48px;height:48px;border-radius:12px;background:rgba(255,193,7,0.1);color:var(--warning);display:flex;align-items:center;justify-content:center;font-size:24px;">
                 <i class="fa-brands fa-linux"></i>
             </div>
-            <div>
+            <div style="min-width:0;">
                 <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;">Kernel</div>
-                <div style="font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;">{{ $metrics['os'] ?? 'Unknown' }}</div>
+                <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;" title="{{ $metrics['system']['kernel'] ?? 'Unknown' }}">{{ $metrics['system']['kernel'] ?? 'Unknown' }}</div>
+            </div>
+        </div>
+
+        <div class="glass-elevated" style="padding:20px;display:flex;align-items:center;gap:16px;">
+            <div style="width:48px;height:48px;border-radius:12px;background:rgba(16,185,129,0.1);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:24px;">
+                <i class="fa-solid fa-server"></i>
+            </div>
+            <div style="min-width:0;">
+                <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;">Hostname</div>
+                <div style="font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;">{{ $metrics['system']['hostname'] ?? 'Unknown' }}</div>
+            </div>
+        </div>
+
+        <div class="glass-elevated" style="padding:20px;display:flex;align-items:center;gap:16px;">
+            <div style="width:48px;height:48px;border-radius:12px;background:rgba(239,68,68,0.1);color:#ef4444;display:flex;align-items:center;justify-content:center;font-size:24px;">
+                <i class="fa-solid fa-microchip"></i>
+            </div>
+            <div style="min-width:0;">
+                <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;">Sistema</div>
+                <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;" title="{{ $metrics['system']['os'] ?? 'Linux' }}">{{ $metrics['system']['os'] ?? 'Linux' }}</div>
             </div>
         </div>
     </div>
+
 
     {{-- Estado de Recursos (Gráficas en Vivo) --}}
     @if(auth()->user()?->isAdmin() || config('larapanel.modules.monitoring'))

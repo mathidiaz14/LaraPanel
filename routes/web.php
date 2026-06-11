@@ -33,6 +33,7 @@ use App\Livewire\Admin\PlanIndex;
 use App\Livewire\Admin\UserIndex;
 use App\Livewire\Admin\ApiTokens;
 use App\Http\Controllers\GitWebhookController;
+use App\Http\Controllers\WebmailAutoLoginController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -78,6 +79,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/email/autoresponders', EmailAutoresponders::class)->name('email.autoresponders');
     Route::get('/email/dkim',         DkimManager::class)->name('email.dkim');
     Route::get('/email/stats',        EmailStats::class)->name('email.stats');
+    Route::get('/email/{id}/backup',  [WebmailAutoLoginController::class, 'backup'])->name('email.backup');
 
     // Databases
     Route::get('/databases', DatabaseIndex::class)->name('databases.index');
@@ -140,4 +142,7 @@ Route::middleware(['auth'])->group(function () {
 
 // ── Webhooks (Public) ─────────────────────────────────────────────
 Route::post('/api/webhooks/git/{uuid}', [GitWebhookController::class, 'handle'])->name('webhooks.git');
+
+// ── Webmail Auto-Login (Signed, Public) ───────────────────────────
+Route::get('/webmail/autologin/{token}', [WebmailAutoLoginController::class, 'autologin'])->name('webmail.autologin');
 

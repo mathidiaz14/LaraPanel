@@ -214,7 +214,8 @@ dbname = ${DB_DATABASE}
 query = SELECT REPLACE(REPLACE(REPLACE(forwarders, ']', ''), '[', ''), '"', '') FROM email_accounts WHERE email='%s' AND is_active=1 AND forwarders IS NOT NULL AND JSON_LENGTH(forwarders) > 0
 EOF
 
-chmod 600 /etc/postfix/mysql-virtual-*.cf
+chown root:postfix /etc/postfix/mysql-virtual-*.cf
+chmod 640 /etc/postfix/mysql-virtual-*.cf
 
 # 2. Configurar main.cf
 postconf -e "myhostname = $(hostname -f)"

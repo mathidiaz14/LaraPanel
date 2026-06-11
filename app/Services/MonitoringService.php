@@ -37,12 +37,16 @@ class MonitoringService
     public function snapshot(): array
     {
         $snap = $this->getSnapshot();
+        // Always find the root (/) partition for consistent disk reporting
+        $rootDisk = collect($snap['disk'])->firstWhere('mount', '/') ?? ($snap['disk'][0] ?? null);
         return [
             'cpu'       => $snap['cpu']['usage'],
             'ram'       => ['usage' => $snap['ram']['percent'], 'total' => $snap['ram']['total'], 'used' => $snap['ram']['used'], 'available' => $snap['ram']['free']],
-            'disk'      => !empty($snap['disk']) ? ['usage' => $snap['disk'][0]['percent'], 'total' => $snap['disk'][0]['size'], 'used' => $snap['disk'][0]['used'], 'free' => $snap['disk'][0]['free']] : ['usage'=>0,'total'=>0,'used'=>0,'free'=>0],
+            'disk'      => $rootDisk ? ['usage' => $rootDisk['percent'], 'total' => $rootDisk['size'], 'used' => $rootDisk['used'], 'free' => $rootDisk['free']] : ['usage'=>0,'total'=>0,'used'=>0,'free'=>0],
             'load'      => $snap['load'],
             'network'   => !empty($snap['net']) ? ['in' => $snap['net'][0]['rx_speed'], 'out' => $snap['net'][0]['tx_speed']] : ['in'=>0,'out'=>0],
+            'uptime'    => $snap['uptime'],
+            'system'    => $this->getSystemInfo(),
             'timestamp' => now()->toIso8601String(),
         ];
     }
@@ -158,13 +162,14 @@ class MonitoringService
 
     public function getDiskMetrics(): array
     {
-        $raw = shell_exec("df -B1 --output=source,size,used,avail,pcent,target 2>/dev/null | grep -v tmpfs | grep -v udev") ?? '';
+        $raw = shell_exec("df -B1 --output=source,size,used,avail,pcent,target 2>/dev/null | grep -v tmpfs | grep -v udev | grep -v overlay | grep -v shm") ?? '';
         $partitions = [];
 
         foreach (array_slice(explode("\n", trim($raw)), 1) as $line) {
             $parts = preg_split('/\s+/', trim($line));
             if (count($parts) < 6) continue;
             [$dev, $size, $used, $avail, $pct, $mount] = $parts;
+            if ((int)$size === 0) continue; // skip zero-size partitions
             $partitions[] = [
                 'device'  => $dev,
                 'size'    => (int)$size,
@@ -175,7 +180,44 @@ class MonitoringService
             ];
         }
 
+        // Sort so root (/) is always first
+        usort($partitions, fn($a, $b) => ($a['mount'] === '/') ? -1 : 1);
+
         return $partitions;
+    }
+
+    // ─── System Info ─────────────────────────────────────────────────────────
+
+    public function getSystemInfo(): array
+    {
+        if (!app()->isProduction()) {
+            return [
+                'kernel'   => '6.1.0-21-amd64',
+                'os'       => 'Ubuntu 24.04.2 LTS',
+                'hostname' => 'larapanel-dev',
+                'uptime'   => '12d 4h 33m',
+            ];
+        }
+
+        $kernel   = trim(shell_exec('uname -r') ?? 'Unknown');
+        $hostname = trim(shell_exec('hostname') ?? 'Unknown');
+        $uptime   = $this->getUptime();
+
+        // Read /etc/os-release for distro name
+        $os = 'Linux';
+        if (file_exists('/etc/os-release')) {
+            $lines = file('/etc/os-release', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            $vars  = [];
+            foreach ($lines as $line) {
+                if (str_contains($line, '=')) {
+                    [$k, $v] = explode('=', $line, 2);
+                    $vars[$k] = trim($v, '"');
+                }
+            }
+            $os = $vars['PRETTY_NAME'] ?? ($vars['NAME'] ?? 'Linux');
+        }
+
+        return compact('kernel', 'os', 'hostname', 'uptime');
     }
 
     // ─── Network ─────────────────────────────────────────────────────────────
