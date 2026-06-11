@@ -183,7 +183,7 @@ class EmailIndex extends Component
 
             // Store the zip temporarily
             $path = $this->zipFile->store('email_imports');
-            $fullPath = storage_path('app/' . $path);
+            $fullPath = \Illuminate\Support\Facades\Storage::path($path);
 
             $importedCount = $emailService->importFromZip($fullPath, auth()->user(), $domain, $this->defaultImportPassword);
 
