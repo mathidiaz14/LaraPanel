@@ -109,8 +109,9 @@ class EmailService
     public function importFromZip(string $zipPath, User $user, Domain $domain, string $defaultPassword): int
     {
         $zip = new \ZipArchive;
-        if ($zip->open($zipPath) !== true) {
-            throw new \RuntimeException("No se pudo abrir el archivo ZIP.");
+        $res = $zip->open($zipPath);
+        if ($res !== true) {
+            throw new \RuntimeException("No se pudo abrir el archivo ZIP (Código de error de PHP: {$res}).");
         }
 
         $extractPath = sys_get_temp_dir() . '/larapanel_import_' . uniqid();
