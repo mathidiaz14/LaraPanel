@@ -148,6 +148,13 @@ cat > "$NGINX_CONF" <<CONF_EOF
 server {
     listen 80;
     listen [::]:80;
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    
+    # Certificados genericos de fallback (Nginx requiere estos si activamos SSL)
+    # Se recomienda usar Cloudflare en modo "Flexible" o instalar certs reales
+    ssl_certificate /etc/ssl/certs/ssl-cert-snakeoil.pem;
+    ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
     
     # Expresión regular para capturar cualquier dominio con el prefijo webmail.
     server_name ~^webmail\.(?<domain_name>.+)$;

@@ -810,6 +810,16 @@ ufw reload || true
 success "PowerDNS instalado y corriendo."
 
 # ══════════════════════════════════════════════════════════════════════════════
+#   FASE 16.5 — SERVIDOR DE CORREO (POSTFIX + DOVECOT)
+# ══════════════════════════════════════════════════════════════════════════════
+step "Fase 16.5 — Instalando Motor de Correo (Postfix + Dovecot)"
+if [ -f "\${INSTALL_DIR}/install-mailserver.sh" ]; then
+    bash "\${INSTALL_DIR}/install-mailserver.sh"
+else
+    warn "No se encontró install-mailserver.sh, omitiendo instalación del motor de correo."
+fi
+
+# ══════════════════════════════════════════════════════════════════════════════
 #   FASE 17 — WEBMAIL (ROUNDCUBE)
 # ══════════════════════════════════════════════════════════════════════════════
 step "Fase 17 — Instalando y configurando Webmail (Roundcube)"
