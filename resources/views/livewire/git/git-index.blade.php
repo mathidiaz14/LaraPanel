@@ -41,8 +41,16 @@
                 <form wire:submit.prevent="save">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
                         <div class="form-group">
-                            <label class="form-label">Dominio (Ruta de destino)</label>
-                            <input type="text" wire:model="domain_name" class="form-input" placeholder="ejemplo.com">
+                            <label class="form-label">Dominio / Proyecto</label>
+                            <div style="position:relative;">
+                                <select wire:model.live="domain_name" class="form-input" style="appearance:none;">
+                                    <option value="">Selecciona un dominio...</option>
+                                    @foreach($availableDomains as $domain)
+                                        <option value="{{ $domain }}">{{ $domain }}</option>
+                                    @endforeach
+                                </select>
+                                <i class="fa-solid fa-chevron-down" style="position:absolute;right:12px;top:12px;color:var(--text-muted);font-size:12px;pointer-events:none;"></i>
+                            </div>
                             @error('domain_name') <span style="color:var(--danger);font-size:11px;">{{ $message }}</span> @enderror
                         </div>
                         <div class="form-group">
@@ -50,6 +58,16 @@
                             <input type="text" wire:model="repository_url" class="form-input" placeholder="https://github.com/usuario/repo.git">
                             @error('repository_url') <span style="color:var(--danger);font-size:11px;">{{ $message }}</span> @enderror
                         </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:16px;">
+                        <label class="form-label">Ruta de Instalación (Directorio del Repo)</label>
+                        <input type="text" wire:model="deploy_path" class="form-input" placeholder="/var/www/ejemplo.com/public_html">
+                        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+                            <i class="fa-solid fa-info-circle" style="color:var(--accent-light);"></i> 
+                            Puedes especificar la ruta de un repositorio que <b>ya hayas descargado</b> manualmente en el servidor. Si existe, LaraPanel sólo lo actualizará sin clonarlo de nuevo.
+                        </div>
+                        @error('deploy_path') <span style="color:var(--danger);font-size:11px;">{{ $message }}</span> @enderror
                     </div>
 
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
@@ -129,13 +147,26 @@
                     <form wire:submit.prevent="save">
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
                             <div class="form-group">
-                                <label class="form-label">Dominio (Ruta de destino)</label>
-                                <input type="text" wire:model="domain_name" class="form-input">
+                                <label class="form-label">Dominio / Proyecto</label>
+                                <div style="position:relative;">
+                                    <select wire:model.live="domain_name" class="form-input" style="appearance:none;">
+                                        <option value="">Selecciona un dominio...</option>
+                                        @foreach($availableDomains as $domain)
+                                            <option value="{{ $domain }}">{{ $domain }}</option>
+                                        @endforeach
+                                    </select>
+                                    <i class="fa-solid fa-chevron-down" style="position:absolute;right:12px;top:12px;color:var(--text-muted);font-size:12px;pointer-events:none;"></i>
+                                </div>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">URL del Repositorio</label>
                                 <input type="text" wire:model="repository_url" class="form-input">
                             </div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom:16px;">
+                            <label class="form-label">Ruta de Instalación</label>
+                            <input type="text" wire:model="deploy_path" class="form-input">
                         </div>
 
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">

@@ -17,6 +17,7 @@ class GitIndex extends Component
     // Form fields
     public bool $isCreating = false;
     public string $domain_name = '';
+    public string $deploy_path = '';
     public string $repository_url = '';
     public string $branch = 'main';
     public string $deploy_script = "composer install --no-interaction --prefer-dist --optimize-autoloader\nphp artisan migrate --force\nphp artisan config:cache\nnpm run build";
@@ -24,6 +25,7 @@ class GitIndex extends Component
 
     protected array $rules = [
         'domain_name'    => 'required|string|max:255',
+        'deploy_path'    => 'nullable|string|max:255',
         'repository_url' => 'required|url|max:255',
         'branch'         => 'required|string|max:100',
         'deploy_script'  => 'nullable|string',
@@ -33,6 +35,18 @@ class GitIndex extends Component
     public function mount()
     {
         $this->loadDeployments();
+    }
+
+    public function updatedDomainName($value)
+    {
+        if ($value) {
+            $domain = \App\Models\Domain::where('name', $value)->first();
+            if ($domain) {
+                $this->deploy_path = $domain->document_root;
+            } else {
+                $this->deploy_path = "/var/www/{$value}/public_html";
+            }
+        }
     }
 
     public function loadDeployments()
@@ -46,6 +60,15 @@ class GitIndex extends Component
     public function selectDeployment(int $id)
     {
         $this->selectedDeployment = GitDeployment::with('logs')->find($id);
+        
+        // Map to form fields for editing
+        $this->domain_name = $this->selectedDeployment->domain_name;
+        $this->deploy_path = $this->selectedDeployment->deploy_path ?? '';
+        $this->repository_url = $this->selectedDeployment->repository_url;
+        $this->branch = $this->selectedDeployment->branch;
+        $this->deploy_script = $this->selectedDeployment->deploy_script;
+        $this->auto_deploy = $this->selectedDeployment->auto_deploy;
+
         $this->isCreating = false;
         $this->activeTab = 'config';
         $this->selectedLog = null;
@@ -53,7 +76,7 @@ class GitIndex extends Component
 
     public function createNew()
     {
-        $this->reset(['domain_name', 'repository_url', 'branch', 'auto_deploy']);
+        $this->reset(['domain_name', 'deploy_path', 'repository_url', 'branch', 'auto_deploy']);
         $this->deploy_script = "composer install --no-interaction --prefer-dist --optimize-autoloader\nphp artisan migrate --force\nphp artisan config:cache\nnpm run build";
         $this->isCreating = true;
         $this->selectedDeployment = null;
@@ -113,7 +136,14 @@ class GitIndex extends Component
 
     public function render()
     {
-        return view('livewire.git.git-index')->layout('layouts.app', [
+        $availableDomains = \App\Models\Domain::where('status', 'active')
+            ->orderBy('name')
+            ->pluck('name')
+            ->toArray();
+
+        return view('livewire.git.git-index', [
+            'availableDomains' => $availableDomains
+        ])->layout('layouts.app', [
             'title'      => 'Git Deploy',
             'breadcrumb' => '<span>Avanzado</span> / <strong>Git Deploy</strong>',
         ]);

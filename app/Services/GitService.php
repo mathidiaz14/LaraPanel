@@ -24,7 +24,7 @@ class GitService
             return $this->simulateDeploy($deployment, $log);
         }
 
-        $domainPath = '/var/www/' . $deployment->domain_name . '/public_html';
+        $domainPath = $deployment->deploy_path ?: '/var/www/' . $deployment->domain_name . '/public_html';
         $outputBuffer = ">>> Starting deployment for {$deployment->domain_name}\n";
         $outputBuffer .= ">>> Repository: {$deployment->repository_url} | Branch: {$deployment->branch}\n\n";
 

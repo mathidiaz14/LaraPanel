@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 class GitDeployment extends Model
 {
     protected $fillable = [
-        'user_id', 'domain_name', 'repository_url', 'branch',
+        'user_id', 'domain_name', 'deploy_path', 'repository_url', 'branch',
         'deploy_script', 'webhook_secret', 'webhook_id', 'auto_deploy',
         'last_deployed_at',
     ];
