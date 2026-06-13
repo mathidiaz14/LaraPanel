@@ -9,11 +9,8 @@ use Illuminate\Support\Facades\File;
 
 class WordPressIndex extends Component
 {
-    // domains mock - in a real scenario we pull from Domain model
-    public array $domains = [
-        ['id' => 1, 'name' => 'miproyecto.com', 'path' => '/var/www/miproyecto.com/public_html', 'has_wp' => false],
-        ['id' => 2, 'name' => 'tiendaonline.net', 'path' => '/var/www/tiendaonline.net/public_html', 'has_wp' => true],
-    ];
+    // Array of domains loaded from DB
+    public array $domains = [];
 
     public ?string $selectedDomain = null;
     public string $siteTitle = 'Mi Blog WordPress';
@@ -25,9 +22,24 @@ class WordPressIndex extends Component
     public string $installOutput = '';
     public bool $installSuccess = false;
 
-    public function mount()
+    public function mount(WordPressService $wpService)
     {
         $this->adminPass = Str::password(16, true, true, false, false);
+        $this->loadDomains($wpService);
+    }
+
+    public function loadDomains(WordPressService $wpService)
+    {
+        $dbDomains = \App\Models\Domain::where('status', 'active')->get();
+        $this->domains = [];
+        foreach ($dbDomains as $dom) {
+            $this->domains[] = [
+                'id' => $dom->id,
+                'name' => $dom->name,
+                'path' => $dom->document_root,
+                'has_wp' => $wpService->isInstalled($dom->document_root),
+            ];
+        }
     }
 
     public function selectDomain(string $domainName)
