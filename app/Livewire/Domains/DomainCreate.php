@@ -35,9 +35,35 @@ class DomainCreate extends Component
 
     public function updatedName(): void
     {
+        $this->updateDocumentRoot();
+    }
+
+    public function updatedParentDomain(): void
+    {
+        $this->updateDocumentRoot();
+    }
+
+    public function updatedType(): void
+    {
+        $this->updateDocumentRoot();
+    }
+
+    protected function updateDocumentRoot(): void
+    {
         if ($this->autoRoot) {
-            $this->document_root = config('larapanel.paths.webroots', '/var/www')
-                . '/' . strtolower(trim($this->name)) . '/public_html';
+            $finalName = strtolower(trim($this->name));
+            if ($this->type === 'subdomain' && $this->parent_domain) {
+                if (!str_ends_with($finalName, '.' . $this->parent_domain)) {
+                    $finalName .= '.' . $this->parent_domain;
+                }
+            }
+            
+            if ($finalName) {
+                $this->document_root = config('larapanel.paths.webroots', '/var/www')
+                    . '/' . $finalName . '/public_html';
+            } else {
+                $this->document_root = '';
+            }
         }
     }
 
@@ -47,15 +73,22 @@ class DomainCreate extends Component
 
         $this->errorMessage = '';
 
+        $finalName = strtolower(trim($this->name));
+        if ($this->type === 'subdomain' && $this->parent_domain) {
+            if (!str_ends_with($finalName, '.' . $this->parent_domain)) {
+                $finalName .= '.' . $this->parent_domain;
+            }
+        }
+
         // Validate domain name format
-        if (!$service->validateDomainName($this->name)) {
+        if (!$service->validateDomainName($finalName)) {
             $this->errorMessage = 'El nombre del dominio no es válido. Ej: ejemplo.com';
             return;
         }
 
         // Check if domain already exists
-        if (Domain::where('name', strtolower($this->name))->exists()) {
-            $this->errorMessage = "El dominio {$this->name} ya está registrado en este servidor.";
+        if (Domain::where('name', $finalName)->exists()) {
+            $this->errorMessage = "El dominio {$finalName} ya está registrado en este servidor.";
             return;
         }
 
@@ -69,7 +102,7 @@ class DomainCreate extends Component
 
         try {
             $domain = $service->create(auth()->user(), [
-                'name'          => $this->name,
+                'name'          => $finalName,
                 'type'          => $this->type,
                 'parent_domain' => $this->parent_domain ?: null,
                 'php_version'   => $this->php_version,
