@@ -242,7 +242,7 @@ class DomainService
             gzip on;
             gzip_types text/plain text/css application/json application/javascript text/xml;
         
-{$locationBlock}
+        {$locationBlock}
         
             # Let's Encrypt challenge
             location ^~ /.well-known/acme-challenge/ {
@@ -328,7 +328,7 @@ class DomainService
             add_header X-Frame-Options "SAMEORIGIN" always;
             add_header X-Content-Type-Options "nosniff" always;
         
-{$locationBlock}
+        {$locationBlock}
         
             client_max_body_size 100M;
         }
