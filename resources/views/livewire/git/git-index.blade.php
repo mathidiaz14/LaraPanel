@@ -56,6 +56,10 @@
                         <div class="form-group">
                             <label class="form-label">URL del Repositorio (HTTPS/SSH)</label>
                             <input type="text" wire:model="repository_url" class="form-input" placeholder="https://github.com/usuario/repo.git">
+                            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+                                Si es un repositorio privado, incluye el token: <br>
+                                <code>https://usuario:TOKEN@gitlab.com/usuario/repo.git</code>
+                            </div>
                             @error('repository_url') <span style="color:var(--danger);font-size:11px;">{{ $message }}</span> @enderror
                         </div>
                     </div>
