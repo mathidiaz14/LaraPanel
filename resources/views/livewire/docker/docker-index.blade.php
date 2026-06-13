@@ -316,8 +316,8 @@
                         <div class="form-group">
                             <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Ruta del Proyecto (donde está el docker-compose.yml)</label>
                             <div style="position:relative;">
-                                <i class="fa-solid fa-folder" style="position:absolute;left:12px;top:10px;color:var(--text-muted);"></i>
-                                <input type="text" wire:model.defer="deployPath" class="input" placeholder="/var/www/panel/html/mi-app" style="padding-left:36px;width:100%;">
+                                <i class="fa-solid fa-folder" style="position:absolute;left:12px;top:10px;color:var(--text-muted);z-index:2;"></i>
+                                <input type="text" wire:model.defer="deployPath" class="form-input" placeholder="/var/www/panel/html/mi-app" style="padding-left:36px;width:100%;margin:0;">
                             </div>
                             @error('deployPath') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
                         </div>
@@ -326,13 +326,13 @@
                             <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Dominio o Subdominio Público</label>
                             <div style="position:relative;">
                                 <i class="fa-solid fa-globe" style="position:absolute;left:12px;top:10px;color:var(--text-muted);z-index:2;"></i>
-                                <select wire:model.defer="deployDomain" class="input" style="padding-left:36px;width:100%;appearance:none;cursor:pointer;background:rgba(255,255,255,0.02);">
-                                    <option value="" style="color:#000;">Selecciona un dominio...</option>
+                                <select wire:model.defer="deployDomain" class="form-input" style="padding-left:36px;width:100%;appearance:none;cursor:pointer;margin:0;">
+                                    <option value="">Selecciona un dominio...</option>
                                     @foreach($availableDomains as $dom)
-                                        <option value="{{ $dom }}" style="color:#000;">{{ $dom }}</option>
+                                        <option value="{{ $dom }}">{{ $dom }}</option>
                                     @endforeach
                                 </select>
-                                <i class="fa-solid fa-chevron-down" style="position:absolute;right:12px;top:12px;color:var(--text-muted);font-size:12px;pointer-events:none;"></i>
+                                <i class="fa-solid fa-chevron-down" style="position:absolute;right:12px;top:12px;color:var(--text-muted);font-size:12px;pointer-events:none;z-index:2;"></i>
                             </div>
                             @error('deployDomain') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
                         </div>
@@ -342,8 +342,8 @@
                         <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Puerto Interno del Contenedor (expuesto al host)</label>
                         <div style="display:flex;align-items:center;gap:12px;">
                             <div style="position:relative;flex:1;max-width:150px;">
-                                <i class="fa-solid fa-plug" style="position:absolute;left:12px;top:10px;color:var(--text-muted);"></i>
-                                <input type="number" wire:model.defer="deployPort" class="input" placeholder="3000" style="padding-left:36px;width:100%;">
+                                <i class="fa-solid fa-plug" style="position:absolute;left:12px;top:10px;color:var(--text-muted);z-index:2;"></i>
+                                <input type="number" wire:model.defer="deployPort" class="form-input" placeholder="3000" style="padding-left:36px;width:100%;margin:0;">
                             </div>
                             <p style="font-size:11px;color:var(--text-muted);margin:0;line-height:1.4;">
                                 LaraPanel creará un proxy inverso desde <br><code style="color:var(--accent-light);background:transparent;padding:0;">http://{dominio}</code> hacia <code style="color:var(--accent-light);background:transparent;padding:0;">http://127.0.0.1:{PUERTO}</code>.
