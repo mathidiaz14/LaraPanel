@@ -272,6 +272,12 @@ body::before {
 .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 .form-input::placeholder { color: var(--text-muted); }
 
+/* Fix select options contrast in dark theme */
+select.form-input option {
+    background-color: var(--bg-elevated);
+    color: var(--text-primary);
+}
+
 /* ── Auth ──────────────────────────────────────── */
 .auth-wrap {
     min-height: 100vh; display: flex; align-items: center; justify-content: center;
