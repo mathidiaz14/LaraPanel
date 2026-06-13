@@ -46,6 +46,16 @@ class Domain extends Model
         return $this->type === 'subdomain';
     }
 
+    public function isProxy(): bool
+    {
+        return $this->type === 'proxy';
+    }
+
+    public function getProxyPort(): ?int
+    {
+        return $this->config['proxy_port'] ?? null;
+    }
+
     public function sslExpiresInDays(): ?int
     {
         if (!$this->ssl_expires_at) return null;

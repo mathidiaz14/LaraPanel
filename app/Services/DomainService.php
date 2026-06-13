@@ -180,6 +180,42 @@ class DomainService
         $phpSocket = $this->phpFpmSocket($domain->php_version);
         $root      = $domain->document_root;
         $name      = $domain->name;
+        $isProxy   = $domain->isProxy();
+        $proxyPort = $domain->getProxyPort();
+
+        $locationBlock = '';
+        if ($isProxy && $proxyPort) {
+            $locationBlock = <<<LOC
+            location / {
+                proxy_pass http://127.0.0.1:{$proxyPort};
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade \$http_upgrade;
+                proxy_set_header Connection 'upgrade';
+                proxy_set_header Host \$host;
+                proxy_cache_bypass \$http_upgrade;
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto \$scheme;
+            }
+            LOC;
+        } else {
+            $locationBlock = <<<LOC
+            location / {
+                try_files \$uri \$uri/ /index.php?\$query_string;
+            }
+        
+            location ~ \.php$ {
+                fastcgi_pass unix:{$phpSocket};
+                fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
+                include fastcgi_params;
+                fastcgi_hide_header X-Powered-By;
+            }
+        
+            location ~ /\.(?!well-known).* {
+                deny all;
+            }
+            LOC;
+        }
 
         return <<<NGINX
         # LaraPanel — generated for {$name}
@@ -206,20 +242,7 @@ class DomainService
             gzip on;
             gzip_types text/plain text/css application/json application/javascript text/xml;
         
-            location / {
-                try_files \$uri \$uri/ /index.php?\$query_string;
-            }
-        
-            location ~ \.php$ {
-                fastcgi_pass unix:{$phpSocket};
-                fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
-                include fastcgi_params;
-                fastcgi_hide_header X-Powered-By;
-            }
-        
-            location ~ /\.(?!well-known).* {
-                deny all;
-            }
+{$locationBlock}
         
             # Let's Encrypt challenge
             location ^~ /.well-known/acme-challenge/ {
@@ -237,6 +260,41 @@ class DomainService
         $phpSocket = $this->phpFpmSocket($domain->php_version);
         $root      = $domain->document_root;
         $name      = $domain->name;
+        $isProxy   = $domain->isProxy();
+        $proxyPort = $domain->getProxyPort();
+
+        $locationBlock = '';
+        if ($isProxy && $proxyPort) {
+            $locationBlock = <<<LOC
+            location / {
+                proxy_pass http://127.0.0.1:{$proxyPort};
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade \$http_upgrade;
+                proxy_set_header Connection 'upgrade';
+                proxy_set_header Host \$host;
+                proxy_cache_bypass \$http_upgrade;
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto \$scheme;
+            }
+            LOC;
+        } else {
+            $locationBlock = <<<LOC
+            location / {
+                try_files \$uri \$uri/ /index.php?\$query_string;
+            }
+        
+            location ~ \.php$ {
+                fastcgi_pass unix:{$phpSocket};
+                fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
+                include fastcgi_params;
+            }
+        
+            location ~ /\.(?!well-known).* {
+                deny all;
+            }
+            LOC;
+        }
 
         return <<<NGINX
         # LaraPanel SSL — generated for {$name}
@@ -270,19 +328,7 @@ class DomainService
             add_header X-Frame-Options "SAMEORIGIN" always;
             add_header X-Content-Type-Options "nosniff" always;
         
-            location / {
-                try_files \$uri \$uri/ /index.php?\$query_string;
-            }
-        
-            location ~ \.php$ {
-                fastcgi_pass unix:{$phpSocket};
-                fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
-                include fastcgi_params;
-            }
-        
-            location ~ /\.(?!well-known).* {
-                deny all;
-            }
+{$locationBlock}
         
             client_max_body_size 100M;
         }

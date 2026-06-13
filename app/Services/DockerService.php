@@ -255,14 +255,34 @@ class DockerService
         }
     }
 
-    /**
-     * Read stored compose file content for a stack.
-     */
     public function getComposeContent(string $stackName): string
     {
         $this->validateStackName($stackName);
         $file = $this->getComposePath($stackName) . '/docker-compose.yml';
         return file_exists($file) ? file_get_contents($file) : '';
+    }
+
+    /**
+     * Run a docker compose command in an arbitrary directory.
+     */
+    public function runComposeInPath(string $path, string $command, array $args = []): string
+    {
+        if (!is_dir($path)) {
+            throw new \InvalidArgumentException("El directorio especificado no existe: {$path}");
+        }
+
+        $cmd = array_merge(['docker', 'compose', $command], $args);
+
+        try {
+            $result = $this->shell
+                ->withTimeout(300)
+                ->inDirectory($path)
+                ->run($cmd, checkExit: false);
+
+            return trim($result->stdout . "\n" . $result->stderr);
+        } catch (\Throwable $e) {
+            return "Error: " . $e->getMessage();
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

@@ -10,6 +10,9 @@
         <button wire:click="setTab('compose')" class="btn {{ $activeTab === 'compose' ? 'btn-primary' : 'btn-ghost' }} btn-sm">
             <i class="fa-solid fa-cubes"></i> Docker Compose
         </button>
+        <button wire:click="setTab('deploy')" class="btn {{ $activeTab === 'deploy' ? 'btn-primary' : 'btn-ghost' }} btn-sm" style="margin-left:auto;">
+            <i class="fa-solid fa-rocket"></i> Desplegar App
+        </button>
     </div>
 
     @if(!$daemonRunning)
@@ -292,6 +295,66 @@
                     <div class="glass" style="padding:20px;">
                         <h4 style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text-primary);"><i class="fa-solid fa-terminal"></i> Salida de Comandos</h4>
                         <pre style="background:rgba(0,0,0,0.8);border:1px solid var(--glass-border);border-radius:8px;padding:16px;font-family:monospace;font-size:11px;color:#cdd6f4;line-height:1.6;white-space:pre-wrap;max-height:300px;overflow-y:auto;text-align:left;">{{ $composeOutput }}</pre>
+                    </div>
+                @endif
+            </div>
+        {{-- TAB: DEPLOY --}}
+        @elseif($activeTab === 'deploy')
+            <div class="glass" style="padding:24px;max-width:800px;margin:0 auto;">
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
+                    <div style="width:48px;height:48px;border-radius:12px;background:rgba(99,102,241,0.1);display:flex;align-items:center;justify-content:center;">
+                        <i class="fa-solid fa-rocket" style="font-size:24px;color:var(--accent-light);"></i>
+                    </div>
+                    <div>
+                        <h2 style="font-size:18px;font-weight:700;color:var(--text-primary);">Desplegar Aplicación Docker</h2>
+                        <p style="font-size:13px;color:var(--text-muted);margin-top:4px;">Inicia contenedores desde un directorio y asígnales un dominio con proxy inverso (Nginx).</p>
+                    </div>
+                </div>
+
+                <form wire:submit.prevent="deployApp" style="display:flex;flex-direction:column;gap:16px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                        <div class="form-group">
+                            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Ruta del Proyecto (donde está el docker-compose.yml)</label>
+                            <div style="position:relative;">
+                                <i class="fa-solid fa-folder" style="position:absolute;left:12px;top:10px;color:var(--text-muted);"></i>
+                                <input type="text" wire:model.defer="deployPath" class="input" placeholder="/var/www/panel/html/mi-app" style="padding-left:36px;width:100%;">
+                            </div>
+                            @error('deployPath') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="form-group">
+                            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Dominio o Subdominio Público</label>
+                            <div style="position:relative;">
+                                <i class="fa-solid fa-globe" style="position:absolute;left:12px;top:10px;color:var(--text-muted);"></i>
+                                <input type="text" wire:model.defer="deployDomain" class="input" placeholder="api.midominio.com" style="padding-left:36px;width:100%;">
+                            </div>
+                            @error('deployDomain') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Puerto Interno del Contenedor (expuesto al host)</label>
+                        <div style="position:relative;">
+                            <i class="fa-solid fa-plug" style="position:absolute;left:12px;top:10px;color:var(--text-muted);"></i>
+                            <input type="number" wire:model.defer="deployPort" class="input" placeholder="3000" style="padding-left:36px;width:100%;max-width:200px;">
+                        </div>
+                        <p style="font-size:11px;color:var(--text-muted);margin-top:6px;">LaraPanel creará un proxy desde <code style="color:var(--accent-light);">http://dominio</code> hacia <code style="color:var(--accent-light);">http://127.0.0.1:PUERTO</code>.</p>
+                        @error('deployPort') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+                        <button type="submit" class="btn btn-primary" wire:loading.attr="disabled" wire:target="deployApp">
+                            <i class="fa-solid fa-rocket" wire:loading.remove wire:target="deployApp"></i>
+                            <i class="fa-solid fa-spinner fa-spin" wire:loading wire:target="deployApp"></i>
+                            Desplegar y Enlazar Dominio
+                        </button>
+                    </div>
+                </form>
+
+                @if($deployOutput)
+                    <div style="margin-top:24px;">
+                        <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Resultado de la Operación</label>
+                        <pre style="background:rgba(0,0,0,0.3);padding:16px;border-radius:8px;border:1px solid var(--glass-border);font-family:monospace;font-size:12px;color:#a8b2d1;white-space:pre-wrap;max-height:400px;overflow-y:auto;">{{ $deployOutput }}</pre>
                     </div>
                 @endif
             </div>

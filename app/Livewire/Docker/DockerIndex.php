@@ -9,7 +9,7 @@ use Livewire\Component;
 class DockerIndex extends Component
 {
     // ── UI State ──────────────────────────────────────────────────────────────
-    public string $activeTab = 'containers'; // containers | images | compose
+    public string $activeTab = 'containers'; // containers | images | compose | deploy
     public bool $daemonRunning = false;
 
     // ── Containers tab ────────────────────────────────────────────────────────
@@ -31,6 +31,12 @@ class DockerIndex extends Component
     public string $composeContent = '';
     public string $composeOutput  = '';
 
+    // ── Deploy tab ────────────────────────────────────────────────────────────
+    public string $deployPath     = '';
+    public string $deployDomain   = '';
+    public string $deployPort     = '';
+    public string $deployOutput   = '';
+
     // Default compose template shown to new users
     private const COMPOSE_TEMPLATE = "version: '3.8'\nservices:\n  app:\n    image: nginx:alpine\n    ports:\n      - \"8081:80\"\n    volumes:\n      - ./html:/usr/share/nginx/html\n    restart: unless-stopped\n";
 
@@ -38,6 +44,9 @@ class DockerIndex extends Component
         'composeName'    => 'required|regex:/^[a-zA-Z0-9_\-]+$/|max:64',
         'composeContent' => 'required|string|min:10',
         'pullImage'      => 'required|regex:/^[a-zA-Z0-9\/_\-.:]+$/|max:200',
+        'deployPath'     => 'required|string|max:255',
+        'deployDomain'   => 'required|regex:/^[a-zA-Z0-9\.\-]+$/|max:255',
+        'deployPort'     => 'required|integer|min:1|max:65535',
     ];
 
     protected array $messages = [
@@ -193,6 +202,67 @@ class DockerIndex extends Component
         $this->composeContent = $docker->getComposeContent($stackName) ?: self::COMPOSE_TEMPLATE;
         $this->composeOutput  = '';
         $this->activeTab = 'compose';
+    }
+
+    public function getComposeContent(DockerService $docker): void
+    {
+        $this->validate(['composeName' => 'required|regex:/^[a-zA-Z0-9_\-]+$/|max:64']);
+        $this->composeContent = $docker->getComposeContent($this->composeName);
+        if (empty($this->composeContent)) {
+            $this->composeContent = self::COMPOSE_TEMPLATE;
+            $this->composeOutput = "No se encontró configuración previa para '{$this->composeName}'.";
+        } else {
+            $this->composeOutput = "Configuración cargada correctamente.";
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    //   DEPLOY (PROXY + COMPOSE)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    public function deployApp(DockerService $docker, \App\Services\DomainService $domainService): void
+    {
+        $this->validate([
+            'deployPath'   => 'required|string|max:255',
+            'deployDomain' => 'required|regex:/^[a-zA-Z0-9\.\-]+$/|max:255',
+            'deployPort'   => 'required|integer|min:1|max:65535',
+        ]);
+
+        $this->deployOutput = '';
+
+        try {
+            // 1. Validate if path exists
+            if (!is_dir($this->deployPath)) {
+                throw new \Exception("La ruta especificada no existe en el servidor.");
+            }
+
+            // 2. Register/Update Domain in DB as proxy
+            $domain = \App\Models\Domain::firstOrNew(['name' => $this->deployDomain]);
+            $domain->user_id = \Illuminate\Support\Facades\Auth::id() ?? 1;
+            $domain->type = 'proxy';
+            $domain->document_root = $this->deployPath;
+            $domain->php_version = '8.3'; // Arbitrary, not used by proxy but required by schema
+            $domain->webserver = 'nginx';
+            $domain->config = array_merge($domain->config ?? [], ['proxy_port' => $this->deployPort]);
+            $domain->is_active = true;
+            $domain->status = 'active';
+            $domain->save();
+
+            // 3. Generate and deploy Nginx config
+            $domainService->deployConfigs($domain);
+
+            // 4. Run Docker Compose in the path
+            $result = $docker->runComposeInPath($this->deployPath, 'up', ['-d', '--remove-orphans']);
+            
+            $this->deployOutput = "✅ App desplegada correctamente.\n\n" . 
+                                  "Dominio: http://{$this->deployDomain} -> Puerto {$this->deployPort}\n\n" .
+                                  "Logs de Docker:\n" . $result;
+
+            $this->loadContainers($docker);
+            
+        } catch (\Throwable $e) {
+            $this->deployOutput = "❌ Error en el despliegue:\n" . $e->getMessage();
+        }
     }
 
     public function deployCompose(DockerService $docker): void
