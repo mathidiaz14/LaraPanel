@@ -28,6 +28,14 @@ class GitService
         $outputBuffer = ">>> Starting deployment for {$deployment->domain_name}\n";
         $outputBuffer .= ">>> Repository: {$deployment->repository_url} | Branch: {$deployment->branch}\n\n";
 
+        // Ensure the domain path exists
+        if (!is_dir($domainPath)) {
+            $outputBuffer .= ">>> Creating directory {$domainPath}...\n";
+            $executor = new \App\Shell\SudoExecutor();
+            $executor->run(['sudo', 'mkdir', '-p', $domainPath], false);
+            $executor->run(['sudo', 'chown', '-R', config('larapanel.server.sudo_user', 'www-data') . ':' . config('larapanel.server.sudo_user', 'www-data'), $domainPath], false);
+        }
+
         // Check if directory is a git repository
         $isRepo = Process::path($domainPath)->run('git rev-parse --is-inside-work-tree');
 
@@ -43,10 +51,9 @@ class GitService
             } else {
                 // Not a repo, clone it
                 $outputBuffer .= ">>> Directory is not a repository. Cloning...\n";
-                // Warning: cloning into an existing directory might fail if not empty.
-                $result = Process::path(dirname($domainPath))
-                    ->timeout(120)
-                    ->run("git clone -b {$deployment->branch} {$deployment->repository_url} public_html_tmp && mv public_html_tmp/.git {$domainPath}/.git && rm -rf public_html_tmp && cd {$domainPath} && git reset --hard");
+                $tmpDir = '/tmp/git_clone_' . md5(uniqid());
+                $result = Process::timeout(120)
+                    ->run("git clone -b {$deployment->branch} {$deployment->repository_url} {$tmpDir} && mv {$tmpDir}/.git {$domainPath}/.git && rm -rf {$tmpDir} && cd {$domainPath} && git reset --hard");
                 $outputBuffer .= $result->output() . $result->errorOutput() . "\n";
                 if (!$result->successful()) throw new \Exception('Git clone failed.');
             }
