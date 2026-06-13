@@ -180,15 +180,128 @@
 
         {{-- Tab Content: General Settings (Placeholder style) --}}
         @if($activeTab === 'general')
-        <div class="glass" style="padding:40px;border-radius:16px;background:rgba(255,255,255,0.01);text-align:center;">
-            <div style="width:72px;height:72px;background:rgba(99,102,241,0.1);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;border:1px solid rgba(99,102,241,0.2);">
-                <i class="fa-solid fa-sliders" style="font-size:32px;color:var(--accent-light);"></i>
+        <div style="display:flex;flex-direction:column;gap:24px;">
+
+            {{-- Alerts --}}
+            @if($generalSuccessMessage)
+            <div class="glass" style="padding:16px 24px;background:rgba(34,197,94,0.12);color:#4ade80;font-size:14px;border:1px solid rgba(34,197,94,0.2);border-radius:12px;display:flex;align-items:center;gap:12px;">
+                <i class="fa-solid fa-circle-check" style="font-size:20px;"></i> 
+                <span>{{ $generalSuccessMessage }}</span>
             </div>
-            <h3 style="font-size:20px;font-weight:700;margin:0 0 8px;">Ajustes de Configuración General</h3>
-            <p style="font-size:13px;color:var(--text-secondary);max-width:460px;margin:0 auto 24px;">Configura las alertas de recursos, rutas predeterminadas, copias de seguridad de LaraPanel y exclusiones de seguridad de tu panel.</p>
-            <div style="font-size:12px;color:var(--text-muted);font-style:italic;">Características próximamente en la versión estable v0.2.0.</div>
+            @endif
+
+            @if($generalErrorMessage)
+            <div class="glass" style="padding:16px 24px;background:rgba(239,68,68,0.12);color:#f87171;font-size:14px;border:1px solid rgba(239,68,68,0.2);border-radius:12px;display:flex;align-items:center;gap:12px;">
+                <i class="fa-solid fa-circle-exclamation" style="font-size:20px;"></i> 
+                <span>{{ $generalErrorMessage }}</span>
+            </div>
+            @endif
+
+            <form wire:submit.prevent="saveGeneralSettings" style="display:flex;flex-direction:column;gap:24px;">
+                
+                {{-- Bloque 1: Monitoreo y Alertas --}}
+                <div class="glass" style="padding:28px;border-radius:16px;background:rgba(255,255,255,0.01);">
+                    <h4 style="font-size:16px;font-weight:700;margin:0 0 20px;display:flex;align-items:center;gap:10px;">
+                        <div style="width:36px;height:36px;background:rgba(99,102,241,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fa-solid fa-chart-line" style="color:var(--accent-light);"></i>
+                        </div>
+                        Sistema y Monitoreo
+                    </h4>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+                        <div class="form-group" style="margin:0;">
+                            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+                                <input type="checkbox" wire:model.defer="alertsEnabled" style="width:18px;height:18px;accent-color:var(--accent);">
+                                <div>
+                                    <span style="display:block;font-size:13px;font-weight:600;color:var(--text-primary);">Activar Alertas de Recursos</span>
+                                    <span style="font-size:11px;color:var(--text-muted);">Recibir notificaciones si el servidor supera el umbral crítico.</span>
+                                </div>
+                            </label>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div class="form-group" style="margin:0;">
+                                <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Umbral de Disco (%)</label>
+                                <input type="number" wire:model.defer="diskThreshold" class="form-input" min="10" max="99">
+                                @error('diskThreshold') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+                            </div>
+                            <div class="form-group" style="margin:0;">
+                                <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Umbral de RAM (%)</label>
+                                <input type="number" wire:model.defer="ramThreshold" class="form-input" min="10" max="99">
+                                @error('ramThreshold') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Bloque 2: Copias de Seguridad --}}
+                <div class="glass" style="padding:28px;border-radius:16px;background:rgba(255,255,255,0.01);">
+                    <h4 style="font-size:16px;font-weight:700;margin:0 0 20px;display:flex;align-items:center;gap:10px;">
+                        <div style="width:36px;height:36px;background:rgba(16,185,129,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fa-solid fa-server" style="color:#34d399;"></i>
+                        </div>
+                        Copias de Seguridad (Backups)
+                    </h4>
+
+                    <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;">
+                        <div class="form-group" style="margin:0;">
+                            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Ruta predeterminada de almacenamiento</label>
+                            <input type="text" wire:model.defer="backupPath" class="form-input" placeholder="/var/larapanel/backups">
+                            <p style="font-size:11px;color:var(--text-muted);margin-top:6px;">Dónde se guardarán los archivos `.tar.gz` o volcados SQL.</p>
+                            @error('backupPath') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Días de Retención</label>
+                            <div style="position:relative;">
+                                <select wire:model.defer="backupRetention" class="form-input" style="appearance:none;">
+                                    <option value="3">3 días</option>
+                                    <option value="7">1 semana (7 días)</option>
+                                    <option value="15">15 días</option>
+                                    <option value="30">1 mes (30 días)</option>
+                                </select>
+                                <i class="fa-solid fa-chevron-down" style="position:absolute;right:12px;top:12px;color:var(--text-muted);font-size:12px;pointer-events:none;z-index:2;"></i>
+                            </div>
+                            @error('backupRetention') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Bloque 3: Localización y Sistema --}}
+                <div class="glass" style="padding:28px;border-radius:16px;background:rgba(255,255,255,0.01);">
+                    <h4 style="font-size:16px;font-weight:700;margin:0 0 20px;display:flex;align-items:center;gap:10px;">
+                        <div style="width:36px;height:36px;background:rgba(245,158,11,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fa-solid fa-earth-americas" style="color:#fbbf24;"></i>
+                        </div>
+                        Localización
+                    </h4>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+                        <div class="form-group" style="margin:0;">
+                            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Zona Horaria del Sistema</label>
+                            <div style="position:relative;">
+                                <select wire:model.defer="timezone" class="form-input" style="appearance:none;">
+                                    <option value="UTC">UTC (Universal)</option>
+                                    <option value="America/Argentina/Buenos_Aires">América / Buenos Aires</option>
+                                    <option value="America/Santiago">América / Santiago</option>
+                                    <option value="America/Bogota">América / Bogotá</option>
+                                    <option value="America/Mexico_City">América / Ciudad de México</option>
+                                    <option value="Europe/Madrid">Europa / Madrid</option>
+                                </select>
+                                <i class="fa-solid fa-chevron-down" style="position:absolute;right:12px;top:12px;color:var(--text-muted);font-size:12px;pointer-events:none;z-index:2;"></i>
+                            </div>
+                            <p style="font-size:11px;color:var(--text-muted);margin-top:6px;">Afecta a los Cron Jobs y registros (logs).</p>
+                            @error('timezone') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;">
+                    <button type="submit" class="btn btn-primary" style="padding:10px 24px;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 4px 15px rgba(99,102,241,0.2);">
+                        <i class="fa-solid fa-save"></i>
+                        <span>Guardar Ajustes</span>
+                    </button>
+                </div>
+            </form>
         </div>
-        @endif
 
     </div>
 </div>

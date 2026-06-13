@@ -12,6 +12,16 @@ class Settings extends Component
     // General Settings tab state
     public string $activeTab = 'updates'; // updates | general
     
+    public bool $alertsEnabled = true;
+    public int $diskThreshold = 80;
+    public int $ramThreshold = 80;
+    public string $backupPath = '/var/larapanel/backups';
+    public int $backupRetention = 7;
+    public string $timezone = 'UTC';
+    
+    public string $generalSuccessMessage = '';
+    public string $generalErrorMessage = '';
+    
     // Updates tab state
     public bool $isUpdateAvailable = false;
     public string $currentCommitHash = '';
@@ -31,6 +41,49 @@ class Settings extends Component
     public function mount(): void
     {
         $this->checkForUpdates();
+        $this->loadSettings();
+    }
+
+    public function loadSettings(): void
+    {
+        $this->alertsEnabled = filter_var(\App\Models\Setting::get('alerts_enabled', '1'), FILTER_VALIDATE_BOOLEAN);
+        $this->diskThreshold = (int) \App\Models\Setting::get('disk_threshold', '80');
+        $this->ramThreshold = (int) \App\Models\Setting::get('ram_threshold', '80');
+        $this->backupPath = \App\Models\Setting::get('backup_path', '/var/larapanel/backups');
+        $this->backupRetention = (int) \App\Models\Setting::get('backup_retention', '7');
+        $this->timezone = \App\Models\Setting::get('timezone', 'UTC');
+    }
+
+    public function saveGeneralSettings(): void
+    {
+        $this->generalSuccessMessage = '';
+        $this->generalErrorMessage = '';
+
+        $this->validate([
+            'diskThreshold' => 'required|integer|min:10|max:99',
+            'ramThreshold'  => 'required|integer|min:10|max:99',
+            'backupPath'    => 'required|string|max:255',
+            'backupRetention' => 'required|integer|min:1|max:365',
+            'timezone'      => 'required|string|max:100',
+        ]);
+
+        try {
+            \App\Models\Setting::set('alerts_enabled', $this->alertsEnabled ? '1' : '0');
+            \App\Models\Setting::set('disk_threshold', (string) $this->diskThreshold);
+            \App\Models\Setting::set('ram_threshold', (string) $this->ramThreshold);
+            \App\Models\Setting::set('backup_path', $this->backupPath);
+            \App\Models\Setting::set('backup_retention', (string) $this->backupRetention);
+            \App\Models\Setting::set('timezone', $this->timezone);
+
+            // Timezone modification logic (if user approved, but here we just update PHP/DB timezone theoretically)
+            // If they want OS timezone changes we would do:
+            // $executor = new ShellExecutor();
+            // $executor->run(['sudo', 'timedatectl', 'set-timezone', $this->timezone], false);
+            
+            $this->generalSuccessMessage = 'Ajustes guardados correctamente.';
+        } catch (\Throwable $e) {
+            $this->generalErrorMessage = 'Error al guardar los ajustes: ' . $e->getMessage();
+        }
     }
 
     /**
