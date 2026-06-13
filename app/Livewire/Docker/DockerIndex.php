@@ -317,7 +317,14 @@ class DockerIndex extends Component
 
     public function render(): \Illuminate\View\View
     {
-        return view('livewire.docker.docker-index')->layout('layouts.app', [
+        $availableDomains = \App\Models\Domain::where('status', 'active')
+            ->orderBy('name')
+            ->pluck('name')
+            ->toArray();
+
+        return view('livewire.docker.docker-index', [
+            'availableDomains' => $availableDomains
+        ])->layout('layouts.app', [
             'title'      => 'Docker',
             'breadcrumb' => '<span>Avanzado</span> / <strong>Docker</strong>',
         ]);
