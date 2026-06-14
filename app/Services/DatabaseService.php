@@ -36,9 +36,9 @@ class DatabaseService
         // 1. Create DB and user on MySQL server
         if (app()->isProduction()) {
             $queries = [
-                "CREATE DATABASE \`{$dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;",
+                "CREATE DATABASE `{$dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;",
                 "CREATE USER '{$dbUser}'@'localhost' IDENTIFIED BY '{$dbPass}';",
-                "GRANT ALL PRIVILEGES ON \`{$dbName}\`.* TO '{$dbUser}'@'localhost';",
+                "GRANT ALL PRIVILEGES ON `{$dbName}`.* TO '{$dbUser}'@'localhost';",
                 "FLUSH PRIVILEGES;"
             ];
 
@@ -81,7 +81,7 @@ class DatabaseService
 
         if (app()->isProduction()) {
             $queries = [
-                "DROP DATABASE IF EXISTS \`{$dbName}\`;",
+                "DROP DATABASE IF EXISTS `{$dbName}`;",
                 "DROP USER IF EXISTS '{$dbUser}'@'localhost';",
                 "FLUSH PRIVILEGES;"
             ];
