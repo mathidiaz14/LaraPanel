@@ -203,6 +203,51 @@ class DatabaseIndex extends Component
         }
     }
 
+    public function installPhpMyAdmin(): void
+    {
+        try {
+            $pmaDir = public_path('pma');
+            if (is_dir($pmaDir)) {
+                throw new \Exception('phpMyAdmin ya está instalado.');
+            }
+
+            $url = 'https://files.phpmyadmin.net/phpMyAdmin/5.2.1/phpMyAdmin-5.2.1-all-languages.tar.gz';
+            $tmpFile = storage_path('app/phpmyadmin.tar.gz');
+
+            $executor = new \App\Shell\ShellExecutor();
+            
+            // Descargar usando wget
+            $executor->withTimeout(300)->run(['wget', '-qO', $tmpFile, $url]);
+            
+            // Extraer en public
+            $executor->withTimeout(120)->run(['tar', '-xzf', $tmpFile, '-C', public_path()]);
+            
+            // Renombrar la carpeta
+            rename(public_path('phpMyAdmin-5.2.1-all-languages'), $pmaDir);
+            unlink($tmpFile);
+
+            // Crear config básico con blowfish_secret para evitar warnings
+            $secret = \Illuminate\Support\Str::random(32);
+            $config = <<<PHP
+<?php
+\$cfg['blowfish_secret'] = '{$secret}';
+\$i = 0;
+\$i++;
+\$cfg['Servers'][\$i]['auth_type'] = 'cookie';
+\$cfg['Servers'][\$i]['host'] = 'localhost';
+\$cfg['Servers'][\$i]['compress'] = false;
+\$cfg['Servers'][\$i]['AllowNoPassword'] = false;
+\$cfg['UploadDir'] = '';
+\$cfg['SaveDir'] = '';
+PHP;
+            file_put_contents($pmaDir . '/config.inc.php', $config);
+
+            $this->successMessage = 'phpMyAdmin instalado correctamente. Ya puedes acceder mediante el botón de arriba.';
+        } catch (\Throwable $e) {
+            $this->errorMessage = 'Error al instalar phpMyAdmin: ' . $e->getMessage();
+        }
+    }
+
     public function render()
     {
         $databases = DatabaseInstance::with('domain')
@@ -219,6 +264,7 @@ class DatabaseIndex extends Component
             'databases' => $databases,
             'domains'   => $domains,
             'dbPrefix'  => auth()->user()->getDbPrefix(),
+            'hasPma'    => is_dir(public_path('pma')),
         ])->layout('layouts.app', [
             'title'      => 'Bases de Datos',
             'breadcrumb' => '<span>Hosting</span> / <strong>Bases de Datos</strong>',
