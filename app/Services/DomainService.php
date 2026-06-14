@@ -152,7 +152,7 @@ class DomainService
                 $config = $this->generateNginxSslConfig($domain, $certFile, $keyFile);
                 
                 if (!app()->isProduction()) {
-                    $domain->update(['config' => ['nginx' => $config]]);
+                    $domain->update(['config' => array_merge($domain->config ?? [], ['nginx' => $config])]);
                 } else {
                     $sitesAvail   = config('larapanel.paths.nginx_sites');
                     $sitesEnabled = config('larapanel.paths.nginx_enabled');
@@ -422,7 +422,7 @@ class DomainService
 
         if (!app()->isProduction()) {
             // In dev: just store the generated config content in DB
-            $domain->update(['config' => ['nginx' => $config]]);
+            $domain->update(['config' => array_merge($domain->config ?? [], ['nginx' => $config])]);
             return;
         }
 
@@ -431,7 +431,7 @@ class DomainService
         $this->sudo->run(['cp', '/tmp/larapanel_vhost_' . $filename, $confPath]);
         $this->sudo->run(['ln', '-sf', $confPath, "{$sitesEnabled}/{$filename}"]);
 
-        $domain->update(['config' => ['nginx' => $confPath]]);
+        $domain->update(['config' => array_merge($domain->config ?? [], ['nginx' => $confPath])]);
     }
 
     protected function deployApacheConfig(Domain $domain): void
