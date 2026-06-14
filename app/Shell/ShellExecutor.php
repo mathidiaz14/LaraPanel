@@ -98,6 +98,13 @@ class ShellExecutor
         return $clone;
     }
 
+    public function withEnv(array $env): static
+    {
+        $clone = clone $this;
+        $clone->envVars = array_merge($this->envVars, $env);
+        return $clone;
+    }
+
     public function inDirectory(string $path): static
     {
         $clone = clone $this;

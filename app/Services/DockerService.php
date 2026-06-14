@@ -149,7 +149,7 @@ class DockerService
         }
 
         try {
-            $result = $this->shell->withTimeout(300)->run(['docker', 'pull', $image], checkExit: false);
+            $result = $this->shell->withTimeout(300)->withEnv(['HOME' => '/tmp'])->run(['docker', 'pull', $image], checkExit: false);
             return trim($result->stdout . "\n" . $result->stderr);
         } catch (\Throwable $e) {
             return "Error: " . $e->getMessage();
@@ -202,6 +202,7 @@ class DockerService
         try {
             $result = $this->shell
                 ->withTimeout(300)
+                ->withEnv(['HOME' => $path])
                 ->inDirectory($path)
                 ->run(['docker', 'compose', '-f', $file, 'up', '-d', '--remove-orphans'], checkExit: false);
 
@@ -217,7 +218,8 @@ class DockerService
     public function composeDown(string $stackName): string
     {
         $this->validateStackName($stackName);
-        $file = $this->getComposePath($stackName) . '/docker-compose.yml';
+        $path = $this->getComposePath($stackName);
+        $file = $path . '/docker-compose.yml';
 
         if (!file_exists($file)) {
             return "Archivo de Compose no encontrado para el stack '{$stackName}'.";
@@ -226,6 +228,7 @@ class DockerService
         try {
             $result = $this->shell
                 ->withTimeout(60)
+                ->withEnv(['HOME' => $path])
                 ->run(['docker', 'compose', '-f', $file, 'down'], checkExit: false);
             return trim($result->stdout . "\n" . $result->stderr);
         } catch (\Throwable $e) {
@@ -239,7 +242,8 @@ class DockerService
     public function composeLogs(string $stackName, int $lines = 100): string
     {
         $this->validateStackName($stackName);
-        $file = $this->getComposePath($stackName) . '/docker-compose.yml';
+        $path = $this->getComposePath($stackName);
+        $file = $path . '/docker-compose.yml';
 
         if (!file_exists($file)) {
             return "Archivo de Compose no encontrado para '{$stackName}'.";
@@ -248,6 +252,7 @@ class DockerService
         try {
             $result = $this->shell
                 ->withTimeout(15)
+                ->withEnv(['HOME' => $path])
                 ->run(['docker', 'compose', '-f', $file, 'logs', '--tail', (string)$lines, '--timestamps'], checkExit: false);
             return trim($result->stdout . "\n" . $result->stderr);
         } catch (\Throwable $e) {
@@ -276,6 +281,7 @@ class DockerService
         try {
             $result = $this->shell
                 ->withTimeout(300)
+                ->withEnv(['HOME' => $path])
                 ->inDirectory($path)
                 ->run($cmd, checkExit: false);
 
