@@ -486,12 +486,10 @@
 
             selectedLang = lang;
 
-            if (editorIframeReady) {
-                sendToIframe(content, lang);
-            } else {
-                pendingEditorContent = content;
-                pendingEditorLang = lang;
-            }
+            // Livewire destróy y recrea el iframe, por lo que el nuevo iframe aún no está listo.
+            editorIframeReady = false;
+            pendingEditorContent = content;
+            pendingEditorLang = lang;
 
             // Establecer valor del selector de lenguaje
             setTimeout(() => {
