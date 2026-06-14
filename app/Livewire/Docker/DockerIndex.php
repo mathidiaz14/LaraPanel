@@ -19,6 +19,12 @@ class DockerIndex extends Component
     public int    $logLines         = 100;
     public bool   $showLogs         = false;
     public string $actionOutput     = '';
+    
+    // ── Terminal state ────────────────────────────────────────────────────────
+    public bool   $showTerminal     = false;
+    public string $terminalContainer= '';
+    public string $terminalCommand  = '';
+    public string $terminalOutput   = '';
 
     // ── Images tab ────────────────────────────────────────────────────────────
     public array  $images    = [];
@@ -141,6 +147,39 @@ class DockerIndex extends Component
         if ($this->selectedContainer) {
             $this->containerLogs = $docker->logs($this->selectedContainer['name'], $this->logLines);
         }
+    }
+
+    public function openTerminal(string $name): void
+    {
+        $this->terminalContainer = $name;
+        $this->terminalCommand = '';
+        $this->terminalOutput = "Welcome to LaraPanel Docker Console.\nConnected to: {$name}\nType a command and press Enter.\n\n";
+        $this->showTerminal = true;
+    }
+
+    public function runTerminalCommand(DockerService $docker): void
+    {
+        $cmd = trim($this->terminalCommand);
+        if (empty($cmd)) return;
+
+        if ($cmd === 'clear') {
+            $this->terminalOutput = '';
+            $this->terminalCommand = '';
+            return;
+        }
+
+        $this->terminalOutput .= "\n$ " . $cmd . "\n";
+        $result = $docker->execContainerCommand($this->terminalContainer, $cmd);
+        $this->terminalOutput .= $result;
+        $this->terminalCommand = '';
+    }
+
+    public function closeTerminal(): void
+    {
+        $this->showTerminal = false;
+        $this->terminalContainer = '';
+        $this->terminalCommand = '';
+        $this->terminalOutput = '';
     }
 
     // ─────────────────────────────────────────────────────────────────────────

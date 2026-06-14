@@ -112,6 +112,10 @@
                                         <i class="fa-solid fa-file-signature"></i> Logs
                                     </button>
 
+                                    <button wire:click="openTerminal('{{ $selectedContainer['name'] }}')" class="btn btn-primary btn-sm" style="background:var(--accent-light);border-color:var(--accent-light);color:black;" title="Abrir Consola">
+                                        <i class="fa-solid fa-terminal"></i> Consola
+                                    </button>
+
                                     <button wire:click="removeContainer('{{ $selectedContainer['name'] }}')" class="btn btn-danger btn-sm" onclick="return confirm('¿Eliminar contenedor? Se detendrá si está corriendo.')" title="Eliminar">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
@@ -369,5 +373,49 @@
                 @endif
             </div>
         @endif
+    @endif
+
+    {{-- Terminal Modal --}}
+    @if($showTerminal)
+    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
+        <div class="glass-elevated" style="max-width:800px;width:100%;padding:24px;margin:16px;display:flex;flex-direction:column;max-height:90vh;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
+                <h3 style="font-size:16px;font-weight:700;margin:0;color:var(--accent-light);">
+                    <i class="fa-solid fa-terminal"></i> Consola: {{ $terminalContainer }}
+                </h3>
+                <button wire:click="closeTerminal" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            {{-- Output Area --}}
+            <div style="flex:1;overflow-y:auto;background:rgba(0,0,0,0.6);border:1px solid var(--glass-border);border-radius:8px;padding:16px;margin-bottom:16px;" id="terminal-output-container">
+                <pre style="margin:0;font-family:monospace;font-size:13px;color:#a8b2d1;white-space:pre-wrap;word-break:break-all;">{{ $terminalOutput }}</pre>
+            </div>
+
+            {{-- Input Area --}}
+            <div style="display:flex;gap:12px;">
+                <input type="text" wire:model.defer="terminalCommand" wire:keydown.enter="runTerminalCommand" class="form-input" style="margin:0;font-family:monospace;" placeholder="Escribe un comando y presiona Enter (ej. php artisan migrate, ls -la)..." autofocus>
+                <button wire:click="runTerminalCommand" class="btn btn-primary" wire:loading.attr="disabled" wire:target="runTerminalCommand">
+                    <span wire:loading.remove wire:target="runTerminalCommand"><i class="fa-solid fa-paper-plane"></i> Enviar</span>
+                    <span wire:loading wire:target="runTerminalCommand"><i class="fa-solid fa-spinner fa-spin"></i> Ejecutando...</span>
+                </button>
+            </div>
+            
+            {{-- Auto-scroll script for terminal --}}
+            <script>
+                document.addEventListener('livewire:initialized', () => {
+                    Livewire.hook('commit', ({ component, commit, respond, succeed, fail }) => {
+                        succeed(({ snapshot, effect }) => {
+                            setTimeout(() => {
+                                let el = document.getElementById('terminal-output-container');
+                                if(el) el.scrollTop = el.scrollHeight;
+                            }, 50);
+                        })
+                    })
+                });
+            </script>
+        </div>
+    </div>
     @endif
 </div>

@@ -120,6 +120,21 @@ class DockerService
         }
     }
 
+    public function execContainerCommand(string $container, string $command): string
+    {
+        $this->validateName($container);
+
+        try {
+            // Using sh -c allows passing the full command string properly, and it's standard in most alpine/debian images
+            $result = $this->shell
+                ->withTimeout(300)
+                ->run(['docker', 'exec', '-i', $container, 'sh', '-c', $command], checkExit: false);
+            return trim(($result->stdout ?: '') . "\n" . ($result->stderr ?: ''));
+        } catch (\Throwable $e) {
+            return "Error executing command: " . $e->getMessage();
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     //   IMAGES
     // ─────────────────────────────────────────────────────────────────────────
