@@ -93,7 +93,7 @@ class DatabaseService
 
         AuditLog::record('database.deleted', $dbName, ['db_user' => $dbUser]);
         
-        $instance->delete();
+        $instance->forceDelete();
     }
 
     /**
