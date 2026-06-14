@@ -32,9 +32,9 @@ class GitService
         $executor = new \App\Shell\SudoExecutor();
         if (!is_dir($domainPath)) {
             $outputBuffer .= ">>> Creating directory {$domainPath}...\n";
-            $executor->run(['sudo', 'mkdir', '-p', $domainPath], false);
+            $executor->run(['mkdir', '-p', $domainPath], false);
         }
-        $executor->run(['sudo', 'chown', '-R', config('larapanel.server.sudo_user', 'www-data') . ':' . config('larapanel.server.sudo_user', 'www-data'), $domainPath], false);
+        $executor->run(['chown', '-R', config('larapanel.server.sudo_user', 'www-data') . ':' . config('larapanel.server.sudo_user', 'www-data'), $domainPath], false);
 
         // Check if directory is a git repository
         $isRepo = Process::path($domainPath)->run('git rev-parse --is-inside-work-tree');
