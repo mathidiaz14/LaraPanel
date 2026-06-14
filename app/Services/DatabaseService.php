@@ -37,8 +37,8 @@ class DatabaseService
         if (app()->isProduction()) {
             $queries = [
                 "CREATE DATABASE `{$dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;",
-                "CREATE USER '{$dbUser}'@'localhost' IDENTIFIED BY '{$dbPass}';",
-                "GRANT ALL PRIVILEGES ON `{$dbName}`.* TO '{$dbUser}'@'localhost';",
+                "CREATE USER '{$dbUser}'@'%' IDENTIFIED BY '{$dbPass}';",
+                "GRANT ALL PRIVILEGES ON `{$dbName}`.* TO '{$dbUser}'@'%';",
                 "FLUSH PRIVILEGES;"
             ];
 
@@ -82,7 +82,7 @@ class DatabaseService
         if (app()->isProduction()) {
             $queries = [
                 "DROP DATABASE IF EXISTS `{$dbName}`;",
-                "DROP USER IF EXISTS '{$dbUser}'@'localhost';",
+                "DROP USER IF EXISTS '{$dbUser}'@'%';",
                 "FLUSH PRIVILEGES;"
             ];
 
@@ -108,7 +108,7 @@ class DatabaseService
         }
 
         if (app()->isProduction()) {
-            $query = "ALTER USER '{$dbUser}'@'localhost' IDENTIFIED BY '{$newPassword}'; FLUSH PRIVILEGES;";
+            $query = "ALTER USER '{$dbUser}'@'%' IDENTIFIED BY '{$newPassword}'; FLUSH PRIVILEGES;";
             $this->sudo->run(['mysql', '-e', $query]);
         }
 
