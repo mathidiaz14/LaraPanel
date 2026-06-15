@@ -1,4 +1,9 @@
-<div style="display:flex;height:calc(100vh - 140px);gap:20px;font-family:'Outfit', sans-serif;color:var(--text-primary);" x-data="{ selectedAll: false }">
+<div style="display:flex;height:calc(100vh - 140px);gap:20px;font-family:'Outfit', sans-serif;color:var(--text-primary);" 
+     x-data="{ selectedAll: false, isUploading: false, progress: 0 }"
+     x-on:livewire-upload-start="isUploading = true"
+     x-on:livewire-upload-finish="isUploading = false"
+     x-on:livewire-upload-error="isUploading = false"
+     x-on:livewire-upload-progress="progress = $event.detail.progress">
     {{-- Left Sidebar: Tree & Shortcuts --}}
     <div class="glass" style="width:280px;display:flex;flex-direction:column;padding:0;border-right:1px solid var(--glass-border);background:rgba(10, 15, 30, 0.4);">
         <div style="padding:24px 20px;border-bottom:1px solid var(--glass-border);">
@@ -148,7 +153,24 @@
                     @endif
 
                     @foreach($items as $item)
-                    <tr wire:key="file-row-{{ md5($item['name'] . '-' . $item['updated_at']) }}" style="border-bottom:1px solid rgba(255,255,255,0.03);transition:background 0.2s;background:{{ in_array($item['name'], $selectedItems) ? 'rgba(99, 102, 241, 0.05)' : 'transparent' }};" class="file-row">
+                    @php
+                        $ext = strtolower(pathinfo($item['name'], PATHINFO_EXTENSION));
+                        $isKnownText = in_array($ext, ['php', 'js', 'css', 'html', 'htm', 'txt', 'json', 'md', 'env', 'ini', 'conf', 'yaml', 'yml', 'sh', 'htaccess', '']);
+                        $isBinary = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico', 'zip', 'tar', 'gz', 'rar', 'pdf', 'mp3', 'mp4', 'avi', 'mov', 'ttf', 'woff', 'woff2', 'eot', 'sqlite', 'sqlite3']);
+                    @endphp
+                    <tr wire:key="file-row-{{ md5($item['name'] . '-' . $item['updated_at']) }}" 
+                        style="border-bottom:1px solid rgba(255,255,255,0.03);transition:background 0.2s;background:{{ in_array($item['name'], $selectedItems) ? 'rgba(99, 102, 241, 0.05)' : 'transparent' }};cursor:default;" 
+                        class="file-row"
+                        @if($item['is_dir'])
+                            wire:dblclick="navigate('{{ ltrim($currentPath . '/' . $item['name'], '/') }}')"
+                        @elseif(!$isBinary)
+                            @if(!$isKnownText)
+                                x-on:dblclick="if(confirm('Este archivo tiene una extensión desconocida. ¿Intentar abrir como texto plano?')) { @this.editFile('{{ $item['name'] }}') }"
+                            @else
+                                wire:dblclick="editFile('{{ $item['name'] }}')"
+                            @endif
+                        @endif
+                    >
                         <td style="padding:12px 20px;text-align:center;vertical-align:middle;">
                             <input type="checkbox" value="{{ $item['name'] }}" wire:model.live="selectedItems" class="file-checkbox" style="width:16px;height:16px;accent-color:var(--accent-light);cursor:pointer;border-radius:4px;">
                         </td>
@@ -161,7 +183,6 @@
                             @else
                                 <div style="display:flex;align-items:center;gap:12px;color:var(--text-primary);">
                                     @php
-                                        $ext = strtolower(pathinfo($item['name'], PATHINFO_EXTENSION));
                                         $icon = 'fa-file-lines';
                                         $color = 'var(--text-secondary)';
                                         if (in_array($ext, ['php', 'js', 'css', 'html', 'json', 'yaml', 'yml', 'xml'])) { $icon = 'fa-file-code'; $color = '#a78bfa'; }
@@ -201,8 +222,14 @@
                         <td style="text-align:right;padding-right:24px;vertical-align:middle;">
                             <div style="display:inline-flex;gap:4px;">
                                 @if(!$item['is_dir'])
-                                    @if(in_array(strtolower(pathinfo($item['name'], PATHINFO_EXTENSION)), ['php', 'js', 'css', 'html', 'htm', 'txt', 'json', 'md', 'env', 'ini', 'conf', 'yaml', 'yml', 'sh', 'htaccess']))
-                                    <button wire:click="editFile('{{ $item['name'] }}')" class="btn btn-ghost btn-sm" title="Editar código" style="padding:6px 10px;border-radius:6px;background:rgba(99,102,241,0.08);">
+                                    @if(!$isBinary)
+                                    <button 
+                                        @if(!$isKnownText)
+                                            x-on:click="if(confirm('Este archivo tiene una extensión desconocida. ¿Intentar abrir como texto plano?')) { @this.editFile('{{ $item['name'] }}') }"
+                                        @else
+                                            wire:click="editFile('{{ $item['name'] }}')"
+                                        @endif
+                                        class="btn btn-ghost btn-sm" title="Editar código" style="padding:6px 10px;border-radius:6px;background:rgba(99,102,241,0.08);">
                                         <i class="fa-solid fa-code" style="color:var(--accent-light);font-size:14px;"></i>
                                     </button>
                                     @endif
@@ -567,8 +594,20 @@
             }
         });
     </script>
-</div>
 
+    {{-- Upload Progress Modal --}}
+    <div x-show="isUploading" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);backdrop-filter:blur(5px);z-index:9999;align-items:center;justify-content:center;" x-bind:style="isUploading ? 'display:flex;' : 'display:none;'">
+        <div style="background:rgba(15, 23, 42, 0.95);border:1px solid var(--glass-border);border-radius:12px;padding:32px;width:100%;max-width:400px;text-align:center;">
+            <i class="fa-solid fa-cloud-arrow-up" style="font-size:48px;color:var(--accent-light);margin-bottom:16px;"></i>
+            <h3 style="font-size:18px;font-weight:700;margin-bottom:12px;">Subiendo Archivos...</h3>
+            <div style="width:100%;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin-bottom:12px;">
+                <div style="height:100%;background:var(--accent-light);border-radius:4px;transition:width 0.3s;" :style="`width: ${progress}%`"></div>
+            </div>
+            <div style="font-size:14px;font-weight:600;color:var(--text-secondary);"><span x-text="progress"></span>% Completado</div>
+            <p style="font-size:12px;color:var(--text-muted);margin-top:12px;">Por favor espera, procesando en segundo plano...</p>
+        </div>
+    </div>
+</div>
 <style>
 @keyframes slideUp {
     from { transform: translate(-50%, 50px); opacity: 0; }
