@@ -37,38 +37,57 @@
                     </div>
 
                     <div style="display:flex;flex-direction:column;gap:8px;max-height:600px;overflow-y:auto;padding-right:4px;">
-                        @foreach($containers as $c)
-                            @php
-                                $isRunning = str_contains(strtolower($c['state']), 'running');
-                                $isExited = str_contains(strtolower($c['state']), 'exited');
-                                $isPaused = str_contains(strtolower($c['state']), 'paused');
-                                $borderColor = ($selectedContainer && $selectedContainer['name'] === $c['name']) ? 'rgba(99,102,241,0.5)' : 'var(--glass-border)';
-                                $bgColor = ($selectedContainer && $selectedContainer['name'] === $c['name']) ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.02)';
-                            @endphp
-                            <button wire:click="selectContainer('{{ $c['name'] }}')" 
-                                style="width:100%;text-align:left;padding:12px;border-radius:8px;border:1px solid {{ $borderColor }};background:{{ $bgColor }};cursor:pointer;transition:all 0.2s;">
-                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                                    <span style="font-size:13px;font-weight:600;color:var(--text-primary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:180px;">
-                                        {{ $c['name'] }}
-                                    </span>
-                                    <span class="badge {{ $isRunning ? 'badge-success' : ($isPaused ? 'badge-warning' : 'badge-secondary') }}" style="font-size:9px;padding:2px 6px;">
-                                        {{ $c['state'] }}
-                                    </span>
-                                </div>
-                                <div style="font-size:11px;color:var(--text-muted);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;margin-bottom:2px;">
-                                    {{ $c['image'] }}
-                                </div>
-                                <div style="font-size:10px;color:var(--text-muted);">
-                                    {{ $c['ports'] ?: 'Sin puertos expuestos' }}
-                                </div>
-                            </button>
-                        @endforeach
+                        @forelse($groupedContainers as $prefix => $group)
+                            {{-- Group header --}}
+                            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;margin-bottom:4px;padding:0 4px;">
+                                <i class="fa-brands fa-docker" style="font-size:11px;color:#2496ed;opacity:0.8;"></i>
+                                <span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">
+                                    {{ $prefix }}
+                                </span>
+                                <div style="flex:1;height:1px;background:var(--glass-border);opacity:0.5;"></div>
+                                <span style="font-size:10px;color:var(--text-muted);opacity:0.7;">{{ count($group) }}</span>
+                            </div>
 
-                        @if(empty($containers))
+                            @foreach($group as $c)
+                                @php
+                                    $isRunning = str_contains(strtolower($c['state']), 'running');
+                                    $isPaused  = str_contains(strtolower($c['state']), 'paused');
+                                    $isSelected = $selectedContainer && $selectedContainer['name'] === $c['name'];
+                                    $borderColor = $isSelected ? 'rgba(99,102,241,0.5)' : 'var(--glass-border)';
+                                    $bgColor     = $isSelected ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.02)';
+                                    // Show only the suffix (strip the prefix-)
+                                    $suffix = str_contains($c['name'], '-')
+                                        ? substr($c['name'], strlen($prefix) + 1)
+                                        : $c['name'];
+                                @endphp
+                                <button wire:click="selectContainer('{{ $c['name'] }}')"
+                                    style="width:100%;text-align:left;padding:10px 12px;border-radius:8px;border:1px solid {{ $borderColor }};background:{{ $bgColor }};cursor:pointer;transition:all 0.2s;margin-bottom:4px;">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                                        <div style="display:flex;align-items:center;gap:6px;">
+                                            <div style="width:6px;height:6px;border-radius:50%;background:{{ $isRunning ? '#22c55e' : ($isPaused ? '#f59e0b' : '#6b7280') }};flex-shrink:0;"></div>
+                                            <span style="font-size:12px;font-weight:600;color:var(--text-primary);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;max-width:160px;">
+                                                {{ $suffix }}
+                                            </span>
+                                        </div>
+                                        <span class="badge {{ $isRunning ? 'badge-success' : ($isPaused ? 'badge-warning' : 'badge-secondary') }}" style="font-size:9px;padding:2px 5px;">
+                                            {{ $c['state'] }}
+                                        </span>
+                                    </div>
+                                    <div style="font-size:10px;color:var(--text-muted);text-overflow:ellipsis;white-space:nowrap;overflow:hidden;padding-left:12px;">
+                                        {{ $c['image'] }}
+                                    </div>
+                                    @if($c['ports'])
+                                        <div style="font-size:10px;color:var(--text-muted);font-family:monospace;padding-left:12px;margin-top:2px;">
+                                            {{ $c['ports'] }}
+                                        </div>
+                                    @endif
+                                </button>
+                            @endforeach
+                        @empty
                             <div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:12px;">
                                 No hay contenedores creados.
                             </div>
-                        @endif
+                        @endforelse
                     </div>
                 </div>
 

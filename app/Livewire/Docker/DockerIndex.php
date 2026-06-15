@@ -13,7 +13,8 @@ class DockerIndex extends Component
     public bool $daemonRunning = false;
 
     // ── Containers tab ────────────────────────────────────────────────────────
-    public array  $containers       = [];
+    public array  $containers        = [];
+    public array  $groupedContainers = []; // Containers grouped by prefix
     public ?array $selectedContainer = null;
     public string $containerLogs    = '';
     public int    $logLines         = 100;
@@ -78,6 +79,25 @@ class DockerIndex extends Component
     public function loadContainers(DockerService $docker): void
     {
         $this->containers = $docker->listContainers();
+        $this->groupedContainers = $this->groupByPrefix($this->containers);
+    }
+
+    /**
+     * Group containers by their name prefix (everything before the first dash).
+     * e.g. orbit-app, orbit-web → ['orbit' => [...]]
+     * Containers with no dash go into 'otros'.
+     */
+    protected function groupByPrefix(array $containers): array
+    {
+        $groups = [];
+        foreach ($containers as $c) {
+            $prefix = str_contains($c['name'], '-')
+                ? explode('-', $c['name'])[0]
+                : 'otros';
+            $groups[$prefix][] = $c;
+        }
+        ksort($groups);
+        return $groups;
     }
 
     public function selectContainer(string $name, DockerService $docker): void
