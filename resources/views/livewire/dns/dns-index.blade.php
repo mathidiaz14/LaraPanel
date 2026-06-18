@@ -1,6 +1,6 @@
 <div>
     {{-- Header --}}
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <div class="page-header">
         <div>
             <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">DNS Manager</h1>
             <p style="color:var(--text-secondary);font-size:13px;">Gestione zonas DNS con PowerDNS. Administre registros A, AAAA, MX, TXT, CNAME, SRV y más.</p>

@@ -139,6 +139,15 @@ body::before {
     border-top: 1px solid var(--glass-border);
 }
 
+/* ── Sidebar Overlay ───────────────────────────── */
+#sidebar-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(2px);
+    z-index: 90; display: none; opacity: 0;
+    transition: opacity var(--transition);
+}
+#sidebar-overlay.show { display: block; opacity: 1; }
+
 /* ── Topbar ────────────────────────────────────── */
 .topbar {
     position: fixed; top: 0; left: var(--sidebar-width); right: 0;
@@ -259,6 +268,15 @@ body::before {
 .btn-danger:hover { background: rgba(239,68,68,0.25); }
 .btn-sm { padding: 5px 10px; font-size: 12px; }
 
+/* ── Layout Utilities ──────────────────────────── */
+.page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; gap: 16px;
+}
+.filters-bar {
+    display: flex; gap: 10px; margin-bottom: 20px; align-items: center;
+}
+
 /* ── Forms ─────────────────────────────────────── */
 .form-group { margin-bottom: 18px; }
 .form-label { display: block; font-size: 12.5px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
@@ -305,4 +323,18 @@ select.form-input option {
     .main-content { margin-left: 0; }
     .topbar { left: 0; }
     .stats-grid { grid-template-columns: 1fr; }
+    
+    .page { padding: 16px; }
+    
+    .lp-table {
+        display: block; width: 100%; overflow-x: auto;
+        -webkit-overflow-scrolling: touch; white-space: nowrap;
+    }
+    
+    .page-header { flex-direction: column; align-items: stretch; }
+    .page-header .btn { width: 100%; justify-content: center; }
+    
+    .filters-bar { flex-direction: column; align-items: stretch; }
+    .filters-bar > div { max-width: 100% !important; }
+    .filters-bar .btn { flex: 1; justify-content: center; }
 }

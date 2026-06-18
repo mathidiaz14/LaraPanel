@@ -1,11 +1,11 @@
-<div style="display:flex;height:calc(100vh - 140px);gap:20px;font-family:'Outfit', sans-serif;color:var(--text-primary);" 
-     x-data="{ selectedAll: false, isUploading: false, progress: 0 }"
+<div class="fm-container" x-data="{ selectedAll: false, isUploading: false, progress: 0 }"
      x-on:livewire-upload-start="isUploading = true"
      x-on:livewire-upload-finish="isUploading = false"
      x-on:livewire-upload-error="isUploading = false"
      x-on:livewire-upload-progress="progress = $event.detail.progress">
+    
     {{-- Left Sidebar: Tree & Shortcuts --}}
-    <div class="glass" style="width:280px;display:flex;flex-direction:column;padding:0;border-right:1px solid var(--glass-border);background:rgba(10, 15, 30, 0.4);">
+    <div class="glass fm-sidebar">
         <div style="padding:24px 20px;border-bottom:1px solid var(--glass-border);">
             <h3 style="font-size:16px;font-weight:700;margin:0;display:flex;align-items:center;gap:10px;">
                 <i class="fa-solid fa-hard-drive" style="color:var(--accent-light);font-size:18px;"></i> 
@@ -69,7 +69,7 @@
     </div>
 
     {{-- Main Panel: Explorer & Actions --}}
-    <div class="glass" style="flex:1;display:flex;flex-direction:column;padding:0;overflow:hidden;background:rgba(10, 15, 30, 0.2);">
+    <div class="glass fm-main">
         {{-- Top Toolbar --}}
         <div style="padding:16px 24px;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;gap:20px;background:rgba(255,255,255,0.01);">
             {{-- Breadcrumb path navigation --}}
@@ -243,7 +243,7 @@
                                         <i class="fa-solid fa-file-zipper" style="color:var(--warning);font-size:14px;"></i>
                                     </button>
                                 @elseif(in_array(strtolower(pathinfo($item['name'], PATHINFO_EXTENSION)), ['zip', 'tar', 'gz']))
-                                    <button wire:click="unzipItem('{{ $item['name'] }}')" class="btn btn-ghost btn-sm" title="Extraer Aquí" style="padding:6px 10px;border-radius:6px;">
+                                    <button wire:click="startUnzip('{{ $item['name'] }}')" class="btn btn-ghost btn-sm" title="Extraer Aquí" style="padding:6px 10px;border-radius:6px;">
                                         <i class="fa-solid fa-box-open" style="color:var(--success);font-size:14px;"></i>
                                     </button>
                                 @endif
@@ -606,9 +606,95 @@
             <div style="font-size:14px;font-weight:600;color:var(--text-secondary);"><span x-text="progress"></span>% Completado</div>
             <p style="font-size:12px;color:var(--text-muted);margin-top:12px;">Por favor espera, procesando en segundo plano...</p>
         </div>
+        </div>
     </div>
+
+    {{-- Unzip Progress Modal --}}
+    @if($showUnzipModal)
+    <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);backdrop-filter:blur(5px);z-index:9999;display:flex;align-items:center;justify-content:center;">
+        <div style="background:rgba(15, 23, 42, 0.95);border:1px solid var(--glass-border);border-radius:12px;padding:32px;width:100%;max-width:500px;display:flex;flex-direction:column;"
+             wire:init="processUnzip">
+            
+            <div style="text-align:center;margin-bottom:16px;">
+                <i class="fa-solid fa-box-open" style="font-size:48px;color:var(--success);margin-bottom:16px;"></i>
+                <h3 style="font-size:18px;font-weight:700;margin-bottom:4px;">Extrayendo Archivos</h3>
+                <p style="font-size:13px;color:var(--text-muted);">{{ $unzipItemName }}</p>
+            </div>
+
+            <div style="width:100%;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin-bottom:12px;">
+                <div wire:stream="unzip-progress" style="width: 0%" class="bg-blue-500 h-full rounded-full transition-all duration-300"></div>
+            </div>
+            
+            <div style="font-size:14px;font-weight:600;color:var(--text-secondary);text-align:center;margin-bottom:16px;">
+                <span wire:stream="unzip-percentage">0%</span> Completado
+            </div>
+
+            <div style="background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);border-radius:8px;padding:12px;height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;font-family:monospace;" id="unzip-log-container">
+                <div wire:stream="unzip-log">
+                    <div class="text-xs text-gray-500 italic">Iniciando extracción...</div>
+                </div>
+            </div>
+            
+            <script>
+                // Auto-scroll the log container to the bottom as new elements stream in
+                const logContainer = document.getElementById('unzip-log-container');
+                if (logContainer) {
+                    const observer = new MutationObserver(() => {
+                        logContainer.scrollTop = logContainer.scrollHeight;
+                    });
+                    observer.observe(logContainer, { childList: true, subtree: true });
+                }
+            </script>
+        </div>
+    </div>
+    @endif
 </div>
 <style>
+.fm-container {
+    display: flex; height: calc(100vh - 140px); gap: 20px;
+    font-family: 'Outfit', sans-serif; color: var(--text-primary);
+}
+.fm-sidebar {
+    width: 280px; display: flex; flex-direction: column; padding: 0;
+    border-right: 1px solid var(--glass-border); background: rgba(10, 15, 30, 0.4);
+    flex-shrink: 0;
+}
+.fm-main {
+    flex: 1; display: flex; flex-direction: column; padding: 0;
+    overflow: hidden; background: rgba(10, 15, 30, 0.2);
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    .fm-container {
+        flex-direction: column;
+        height: auto;
+        min-height: calc(100vh - 140px);
+    }
+    .fm-sidebar {
+        width: 100%;
+        height: 350px;
+        border-right: none;
+        border-bottom: 1px solid var(--glass-border);
+    }
+    .fm-main {
+        overflow: visible;
+    }
+    /* Toolbar wrap */
+    .fm-main > div:first-child {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 12px;
+    }
+    .fm-main > div:first-child > div:last-child {
+        flex-wrap: wrap;
+    }
+    .fm-main > div:first-child .btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
 @keyframes slideUp {
     from { transform: translate(-50%, 50px); opacity: 0; }
     to { transform: translate(-50%, 0); opacity: 1; }

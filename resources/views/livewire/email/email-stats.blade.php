@@ -1,7 +1,7 @@
 <div>
     @include('livewire.email._email-nav', ['active' => 'stats'])
 
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <div class="page-header">
         <div>
             <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">Estadísticas de Email</h1>
             <p style="color:var(--text-secondary);font-size:13px;">Monitorea el uso de cuota y el estado de todos los buzones por dominio.</p>

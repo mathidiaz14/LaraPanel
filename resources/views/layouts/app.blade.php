@@ -23,6 +23,8 @@
 <body>
 <div class="app-layout">
 
+    <div id="sidebar-overlay"></div>
+
     {{-- ── Sidebar ─────────────────────────────────── --}}
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-logo">
@@ -277,8 +279,33 @@
     // Mobile sidebar toggle
     const toggle = document.getElementById('sidebar-toggle');
     const sidebar = document.getElementById('sidebar');
-    if (toggle) toggle.addEventListener('click', () => sidebar.classList.toggle('open'));
+    const overlay = document.getElementById('sidebar-overlay');
+    
+    function toggleSidebar() {
+        sidebar.classList.toggle('open');
+        if (sidebar.classList.contains('open')) {
+            overlay.classList.add('show');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        } else {
+            overlay.classList.remove('show');
+            document.body.style.overflow = '';
+        }
+    }
+
+    if (toggle) toggle.addEventListener('click', toggleSidebar);
+    if (overlay) overlay.addEventListener('click', toggleSidebar);
+    
+    // Check initially
     if (window.innerWidth <= 768 && toggle) toggle.style.display = 'flex';
+    
+    // Also close on any nav link click on mobile
+    document.querySelectorAll('.nav-item').forEach(link => {
+        link.addEventListener('click', () => {
+            if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
+                toggleSidebar();
+            }
+        });
+    });
 </script>
 </body>
 </html>

@@ -242,14 +242,51 @@ class FileManager extends Component
         }
     }
 
-    public function unzipItem(string $name, FileService $fileService): void
+    public $showUnzipModal = false;
+    public $unzipItemName = '';
+
+    public function startUnzip(string $name)
     {
-        $path = $this->currentPath . '/' . $name;
+        $this->unzipItemName = $name;
+        $this->showUnzipModal = true;
+    }
+
+    public function processUnzip(FileService $fileService): void
+    {
+        $path = $this->currentPath . '/' . $this->unzipItemName;
         try {
-            $fileService->unzip($path);
+            $fileService->unzipStream($path, function ($filename, $current, $total) {
+                // Enviar la línea extraída al log
+                $this->stream(
+                    to: 'unzip-log',
+                    content: "<div class='text-xs text-gray-300 truncate'>$filename</div>",
+                    replace: false,
+                );
+                
+                // Actualizar la barra de progreso
+                $percentage = round(($current / $total) * 100);
+                $this->stream(
+                    to: 'unzip-progress',
+                    content: "<div style='width: {$percentage}%' class='bg-blue-500 h-full rounded-full transition-all duration-300'></div>",
+                    replace: true,
+                );
+                
+                // Enviar porcentaje al indicador numérico
+                $this->stream(
+                    to: 'unzip-percentage',
+                    content: $percentage . "%",
+                    replace: true,
+                );
+                
+                return true;
+            });
+            
             $this->successMessage = "Archivo descomprimido con éxito.";
+            $this->showUnzipModal = false;
+            $this->loadItems($fileService);
         } catch (\Throwable $e) {
             $this->errorMessage = $e->getMessage();
+            $this->showUnzipModal = false;
         }
     }
 

@@ -1,6 +1,6 @@
 <div>
     {{-- Tab Navigation --}}
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <div class="page-header">
         <div>
             <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">
                 <i class="fa-solid fa-shield-virus" style="color:var(--accent-light);margin-right:8px;"></i>

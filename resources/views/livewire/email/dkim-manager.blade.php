@@ -2,7 +2,7 @@
     {{-- Email Submenu Navigation --}}
     @include('livewire.email._email-nav', ['active' => 'dkim'])
 
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+    <div class="page-header">
         <div>
             <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">Seguridad de Email: DKIM / SPF / DMARC</h1>
             <p style="color:var(--text-secondary);font-size:13px;">Configure autenticación de correo para mejorar la entregabilidad y prevenir el spoofing.</p>

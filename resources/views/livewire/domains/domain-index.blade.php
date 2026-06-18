@@ -1,6 +1,6 @@
 <div>
     {{-- Header --}}
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+    <div class="page-header">
         <div>
             <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">Gestión de Dominios</h1>
             <p style="color:var(--text-secondary);font-size:13px;">
@@ -19,7 +19,7 @@
     @endif
 
     {{-- Filters --}}
-    <div style="display:flex;gap:10px;margin-bottom:20px;align-items:center;">
+    <div class="filters-bar">
         <div style="position:relative;flex:1;max-width:360px;">
             <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:13px;"></i>
             <input wire:model.live.debounce.300ms="search"

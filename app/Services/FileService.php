@@ -357,9 +357,9 @@ class FileService
     }
 
     /**
-     * Unzip archive.
+     * Unzip archive with progress stream.
      */
-    public function unzip(string $relativePath): bool
+    public function unzipStream(string $relativePath, callable $onProgress): bool
     {
         $zipPath = $this->resolvePath($relativePath);
         $destPath = dirname($zipPath);
@@ -368,13 +368,33 @@ class FileService
             throw new \RuntimeException("El archivo zip no existe.");
         }
 
-        AuditLog::record('filemanager.unzip', $relativePath);
+        AuditLog::record('filemanager.unzip_stream', $relativePath);
 
         if (class_exists(\ZipArchive::class)) {
             $zip = new \ZipArchive();
             if ($zip->open($zipPath) === true) {
-                $zip->extractTo($destPath);
+                $total = $zip->numFiles;
+                
+                // Extraer de a grupos pequeños o uno por uno
+                for ($i = 0; $i < $total; $i++) {
+                    $filename = $zip->getNameIndex($i);
+                    $zip->extractTo($destPath, $filename);
+                    
+                    // Si el callback devuelve false, abortamos (útil para errores)
+                    if ($onProgress($filename, $i + 1, $total) === false) {
+                        break;
+                    }
+                }
                 $zip->close();
+                
+                if (app()->isProduction()) {
+                    // En producción los archivos creados pueden quedar con dueño www-data en lugar de larapanel.
+                    // Pero como corre bajo el pool de PHP, www-data es correcto para el servidor web.
+                    // Si necesitamos permisos específicos, podemos correr un chown al finalizar.
+                    try {
+                        $this->sudo->run(['chown', '-R', 'www-data:www-data', $destPath]);
+                    } catch (\Throwable $e) {}
+                }
                 return true;
             }
         }
