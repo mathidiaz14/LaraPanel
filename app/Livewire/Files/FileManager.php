@@ -268,7 +268,7 @@ class FileManager extends Component
                 $filename = preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $filename);
                 // Subir como archivo temporal
                 $tmpPath = $upload->storeAs('livewire-tmp', $filename);
-                $fullTmpPath = storage_path('app/' . $tmpPath);
+                $fullTmpPath = \Illuminate\Support\Facades\Storage::disk('local')->path($tmpPath);
                 
                 // Mover al destino real usando el resolvePath para evitar errores de permisos si el directorio webroot es de root
                 $destPath = $fileService->resolvePath($this->currentPath . '/' . $filename);
