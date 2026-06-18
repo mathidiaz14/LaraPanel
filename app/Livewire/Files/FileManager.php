@@ -259,7 +259,7 @@ class FileManager extends Component
     public function updatedUploads(FileService $fileService): void
     {
         $this->validate([
-            'uploads.*' => 'file|max:51200', // 50MB max file size
+            'uploads.*' => 'file|max:2048000', // 2GB max file size
         ]);
 
         try {
