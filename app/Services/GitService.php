@@ -139,4 +139,34 @@ class GitService
 
         return $log;
     }
+
+    /**
+     * Gets the current git status of the local repository.
+     */
+    public function getRepoStatus(GitDeployment $deployment): array
+    {
+        $domainPath = $deployment->deploy_path ?: '/var/www/' . $deployment->domain_name . '/public_html';
+        
+        if (!is_dir($domainPath)) {
+            return ['status' => 'not_found', 'message' => 'El directorio no existe en el servidor.'];
+        }
+        
+        $isRepo = Process::path($domainPath)->run('git rev-parse --is-inside-work-tree');
+        if (!$isRepo->successful()) {
+            return ['status' => 'not_initialized', 'message' => 'El directorio existe pero no es un repositorio de git. Se clonará en el próximo despliegue.'];
+        }
+        
+        // It is a repo
+        $branch = Process::path($domainPath)->run('git rev-parse --abbrev-ref HEAD')->output();
+        $commit = Process::path($domainPath)->run('git log -1 --pretty=format:"%h - %s (%cr)"')->output();
+        $status = Process::path($domainPath)->run('git status --short')->output();
+        
+        return [
+            'status' => 'active',
+            'branch' => trim($branch),
+            'commit' => trim($commit),
+            'changes' => trim($status) !== '' ? trim($status) : 'Directorio de trabajo limpio',
+            'has_changes' => trim($status) !== ''
+        ];
+    }
 }

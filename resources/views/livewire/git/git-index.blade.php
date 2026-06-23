@@ -129,9 +129,58 @@
                         </div>
                     </div>
 
+                    {{-- Repo Status Info --}}
+                    @if(!empty($repoStatus))
+                    <div style="background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);border-radius:8px;padding:16px;margin-bottom:24px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                            <h3 style="font-size:13px;font-weight:700;color:var(--text-primary);"><i class="fa-brands fa-git-alt" style="color:#f14e32;margin-right:6px;"></i> Estado del Repositorio Local</h3>
+                            <button wire:click="refreshRepoStatus" class="btn btn-ghost btn-sm" wire:loading.attr="disabled" wire:target="refreshRepoStatus">
+                                <span wire:loading.remove wire:target="refreshRepoStatus"><i class="fa-solid fa-rotate"></i> Actualizar</span>
+                                <span wire:loading wire:target="refreshRepoStatus"><i class="fa-solid fa-spinner fa-spin"></i></span>
+                            </button>
+                        </div>
+                        
+                        @if($repoStatus['status'] === 'not_found')
+                            <span class="badge badge-warning">Directorio Inexistente</span>
+                            <p style="color:var(--text-muted);margin-top:8px;font-size:12px;">{{ $repoStatus['message'] }}</p>
+                        @elseif($repoStatus['status'] === 'not_initialized')
+                            <span class="badge badge-warning">No Inicializado</span>
+                            <p style="color:var(--text-muted);margin-top:8px;font-size:12px;">{{ $repoStatus['message'] }}</p>
+                        @else
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:12px;">
+                                <div>
+                                    <div style="color:var(--text-muted);margin-bottom:4px;">Rama Actual</div>
+                                    <div style="font-family:monospace;font-weight:600;"><i class="fa-solid fa-code-branch" style="color:var(--accent-light);margin-right:4px;"></i> {{ $repoStatus['branch'] }}</div>
+                                </div>
+                                <div>
+                                    <div style="color:var(--text-muted);margin-bottom:4px;">Último Commit Descargado</div>
+                                    <div style="font-family:monospace;font-size:11px;color:var(--text-primary);">{{ $repoStatus['commit'] }}</div>
+                                </div>
+                            </div>
+                            @if($repoStatus['has_changes'])
+                                <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--glass-border);">
+                                    <div style="color:var(--warning);margin-bottom:6px;font-size:12px;font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> Archivos modificados localmente (podrían sobreescribirse o causar conflictos):</div>
+                                    <pre style="background:rgba(0,0,0,0.4);padding:10px;border-radius:6px;font-family:monospace;font-size:11px;color:var(--text-secondary);max-height:120px;overflow-y:auto;border:1px solid rgba(255,255,255,0.05);">{{ $repoStatus['changes'] }}</pre>
+                                </div>
+                            @else
+                                <div style="margin-top:16px;color:var(--success);font-size:12px;display:flex;align-items:center;gap:6px;">
+                                    <i class="fa-solid fa-circle-check"></i> Directorio de trabajo limpio
+                                </div>
+                            @endif
+                        @endif
+                    </div>
+                    @endif
+
                     {{-- Webhook Info --}}
                     <div style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:16px;margin-bottom:24px;">
-                        <h3 style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--accent-light);"><i class="fa-solid fa-link"></i> Webhook URL</h3>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                            <h3 style="font-size:13px;font-weight:700;color:var(--accent-light);"><i class="fa-solid fa-link"></i> Webhook URL</h3>
+                            @if($selectedDeployment->auto_deploy)
+                                <span class="badge badge-success"><i class="fa-solid fa-bolt"></i> Auto-Deploy Activo</span>
+                            @else
+                                <span class="badge badge-muted"><i class="fa-solid fa-power-off"></i> Auto-Deploy Apagado</span>
+                            @endif
+                        </div>
                         <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
                             <input type="text" readonly value="{{ $selectedDeployment->webhook_url }}" class="form-input" style="font-family:monospace;font-size:12px;color:var(--text-primary);background:rgba(0,0,0,0.3);">
                         </div>

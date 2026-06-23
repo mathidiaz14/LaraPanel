@@ -129,7 +129,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/logs', LogIndex::class)->name('logs.index');
 
     // Profile
-    Route::get('/profile', fn() => view('coming-soon', ['module' => 'Mi Perfil']))->name('profile');
+    Route::get('/profile', \App\Livewire\Profile::class)->name('profile');
 
     // Admin routes
     Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {

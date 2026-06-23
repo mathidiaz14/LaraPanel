@@ -13,6 +13,7 @@ class GitIndex extends Component
     public ?GitDeployment $selectedDeployment = null;
     public ?GitDeploymentLog $selectedLog = null;
     public string $activeTab = 'config'; // config | logs
+    public array $repoStatus = [];
 
     // Form fields
     public bool $isCreating = false;
@@ -72,6 +73,15 @@ class GitIndex extends Component
         $this->isCreating = false;
         $this->activeTab = 'config';
         $this->selectedLog = null;
+        
+        $this->refreshRepoStatus(app(GitService::class));
+    }
+
+    public function refreshRepoStatus(GitService $gitService)
+    {
+        if ($this->selectedDeployment) {
+            $this->repoStatus = $gitService->getRepoStatus($this->selectedDeployment);
+        }
     }
 
     public function createNew()
