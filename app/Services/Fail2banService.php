@@ -23,7 +23,7 @@ class Fail2banService
 
         try {
             $result = $this->sudo->run(['systemctl', 'is-active', 'fail2ban'], checkExit: false);
-            return trim($result['output'] ?? '') === 'active';
+            return $result->output() === 'active';
         } catch (\Throwable) {
             return false;
         }
@@ -41,7 +41,7 @@ class Fail2banService
         // Use systemctl as authoritative source for running state
         try {
             $svcResult = $this->sudo->run(['systemctl', 'is-active', 'fail2ban'], checkExit: false);
-            $isRunning = trim($svcResult['output'] ?? '') === 'active';
+            $isRunning = $svcResult->output() === 'active';
         } catch (\Throwable) {
             $isRunning = false;
         }
@@ -52,7 +52,7 @@ class Fail2banService
         if ($isRunning) {
             try {
                 $result = $this->sudo->run(['fail2ban-client', 'status'], checkExit: false);
-                $rawOutput = $result['output'] ?? '';
+                $rawOutput = $result->output();
                 if (preg_match('/Jail list:\s+(.+)/i', $rawOutput, $m)) {
                     $jails = array_values(array_filter(array_map('trim', explode(',', $m[1]))));
                 }
@@ -79,7 +79,7 @@ class Fail2banService
 
         try {
             $result = $this->sudo->run(['fail2ban-client', 'status', $jail], checkExit: false);
-            $output = $result['output'] ?? '';
+            $output = $result->output();
 
             return [
                 'name'        => $jail,
@@ -198,7 +198,7 @@ class Fail2banService
 
         try {
             $result = $this->sudo->run(['tail', '-n', (string)$lines, '/var/log/fail2ban.log'], checkExit: false);
-            return $result['output'] ?? 'No se pudo leer el log de fail2ban.';
+            return $result->output() ?: 'No se pudo leer el log de fail2ban.';
         } catch (\Throwable $e) {
             return 'Error: ' . $e->getMessage();
         }

@@ -82,11 +82,11 @@ class WordPressIndex extends Component
             $dbPass
         );
 
-        $this->installOutput = $result['output'];
-        $this->installSuccess = $result['success'];
+        $this->installOutput = $result->output();
+        $this->installSuccess = $result->successful();
         $this->isInstalling = false;
 
-        if ($result['success']) {
+        if ($result->successful()) {
             // Update local mock array to show it's installed
             foreach ($this->domains as &$d) {
                 if ($d['name'] === $this->selectedDomain) {
