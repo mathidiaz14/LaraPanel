@@ -21,4 +21,16 @@ Schedule::command('ssl:renew')
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/ssl-renew.log'));
 
-// Server metrics historical logging was removed during the Super Dashboard refactoring
+// Server metrics collection and threshold alerts
+Schedule::command('panel:collect-metrics')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/panel-metrics.log'));
+
+// Check uptime for active domains
+Schedule::command('panel:check-uptime')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/panel-uptime.log'));

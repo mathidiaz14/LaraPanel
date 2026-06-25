@@ -108,6 +108,19 @@
             </div>
         </div>
     </div>
+
+    {{-- Historial de Recursos (Líneas) --}}
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;margin-top:32px;color:var(--text-primary);border-bottom:1px solid var(--glass-border);padding-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+        Historial de Consumo
+        <select wire:model.live="timeRange" class="form-select form-select-sm" style="width: auto; background: var(--glass-bg); color: var(--text-primary); border: 1px solid var(--glass-border);">
+            <option value="1h">Última Hora</option>
+            <option value="24h">Últimas 24 Horas</option>
+            <option value="7d">Últimos 7 Días</option>
+        </select>
+    </h3>
+    <div class="glass" style="padding:24px;margin-bottom:24px;height:300px;">
+        <canvas id="historyChart"></canvas>
+    </div>
     @endif
 
     {{-- Estado de Servicios --}}
@@ -190,6 +203,84 @@ document.addEventListener('livewire:initialized', () => {
             }]
         },
         options: commonOptions
+    });
+
+    const ctxHistory = document.getElementById('historyChart')?.getContext('2d');
+    let historyChart = null;
+
+    if(ctxHistory) {
+        let rawHistory = @json($history);
+        
+        historyChart = new Chart(ctxHistory, {
+            type: 'line',
+            data: {
+                labels: rawHistory.map(h => h.time),
+                datasets: [
+                    {
+                        label: 'CPU %',
+                        data: rawHistory.map(h => h.cpu),
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHitRadius: 10
+                    },
+                    {
+                        label: 'RAM %',
+                        data: rawHistory.map(h => h.ram),
+                        borderColor: '#27c93f',
+                        backgroundColor: 'rgba(39, 201, 63, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHitRadius: 10
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { callback: function(value) { return value + '%' } }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                    },
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false,
+                    }
+                }
+            }
+        });
+    }
+
+    Livewire.on('history-updated', (data) => {
+        let newHistory = data[0];
+        if(!newHistory || !historyChart) return;
+
+        historyChart.data.labels = newHistory.map(h => h.time);
+        historyChart.data.datasets[0].data = newHistory.map(h => h.cpu);
+        historyChart.data.datasets[1].data = newHistory.map(h => h.ram);
+        historyChart.update();
     });
 
     Livewire.on('snapshot-updated', (data) => {

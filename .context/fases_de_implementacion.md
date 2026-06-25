@@ -18,11 +18,11 @@ El núcleo del proyecto, su framework estructural, diseño UI y todos los conect
   - Repaso de `$rules` en los componentes Livewire previniendo inyecciones o desbordes en el Bash subyacente.
 
 ## Fase 2: Notificaciones y Monitoreo Histórico
-*Estado: Pendiente*
+*Estado: Completada*
 **Prioridad:** ALTA.
-- [ ] **2.1. Arquitectura de Canales (Notifications):** Disparo de alertas usando Laravel Notifications via Email y bot de Telegram.
-- [ ] **2.2. Monitoreo de Umbrales (Alarms):** Script periódico evaluando `ServerMetric`. Alerta al administrador si (CPU > 90% o RAM > 95%).
-- [ ] **2.3. Métricas Históricas & Uptime:** Volcado histórico persistente en `server_metrics` visualizado en Chart.js (1h/24h/7d) e iteración contra dominios vivos para medir caídas (status_code 200).
+- [x] **2.1. Arquitectura de Canales (Notifications):** Disparo de alertas usando Laravel Notifications via Email y paquete de Telegram.
+- [x] **2.2. Monitoreo de Umbrales (Alarms):** Script periódico (`CollectServerMetricsCommand`) evaluando `ServerMetric` para CPU/RAM, y `CheckDomainsUptimeCommand` para caídas.
+- [x] **2.3. Métricas Históricas & Uptime:** Volcado histórico persistente visualizado en Chart.js (1h/24h/7d) e iteración contra dominios vivos.
 
 ## Fase 3: Backups Avanzados (Nube)
 *Estado: Pendiente*

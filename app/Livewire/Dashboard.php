@@ -16,7 +16,7 @@ class Dashboard extends Component
     public int $domainCount = 0;
     public bool $loading = true;
 
-    protected MonitoringService $monitoring;
+    public string $timeRange = '1h'; // 1h, 24h, 7d
 
     public function boot(MonitoringService $monitoring): void
     {
@@ -30,6 +30,12 @@ class Dashboard extends Component
         $this->domainCount = Domain::where('user_id', auth()->id())->active()->count();
     }
 
+    public function updatedTimeRange()
+    {
+        $this->loadHistory();
+        $this->dispatch('history-updated', $this->history);
+    }
+
     public function loadMetrics(): void
     {
         $this->metrics  = $this->monitoring->snapshot();
@@ -39,14 +45,27 @@ class Dashboard extends Component
 
     public function loadHistory(): void
     {
-        $this->history = ServerMetric::recent(1)
-            ->orderBy('recorded_at')
-            ->get(['cpu_usage', 'ram_usage', 'disk_usage', 'recorded_at'])
+        $hours = match($this->timeRange) {
+            '24h' => 24,
+            '7d'  => 168,
+            default => 1,
+        };
+
+        $query = ServerMetric::recent($hours)->orderBy('recorded_at');
+
+        // Para evitar demasiados puntos en 24h/7d, podríamos agrupar, pero por ahora tomamos limit si es muy grande, o raw.
+        // Dado que corre cada 5 minutos:
+        // 1h = 12 puntos
+        // 24h = 288 puntos
+        // 7d = 2016 puntos
+        // Lo devolvemos entero, Chart.js puede manejar 2000 puntos bien con decimation, o podemos tomar 1 de cada X.
+
+        $this->history = $query->get(['cpu_usage', 'ram_usage', 'disk_usage', 'recorded_at'])
             ->map(fn($m) => [
                 'cpu'  => $m->cpu_usage,
                 'ram'  => $m->ram_usage,
                 'disk' => $m->disk_usage,
-                'time' => $m->recorded_at->format('H:i:s'),
+                'time' => $m->recorded_at->format('H:i'), // Formato corto
             ])
             ->values()
             ->toArray();

@@ -7,6 +7,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "laravel-notification-channels/telegram": "^7.0",
         "laravel/fortify": "^1.37",
         "laravel/framework": "^13.8",
         "laravel/horizon": "^5.47",

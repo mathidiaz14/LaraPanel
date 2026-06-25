@@ -21,11 +21,13 @@ La arquitectura monolítica definida en la documentación funciona exactamente c
 
 ## 2. El Próximo Paso Técnico Inmediato
 
-La **Fase 1: Estabilización** ha sido completada exitosamente. Se ha aplicado el Rate Limiting estricto a las rutas públicas (Webhooks, Login) y se ha saneado la validación de todos los componentes de Livewire mediante expresiones regulares para evitar inyecciones Bash a través de `ShellExecutor`.
+## 2. El Próximo Paso Técnico Inmediato
 
-De acuerdo a la hoja de ruta en `fases_de_implementacion.md`, el **próximo paso técnico prioritario es iniciar la Fase 2: Notificaciones y Monitoreo Histórico.**
+La **Fase 2: Notificaciones y Monitoreo Histórico** ha sido completada con éxito. Se configuraron los comandos `CollectServerMetricsCommand` y `CheckDomainsUptimeCommand` para recolectar datos cada 5 minutos. También se instaló el canal de Telegram y se incorporaron las clases de alerta. Finalmente, la vista del Dashboard ahora cuenta con una gráfica histórica.
+
+De acuerdo a la hoja de ruta en `fases_de_implementacion.md`, el **próximo paso técnico prioritario es iniciar la Fase 3: Backups Remotos S3 / Nube.**
 
 Las tareas propuestas para continuar son:
-1. Crear el sistema de notificaciones base de Laravel para poder disparar alertas vía Email o Telegram.
-2. Escribir un Cron en el backend (`Console/Commands`) que procese `ServerMetric` y alerte si la CPU o RAM superan umbrales críticos.
-3. Crear un script que persista periódicamente el estado actual del servidor para graficar métricas históricas de 24hs/7d en el Dashboard.
+1. Interconectar la creación de copias de seguridad locales (tarballs y dumps de base de datos) con el Driver de Storage S3 de Laravel.
+2. Añadir campos en la interfaz (Settings) para configurar credenciales de AWS S3 o Backblaze B2.
+3. Asegurar que tras la subida exitosa, el archivo local se limpie para no saturar el disco.
