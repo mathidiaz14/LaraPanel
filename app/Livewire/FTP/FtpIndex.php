@@ -38,7 +38,7 @@ class FtpIndex extends Component
     protected array $rules = [
         'usernameSuffix'   => 'required|string|min:2|max:20|regex:/^[a-zA-Z0-9_\-\.]+$/',
         'domainId'         => 'required|integer|exists:domains,id',
-        'subdir'           => 'nullable|string|max:100',
+        'subdir'           => ['nullable', 'string', 'max:100', 'regex:/^\/[a-zA-Z0-9_\-\.\/]*$/'],
         'password'         => 'required|string|min:8|max:64',
         'quotaMb'          => 'required|integer|min:0|max:102400',
         'readonly'         => 'boolean',

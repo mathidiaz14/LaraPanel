@@ -21,9 +21,11 @@ La arquitectura monolítica definida en la documentación funciona exactamente c
 
 ## 2. El Próximo Paso Técnico Inmediato
 
-De acuerdo a la planificación y las instrucciones maestras en `fases_de_implementacion.md`, **la prioridad máxima que bloquea una liberación segura a producción es concluir la Fase 1: Estabilización.**
+La **Fase 1: Estabilización** ha sido completada exitosamente. Se ha aplicado el Rate Limiting estricto a las rutas públicas (Webhooks, Login) y se ha saneado la validación de todos los componentes de Livewire mediante expresiones regulares para evitar inyecciones Bash a través de `ShellExecutor`.
 
-Las tareas exactas para los programadores en el siguiente commit son:
-1. Abrir `routes/api.php` y `routes/web.php`.
-2. Proteger la ruta del webhook de despliegue de Git y las pantallas de Login de Fortify aplicando un middleware estricto de Rate Limiting (ej: `->middleware('throttle:60,1')`).
-3. Someter a todos los `Livewire Components` a un barrido de sus atributos `$rules` para garantizar validación exhaustiva de los inputs antes de que estos pasen a `ShellExecutor`.
+De acuerdo a la hoja de ruta en `fases_de_implementacion.md`, el **próximo paso técnico prioritario es iniciar la Fase 2: Notificaciones y Monitoreo Histórico.**
+
+Las tareas propuestas para continuar son:
+1. Crear el sistema de notificaciones base de Laravel para poder disparar alertas vía Email o Telegram.
+2. Escribir un Cron en el backend (`Console/Commands`) que procese `ServerMetric` y alerte si la CPU o RAM superan umbrales críticos.
+3. Crear un script que persista periódicamente el estado actual del servidor para graficar métricas históricas de 24hs/7d en el Dashboard.

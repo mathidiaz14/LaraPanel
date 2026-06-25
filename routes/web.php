@@ -141,7 +141,9 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // ── Webhooks (Public) ─────────────────────────────────────────────
-Route::post('/api/webhooks/git/{uuid}', [GitWebhookController::class, 'handle'])->name('webhooks.git');
+Route::post('/api/webhooks/git/{uuid}', [GitWebhookController::class, 'handle'])
+    ->name('webhooks.git')
+    ->middleware('throttle:60,1');
 
 // ── Webmail Auto-Login (Signed, Public) ───────────────────────────
 Route::get('/webmail/autologin/{token}', [WebmailAutoLoginController::class, 'autologin'])->name('webmail.autologin');

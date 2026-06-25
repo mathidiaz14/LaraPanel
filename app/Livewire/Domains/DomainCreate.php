@@ -19,12 +19,12 @@ class DomainCreate extends Component
     public string $errorMessage = '';
 
     protected array $rules = [
-        'name'          => 'required|string|min:4|max:253',
+        'name'          => ['required', 'string', 'min:4', 'max:253', 'regex:/^[a-zA-Z0-9\-\.]+$/'],
         'type'          => 'required|in:main,subdomain,addon,parked',
-        'parent_domain' => 'nullable|string',
-        'php_version'   => 'required|string',
+        'parent_domain' => ['nullable', 'string', 'regex:/^[a-zA-Z0-9\-\.]+$/'],
+        'php_version'   => ['required', 'string', 'regex:/^[0-9\.]+$/'],
         'webserver'     => 'required|in:nginx,apache,both',
-        'document_root' => 'nullable|string',
+        'document_root' => ['nullable', 'string', 'regex:/^\/[a-zA-Z0-9\-\.\/_]+$/'],
     ];
 
     public function mount(): void

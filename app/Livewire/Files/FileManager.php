@@ -422,6 +422,10 @@ class FileManager extends Component
             return;
         }
 
+        $this->validate([
+            'bulkDestDirectory' => 'required|string|regex:/^[a-zA-Z0-9_\-\.\/]*$/',
+        ]);
+
         try {
             $paths = array_map(fn($item) => $this->currentPath . '/' . $item, $this->selectedItems);
             $fileService->moveMultiple($paths, $this->bulkDestDirectory);
@@ -442,6 +446,10 @@ class FileManager extends Component
         if (empty($this->selectedItems)) {
             return;
         }
+
+        $this->validate([
+            'bulkDestDirectory' => 'required|string|regex:/^[a-zA-Z0-9_\-\.\/]*$/',
+        ]);
 
         try {
             $paths = array_map(fn($item) => $this->currentPath . '/' . $item, $this->selectedItems);

@@ -7,14 +7,14 @@ Esta hoja de ruta está basada íntegramente en la documentación maestra del re
 El núcleo del proyecto, su framework estructural, diseño UI y todos los conectores con los servicios primarios del OS (Nginx, PHP, MySQL, Postfix, Docker, PowerDNS) están consolidados en 23 Servicios de Laravel y 27 Modelos Eloquent interactivos.
 
 ## Fase 1: Estabilización y Seguridad Core
-*Estado: En progreso avanzado*
+*Estado: Completada*
 **Prioridad:** CRÍTICA.
 - [x] **1.1. Autenticación de Dos Factores (2FA):** Integración nativa de Laravel Fortify (TOTP).
 - [x] **1.2. Interfaz de Perfil de Usuario:** Creación del componente completo para password y gestión de sesiones.
 - [x] **1.3. Pruebas Automatizadas (PHPUnit):** Suite de Unit/Feature tests para `ShellExecutor` (whitelist) y prevenciones de Path Traversal.
-- [ ] **1.4. Rate Limiting en API y Webhooks:**
+- [x] **1.4. Rate Limiting en API y Webhooks:**
   - Límite global en rutas críticas (`throttle:60,1` en webhooks, protección del login frente a brute-force).
-- [ ] **1.5. Validación Exhaustiva de Formularios:**
+- [x] **1.5. Validación Exhaustiva de Formularios:**
   - Repaso de `$rules` en los componentes Livewire previniendo inyecciones o desbordes en el Bash subyacente.
 
 ## Fase 2: Notificaciones y Monitoreo Histórico

@@ -25,10 +25,10 @@ class GitIndex extends Component
     public bool $auto_deploy = true;
 
     protected array $rules = [
-        'domain_name'    => 'required|string|max:255',
-        'deploy_path'    => 'nullable|string|max:255',
+        'domain_name'    => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z0-9\-\.]+$/'],
+        'deploy_path'    => ['nullable', 'string', 'max:255', 'regex:/^\/[a-zA-Z0-9\-\.\/_]+$/'],
         'repository_url' => 'required|url|max:255',
-        'branch'         => 'required|string|max:100',
+        'branch'         => ['required', 'string', 'max:100', 'regex:/^[a-zA-Z0-9\-\.\/_]+$/'],
         'deploy_script'  => 'nullable|string',
         'auto_deploy'    => 'boolean',
     ];
