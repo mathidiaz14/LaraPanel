@@ -41,6 +41,10 @@ class Fail2banIndex extends Component
         $this->isRunning = $status['running'];
         $this->jails     = $status['jails'];
         $this->banJail   = $this->jails[0] ?? 'sshd';
+
+        if (!$this->isRunning) {
+            $this->errorMessage = "El servicio fail2ban no está activo. Razón: " . ($status['raw_output'] ?? 'desconocida');
+        }
     }
 
     public function selectJail(string $jail, Fail2banService $f2b): void

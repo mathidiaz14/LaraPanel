@@ -39,11 +39,16 @@ class Fail2banService
         }
 
         // Use systemctl as authoritative source for running state
+        $errorMsg = '';
         try {
             $svcResult = $this->sudo->run(['systemctl', 'is-active', 'fail2ban'], checkExit: false);
             $isRunning = $svcResult->output() === 'active';
-        } catch (\Throwable) {
+            if (!$isRunning) {
+                $errorMsg = $svcResult->output() . ($svcResult->stderr ? ' | ' . $svcResult->stderr : '');
+            }
+        } catch (\Throwable $e) {
             $isRunning = false;
+            $errorMsg = $e->getMessage();
         }
 
         // Separately query jails (only possible if daemon is actually running)
@@ -59,6 +64,8 @@ class Fail2banService
             } catch (\Throwable $e) {
                 $rawOutput = $e->getMessage();
             }
+        } else {
+            $rawOutput = $errorMsg ?: 'Servicio detenido o no instalado.';
         }
 
         return [
