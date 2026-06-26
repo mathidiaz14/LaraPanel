@@ -114,8 +114,108 @@
             </form>
         </div>
 
-        {{-- Backups List --}}
-        <div class="glass" style="padding:24px;">
+        {{-- Create Schedule Panel --}}
+        <div class="glass" style="padding:24px;margin-top:20px;">
+            <h2 style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">
+                <i class="fa-solid fa-clock" style="color:var(--accent-light);margin-right:8px;"></i>
+                Programar Backups (Cron)
+            </h2>
+
+            <form wire:submit.prevent="createSchedule">
+                <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <label class="form-label">Tipo</label>
+                        <select wire:model="schedType" class="form-input">
+                            <option value="full">Completo (Archivos + DB)</option>
+                            <option value="files">Solo Archivos</option>
+                            <option value="database">Solo Base de Datos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Destino (Disco)</label>
+                        <select wire:model="schedDisk" class="form-input">
+                            <option value="local">Disco Local</option>
+                            <option value="s3">Nube (S3 / Backblaze)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                    <div>
+                        <label class="form-label">Frecuencia</label>
+                        <select wire:model="schedFrequency" class="form-input">
+                            <option value="daily">Diario</option>
+                            <option value="weekly">Semanal</option>
+                            <option value="monthly">Mensual</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Retención</label>
+                        <input type="number" wire:model="schedRetention" min="1" max="30" class="form-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Dominio <span style="color:var(--text-muted);font-weight:400;">— opcional, vacío = todos</span></label>
+                    <select wire:model="schedDomainId" class="form-input">
+                        <option value="">Todos los dominios</option>
+                        @foreach($domains as $dom)
+                        <option value="{{ $dom->id }}">{{ $dom->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-secondary" style="width:100%;justify-content:center;" wire:loading.attr="disabled">
+                    <i class="fa-solid fa-calendar-plus"></i> Añadir Programación
+                </button>
+            </form>
+        </div>
+    </div>
+
+        <div>
+            {{-- Schedules List --}}
+            @if($schedules->isNotEmpty())
+            <div class="glass" style="padding:24px;margin-bottom:20px;">
+                <h2 style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">
+                    <i class="fa-solid fa-calendar-check" style="color:var(--accent-light);margin-right:8px;"></i>
+                    Backups Programados Activos
+                </h2>
+                <div style="overflow-x:auto;">
+                    <table class="table" style="width:100%;">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Destino</th>
+                                <th>Frecuencia</th>
+                                <th>Próxima Ejecución</th>
+                                <th style="text-align:right;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($schedules as $sched)
+                            <tr>
+                                <td>
+                                    <span style="font-weight:600;font-size:13px;">{{ ucfirst($sched->type) }}</span>
+                                    <div style="font-size:11px;color:var(--text-muted);">{{ $sched->domain?->name ?? 'Todos' }}</div>
+                                </td>
+                                <td><span class="badge badge-muted" style="font-size:11px;">{{ strtoupper($sched->disk) }}</span></td>
+                                <td>{{ ucfirst($sched->frequency) }} (Ret: {{ $sched->retention_count }})</td>
+                                <td style="font-size:12px;color:var(--text-secondary);">{{ $sched->next_run_at ? $sched->next_run_at->diffForHumans() : 'Pendiente' }}</td>
+                                <td style="text-align:right;">
+                                    <button wire:click="deleteSchedule({{ $sched->id }})" class="btn btn-danger btn-sm" onclick="return confirm('¿Seguro que desea eliminar esta programación?')" title="Eliminar">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
+
+            {{-- Backups List --}}
+            <div class="glass" style="padding:24px;">
             <h2 style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">
                 <i class="fa-solid fa-list" style="color:var(--accent-light);margin-right:8px;"></i>
                 Historial de Backups
@@ -182,9 +282,12 @@
                                     <button wire:click="viewBackup({{ $backup->id }})" class="btn btn-ghost btn-sm" title="Ver detalles">
                                         <i class="fa-solid fa-eye" style="color:var(--accent-light);"></i>
                                     </button>
-                                    @if($backup->status === 'completed' && $backup->filename)
+                                    @if($backup->status === 'completed' && ($backup->filename || $backup->remote_path))
                                     <button wire:click="downloadBackup({{ $backup->id }})" class="btn btn-ghost btn-sm" title="Descargar">
                                         <i class="fa-solid fa-download" style="color:var(--success);"></i>
+                                    </button>
+                                    <button wire:click="restoreBackup({{ $backup->id }})" class="btn btn-ghost btn-sm" onclick="return confirm('ATENCIÓN: Restaurar un backup reemplazará los archivos y/o base de datos actuales de forma irreversible. ¿Deseas continuar?')" title="Restaurar (Reemplaza datos actuales)">
+                                        <i class="fa-solid fa-clock-rotate-left" style="color:var(--warning);"></i>
                                     </button>
                                     @endif
                                     <button wire:click="deleteBackup({{ $backup->id }})" class="btn btn-danger btn-sm" onclick="return confirm('¿Seguro que desea eliminar este backup y su archivo?')" title="Eliminar">

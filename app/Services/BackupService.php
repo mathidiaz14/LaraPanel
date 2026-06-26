@@ -43,11 +43,14 @@ class BackupService
         $label      = $data['label'] ?? 'Backup ' . now()->format('d/m/Y H:i');
         $notes      = $data['notes'] ?? null;
 
+        $disk       = $data['disk'] ?? 'local';
+
         $backup = Backup::create([
             'user_id'    => $user->id,
             'domain_id'  => $domainId,
             'label'      => $label,
             'type'       => $type,
+            'disk'       => $disk,
             'status'     => 'running',
             'notes'      => $notes,
             'started_at' => now(),
@@ -55,18 +58,33 @@ class BackupService
 
         try {
             $filename = $this->runBackup($backup, $user, $data);
-
             $fullPath = $this->getBackupRoot($user) . '/' . $filename;
             $size = file_exists($fullPath) ? filesize($fullPath) : 0;
+            
+            $remotePath = null;
+            if ($disk === 's3' && file_exists($fullPath)) {
+                $this->configureS3();
+                $remotePath = 'backups/' . $user->id . '/' . $filename;
+                
+                // Upload to S3
+                \Illuminate\Support\Facades\Storage::disk('s3')->put(
+                    $remotePath,
+                    fopen($fullPath, 'r+')
+                );
+                
+                // Remove local file
+                @unlink($fullPath);
+            }
 
             $backup->update([
                 'status'       => 'completed',
                 'filename'     => $filename,
+                'remote_path'  => $remotePath,
                 'size_bytes'   => $size,
                 'completed_at' => now(),
             ]);
 
-            AuditLog::record('backup.created', $label, ['type' => $type, 'size' => $size]);
+            AuditLog::record('backup.created', $label, ['type' => $type, 'disk' => $disk, 'size' => $size]);
         } catch (\Throwable $e) {
             $backup->update([
                 'status'        => 'failed',
@@ -79,6 +97,28 @@ class BackupService
         }
 
         return $backup->fresh();
+    }
+    
+    /**
+     * Configure S3 filesystem disk using global settings.
+     */
+    protected function configureS3(): void
+    {
+        $endpoint = \App\Models\Setting::get('aws_endpoint');
+        
+        $config = [
+            'driver' => 's3',
+            'key' => \App\Models\Setting::get('aws_access_key_id'),
+            'secret' => \App\Models\Setting::get('aws_secret_access_key'),
+            'region' => \App\Models\Setting::get('aws_default_region', 'us-east-1'),
+            'bucket' => \App\Models\Setting::get('aws_bucket'),
+            'url' => null,
+            'endpoint' => empty($endpoint) ? null : $endpoint,
+            'use_path_style_endpoint' => !empty($endpoint),
+            'throw' => false,
+        ];
+        
+        config(['filesystems.disks.s3' => $config]);
     }
 
     /**
@@ -221,7 +261,12 @@ class BackupService
      */
     public function delete(Backup $backup): void
     {
-        if ($backup->filename) {
+        if ($backup->disk === 's3' && $backup->remote_path) {
+            $this->configureS3();
+            if (\Illuminate\Support\Facades\Storage::disk('s3')->exists($backup->remote_path)) {
+                \Illuminate\Support\Facades\Storage::disk('s3')->delete($backup->remote_path);
+            }
+        } elseif ($backup->filename) {
             $fullPath = $this->getBackupRoot($backup->user) . '/' . $backup->filename;
             if (file_exists($fullPath)) {
                 if (app()->isProduction()) {
@@ -237,10 +282,97 @@ class BackupService
     }
 
     /**
+     * Restore a backup.
+     */
+    public function restore(Backup $backup): void
+    {
+        $localPath = $this->getFullPath($backup, true); // true forces download if s3
+        
+        if (!$localPath || !file_exists($localPath)) {
+            throw new \RuntimeException("No se pudo encontrar o descargar el archivo de backup.");
+        }
+        
+        if (!app()->isProduction()) {
+            AuditLog::record('backup.restored', $backup->label . ' (Simulado)');
+            return;
+        }
+        
+        $type = $backup->type;
+        $domain = $backup->domain;
+        
+        try {
+            // Restore Files
+            if (($type === 'files' || $type === 'full') && $domain) {
+                // Extract directly to webroot directory, replacing files
+                $docRoot = $domain->document_root;
+                $this->sudo->run(['tar', '-xzf', $localPath, '-C', dirname($docRoot)]);
+            }
+
+            // Restore Database
+            if (($type === 'database' || $type === 'full')) {
+                // Determine databases included in this backup based on domain
+                $databases = DatabaseInstance::where('user_id', $backup->user_id)
+                    ->when($domain, fn($q) => $q->where('domain_id', $domain->id))
+                    ->pluck('db_name')
+                    ->toArray();
+                
+                if (!empty($databases)) {
+                    // Extract the sql.gz from the tar archive to a temp directory
+                    $tmpDir = sys_get_temp_dir() . '/lp_restore_' . uniqid();
+                    $this->sudo->run(['mkdir', '-p', $tmpDir]);
+                    
+                    // The tar has a file named database_dump.sql.gz inside
+                    $this->sudo->run(['tar', '-xzf', $localPath, '-C', $tmpDir, 'database_dump.sql.gz'], checkExit: false);
+                    
+                    $sqlGzPath = $tmpDir . '/database_dump.sql.gz';
+                    if (file_exists($sqlGzPath) || $this->sudo->run(['test', '-f', $sqlGzPath], false)->successful()) {
+                        // Unzip and restore
+                        // We assume the dump already contains `USE db_name;` or we just source it.
+                        // mysqldump --databases includes CREATE DATABASE and USE statements by default!
+                        $this->sudo->run(['gunzip', $sqlGzPath]);
+                        $sqlPath = $tmpDir . '/database_dump.sql';
+                        $this->sudo->run(['mysql', '<', $sqlPath]);
+                    }
+                    
+                    $this->sudo->run(['rm', '-rf', $tmpDir]);
+                }
+            }
+            
+            AuditLog::record('backup.restored', $backup->label);
+            
+        } catch (\Throwable $e) {
+            Log::error("Error restaurando backup {$backup->id}: " . $e->getMessage());
+            throw new \RuntimeException("Error crítico al restaurar: " . $e->getMessage());
+        }
+    }
+
+    /**
      * Get full path of backup file for download.
      */
-    public function getFullPath(Backup $backup): ?string
+    public function getFullPath(Backup $backup, bool $forceDownload = false): ?string
     {
+        if ($backup->disk === 's3' && $backup->remote_path) {
+            $this->configureS3();
+            if ($forceDownload) {
+                // Download to local tmp
+                $tmpPath = sys_get_temp_dir() . '/' . basename($backup->remote_path);
+                if (!file_exists($tmpPath)) {
+                    $stream = \Illuminate\Support\Facades\Storage::disk('s3')->readStream($backup->remote_path);
+                    if ($stream) {
+                        file_put_contents($tmpPath, stream_get_contents($stream));
+                        fclose($stream);
+                    }
+                }
+                return file_exists($tmpPath) ? $tmpPath : null;
+            }
+            
+            // Just returning a temporary URL for download
+            return \Illuminate\Support\Facades\Storage::disk('s3')->temporaryUrl(
+                $backup->remote_path,
+                now()->addMinutes(60)
+            );
+        }
+        
         if (!$backup->filename) return null;
         $path = $this->getBackupRoot($backup->user) . '/' . $backup->filename;
         return file_exists($path) ? $path : null;

@@ -11,7 +11,7 @@ class Backup extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'user_id', 'domain_id', 'label', 'type', 'status',
+        'user_id', 'domain_id', 'label', 'type', 'disk', 'remote_path', 'status',
         'filename', 'size_bytes', 'notes', 'error_message',
         'started_at', 'completed_at',
     ];

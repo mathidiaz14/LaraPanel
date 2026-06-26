@@ -23,11 +23,11 @@ La arquitectura monolítica definida en la documentación funciona exactamente c
 
 ## 2. El Próximo Paso Técnico Inmediato
 
-La **Fase 2: Notificaciones y Monitoreo Histórico** ha sido completada con éxito. Se configuraron los comandos `CollectServerMetricsCommand` y `CheckDomainsUptimeCommand` para recolectar datos cada 5 minutos. También se instaló el canal de Telegram y se incorporaron las clases de alerta. Finalmente, la vista del Dashboard ahora cuenta con una gráfica histórica.
+La **Fase 3: Backups Avanzados (Nube)** ha sido completada con éxito.
+Se integró `league/flysystem-aws-s3-v3` para subidas directas a S3/Backblaze usando credenciales globales configuradas desde el Panel de Administración.
+También se implementó la restauración destructiva automatizada y la programación recurrente usando `RunScheduledBackupsCommand` para retención inteligente.
 
-De acuerdo a la hoja de ruta en `fases_de_implementacion.md`, el **próximo paso técnico prioritario es iniciar la Fase 3: Backups Remotos S3 / Nube.**
-
-Las tareas propuestas para continuar son:
-1. Interconectar la creación de copias de seguridad locales (tarballs y dumps de base de datos) con el Driver de Storage S3 de Laravel.
-2. Añadir campos en la interfaz (Settings) para configurar credenciales de AWS S3 o Backblaze B2.
-3. Asegurar que tras la subida exitosa, el archivo local se limpie para no saturar el disco.
+De acuerdo a la hoja de ruta, el **próximo paso técnico prioritario es iniciar la Fase 4: Despliegues Git y Docker.**
+Las tareas de esta próxima fase involucrarán:
+1. Conectar los Webhooks de GitHub/GitLab con `GitDeploymentService` para hacer pulls automáticos.
+2. Interfaz para gestionar contenedores y stacks de `docker-compose`.

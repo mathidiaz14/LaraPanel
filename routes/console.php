@@ -34,3 +34,8 @@ Schedule::command('panel:check-uptime')
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/panel-uptime.log'));
+
+// Backups Scheduler
+Schedule::command('backups:run-scheduled')
+    ->hourly()
+    ->withoutOverlapping();

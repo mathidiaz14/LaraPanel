@@ -19,6 +19,13 @@ class Settings extends Component
     public int $backupRetention = 7;
     public string $timezone = 'UTC';
     
+    // AWS S3 Settings
+    public string $awsAccessKeyId = '';
+    public string $awsSecretAccessKey = '';
+    public string $awsDefaultRegion = 'us-east-1';
+    public string $awsBucket = '';
+    public string $awsEndpoint = '';
+    
     public string $generalSuccessMessage = '';
     public string $generalErrorMessage = '';
     
@@ -52,6 +59,12 @@ class Settings extends Component
         $this->backupPath = \App\Models\Setting::get('backup_path', '/var/larapanel/backups');
         $this->backupRetention = (int) \App\Models\Setting::get('backup_retention', '7');
         $this->timezone = \App\Models\Setting::get('timezone', 'UTC');
+        
+        $this->awsAccessKeyId = \App\Models\Setting::get('aws_access_key_id', '');
+        $this->awsSecretAccessKey = \App\Models\Setting::get('aws_secret_access_key', '');
+        $this->awsDefaultRegion = \App\Models\Setting::get('aws_default_region', 'us-east-1');
+        $this->awsBucket = \App\Models\Setting::get('aws_bucket', '');
+        $this->awsEndpoint = \App\Models\Setting::get('aws_endpoint', '');
     }
 
     public function saveGeneralSettings(): void
@@ -65,6 +78,11 @@ class Settings extends Component
             'backupPath'    => 'required|string|max:255',
             'backupRetention' => 'required|integer|min:1|max:365',
             'timezone'      => 'required|string|max:100',
+            'awsAccessKeyId' => 'nullable|string|max:255',
+            'awsSecretAccessKey' => 'nullable|string|max:255',
+            'awsDefaultRegion' => 'nullable|string|max:255',
+            'awsBucket' => 'nullable|string|max:255',
+            'awsEndpoint' => 'nullable|url|max:255',
         ]);
 
         try {
@@ -74,6 +92,12 @@ class Settings extends Component
             \App\Models\Setting::set('backup_path', $this->backupPath);
             \App\Models\Setting::set('backup_retention', (string) $this->backupRetention);
             \App\Models\Setting::set('timezone', $this->timezone);
+            
+            \App\Models\Setting::set('aws_access_key_id', $this->awsAccessKeyId);
+            \App\Models\Setting::set('aws_secret_access_key', $this->awsSecretAccessKey);
+            \App\Models\Setting::set('aws_default_region', $this->awsDefaultRegion);
+            \App\Models\Setting::set('aws_bucket', $this->awsBucket);
+            \App\Models\Setting::set('aws_endpoint', $this->awsEndpoint);
 
             // Timezone modification logic (if user approved, but here we just update PHP/DB timezone theoretically)
             // If they want OS timezone changes we would do:
