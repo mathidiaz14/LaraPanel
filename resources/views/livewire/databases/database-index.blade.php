@@ -8,16 +8,6 @@
             </p>
         </div>
         <div style="display:flex;gap:10px;">
-            @if($hasPma)
-            <a href="{{ route('admin.db') }}" target="_blank" class="btn btn-primary" style="background:var(--success);border-color:var(--success);">
-                <i class="fa-solid fa-external-link-alt"></i> Abrir phpMyAdmin
-            </a>
-            @else
-            <button wire:click="installPhpMyAdmin" class="btn btn-primary" wire:loading.attr="disabled">
-                <span wire:loading.remove wire:target="installPhpMyAdmin"><i class="fa-solid fa-download"></i> Instalar phpMyAdmin</span>
-                <span wire:loading wire:target="installPhpMyAdmin"><i class="fa-solid fa-spinner fa-spin"></i> Instalando... (puede tardar)</span>
-            </button>
-            @endif
             <button wire:click="refreshSizes" class="btn btn-ghost">
                 <i class="fa-solid fa-sync fa-spin-hover"></i> Actualizar Tamaños
             </button>

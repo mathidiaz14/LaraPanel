@@ -86,7 +86,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/databases', DatabaseIndex::class)->name('databases.index');
     Route::get('/admin/db', function () {
         $token = Str::random(40);
-        $tokenDir = '/tmp/larapanel_pma_sso';
+        $tokenDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'larapanel_pma_sso';
         
         if (!is_dir($tokenDir)) {
             mkdir($tokenDir, 0700, true);
