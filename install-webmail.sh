@@ -98,7 +98,8 @@ cat > "$ROUNDCUBE_CONFIG" <<CONF_EOF
     'archive',
     'zipdownload',
     'managesieve',
-    'password'
+    'password',
+    'larapanel_autologin'
 );
 
 // Permitir crear casillas y contraseñas de forma limpia
@@ -108,6 +109,16 @@ CONF_EOF
 # Asegurar permisos correctos para que Nginx / PHP-FPM puedan leer la configuración
 chown -R root:www-data /etc/roundcube
 chmod 640 "$ROUNDCUBE_CONFIG"
+
+# Instalar el plugin larapanel_autologin
+mkdir -p /usr/share/roundcube/plugins/larapanel_autologin
+cp "/var/www/panel/resources/roundcube_plugin/larapanel_autologin.php" /usr/share/roundcube/plugins/larapanel_autologin/larapanel_autologin.php
+chown -R root:root /usr/share/roundcube/plugins/larapanel_autologin
+
+# Configurar Dovecot Master User si no está configurado (para el auto-login)
+if [ -f "/var/www/panel/setup-dovecot-master.sh" ]; then
+    bash "/var/www/panel/setup-dovecot-master.sh"
+fi
 
 success "Configuración de Roundcube guardada."
 

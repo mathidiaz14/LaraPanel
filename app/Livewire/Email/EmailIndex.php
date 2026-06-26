@@ -15,6 +15,12 @@ class EmailIndex extends Component
 {
     use WithFileUploads;
 
+    public function mount(EmailService $emailService): void
+    {
+        // Actualizar el cálculo de cuota de correo al cargar la página
+        $emailService->refreshUsage(auth()->id());
+    }
+
     // Form fields
     public string $username = '';
     public ?int $domainId = null;

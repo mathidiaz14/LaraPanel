@@ -34,8 +34,8 @@ use App\Livewire\Admin\UserIndex;
 use App\Livewire\Admin\ApiTokens;
 use App\Http\Controllers\GitWebhookController;
 use App\Http\Controllers\WebmailAutoLoginController;
-use App\Http\Controllers\AdminerController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 
 /*
 |--------------------------------------------------------------------------
@@ -84,7 +84,22 @@ Route::middleware(['auth'])->group(function () {
 
     // Databases
     Route::get('/databases', DatabaseIndex::class)->name('databases.index');
-    Route::any('/admin/db', [AdminerController::class, 'index'])->name('adminer.index');
+    Route::get('/admin/db', function () {
+        $token = Str::random(40);
+        $tokenDir = '/tmp/larapanel_pma_sso';
+        
+        if (!is_dir($tokenDir)) {
+            mkdir($tokenDir, 0700, true);
+        }
+        
+        $dbUser = env('DB_USERNAME', 'root');
+        $dbPass = env('DB_PASSWORD', '');
+        
+        file_put_contents("$tokenDir/$token", "$dbUser:$dbPass");
+        chmod("$tokenDir/$token", 0600);
+        
+        return redirect('/pma/signon.php?token=' . $token);
+    })->name('admin.db');
 
     // File Manager
     Route::get('/files', FileManager::class)->name('files.index');

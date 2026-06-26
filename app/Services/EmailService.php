@@ -210,4 +210,49 @@ class EmailService
 
         return $filtered;
     }
+
+    /**
+     * Refresh mailbox usage for all accounts of a user.
+     */
+    public function refreshUsage(int $userId): void
+    {
+        if (!app()->isProduction()) {
+            return; // En local/dev ignoramos el cálculo pesado
+        }
+
+        $accounts = EmailAccount::with('domain')->where('user_id', $userId)->get();
+        $vmailBase = config('larapanel.paths.vmail', '/var/vmail');
+
+        foreach ($accounts as $account) {
+            $maildir = rtrim($vmailBase, '/') . '/' . $account->domain->name . '/' . $account->username;
+            $maildirsizePath = $maildir . '/maildirsize';
+
+            $bytes = 0;
+
+            // Intentar leer de maildirsize si existe (mucho más rápido)
+            if (file_exists($maildirsizePath)) {
+                $content = file_get_contents($maildirsizePath);
+                $lines = explode("\n", $content);
+                // Las líneas después de la primera indican el tamaño acumulado
+                foreach (array_slice($lines, 1) as $line) {
+                    $parts = explode(' ', trim($line));
+                    if (count($parts) > 0 && is_numeric($parts[0])) {
+                        $bytes += (int)$parts[0];
+                    }
+                }
+            } elseif (is_dir($maildir)) {
+                // Fallback a du -sb
+                $output = [];
+                exec('du -sb ' . escapeshellarg($maildir) . ' 2>/dev/null', $output);
+                if (!empty($output[0])) {
+                    $bytes = (int)explode("\t", $output[0])[0];
+                }
+            }
+
+            // Actualizar si es diferente
+            if ($bytes !== $account->used_bytes) {
+                $account->update(['used_bytes' => max(0, $bytes)]);
+            }
+        }
+    }
 }

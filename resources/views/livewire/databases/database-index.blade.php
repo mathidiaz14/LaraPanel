@@ -9,7 +9,7 @@
         </div>
         <div style="display:flex;gap:10px;">
             @if($hasPma)
-            <a href="/pma" target="_blank" class="btn btn-primary" style="background:var(--success);border-color:var(--success);">
+            <a href="{{ route('admin.db') }}" target="_blank" class="btn btn-primary" style="background:var(--success);border-color:var(--success);">
                 <i class="fa-solid fa-external-link-alt"></i> Abrir phpMyAdmin
             </a>
             @else

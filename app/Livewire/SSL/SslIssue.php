@@ -16,7 +16,6 @@ class SslIssue extends Component
     public bool    $isWildcard = false;
     public array   $extraSans  = [];
     public string  $newSan     = '';
-    public bool    $isLoading  = false;
     public string  $errorMsg   = '';
     public bool    $success    = false;
     public ?string $successMsg = null;
@@ -59,7 +58,6 @@ class SslIssue extends Component
             ->where('user_id', auth()->id())
             ->firstOrFail();
 
-        $this->isLoading = true;
         $this->errorMsg  = '';
 
         try {
@@ -72,11 +70,9 @@ class SslIssue extends Component
 
             $this->success    = true;
             $this->successMsg = "¡Certificado SSL emitido correctamente para {$domain->name}! Expira el {$cert->expires_at?->format('d/m/Y')}.";
-            $this->isLoading  = false;
 
         } catch (\Throwable $e) {
             $this->errorMsg  = $e->getMessage();
-            $this->isLoading = false;
         }
     }
 

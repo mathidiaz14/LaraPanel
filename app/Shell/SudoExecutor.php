@@ -15,7 +15,15 @@ class SudoExecutor extends ShellExecutor
 {
     public function run(array $command, bool $checkExit = true): ShellResult
     {
-        return parent::run(array_merge(['sudo', '-n'], $command), $checkExit);
+        $sudoCmd = ['sudo', '-n'];
+        
+        // sudo strips environment variables by default.
+        // We explicitly pass them as VAR=value arguments to sudo.
+        foreach ($this->envVars as $key => $value) {
+            $sudoCmd[] = "{$key}={$value}";
+        }
+
+        return parent::run(array_merge($sudoCmd, $command), $checkExit);
     }
 
     /**

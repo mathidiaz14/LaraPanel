@@ -101,79 +101,87 @@
                 @foreach($emailsByDomain as $domainId => $domainEmails)
                 @php $domainName = $domainEmails->first()?->domain?->name ?? 'Sin dominio'; @endphp
 
-                {{-- Domain header --}}
-                <div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--glass-border);">
-                    <i class="fa-solid fa-at" style="color:var(--accent-light);font-size:12px;"></i>
-                    <span style="font-size:13px;font-weight:700;color:var(--accent-light);">{{ $domainName }}</span>
-                    <span style="font-size:11px;color:var(--text-muted);background:rgba(99,102,241,0.1);padding:2px 8px;border-radius:20px;">{{ $domainEmails->count() }} cuenta(s)</span>
-                </div>
+                <div x-data="{ open: true }" style="margin-bottom: 12px; border: 1px solid var(--glass-border); border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.15);">
+                    {{-- Domain header --}}
+                    <div @click="open = !open" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(255,255,255,0.02);cursor:pointer;user-select:none;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <i class="fa-solid fa-at" style="color:var(--accent-light);font-size:14px;"></i>
+                            <span style="font-size:14px;font-weight:700;color:var(--accent-light);">{{ $domainName }}</span>
+                            <span style="font-size:11px;color:var(--text-muted);background:rgba(99,102,241,0.1);padding:2px 8px;border-radius:20px;">{{ $domainEmails->count() }} cuenta(s)</span>
+                        </div>
+                        <div>
+                            <i class="fa-solid fa-chevron-down" x-show="!open" style="color:var(--text-muted);font-size:12px;"></i>
+                            <i class="fa-solid fa-chevron-up" x-show="open" style="color:var(--text-muted);font-size:12px;"></i>
+                        </div>
+                    </div>
 
-                <div style="overflow-x:auto;margin-bottom:8px;">
-                    <table class="lp-table">
-                        <thead>
-                            <tr>
-                                <th>Cuenta</th>
-                                <th>Uso / Cuota</th>
-                                <th>Estado</th>
-                                <th>Reenvíos</th>
-                                <th style="text-align:right;">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($domainEmails as $email)
-                            <tr>
-                                <td>
-                                    <strong style="color:var(--text-primary);font-size:13px;">{{ $email->email }}</strong>
-                                </td>
-                                <td>
-                                    <div style="display:flex;align-items:center;gap:8px;">
-                                        <span style="font-size:11px;font-weight:500;white-space:nowrap;">{{ $email->usedFormatted() }} / {{ $email->quotaFormatted() }}</span>
-                                        @php $percent = $email->quota_bytes > 0 ? ($email->used_bytes / $email->quota_bytes) * 100 : 0; @endphp
-                                        <div style="width:40px;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;flex-shrink:0;">
-                                            <div style="width:{{ min(100, $percent) }}%;height:100%;background:{{ $percent > 85 ? 'var(--danger)' : 'var(--accent-light)' }};"></div>
+                    <div x-show="open" x-collapse style="overflow-x:auto;">
+                        <table class="lp-table" style="margin-bottom:0;border-top:1px solid var(--glass-border);">
+                            <thead>
+                                <tr>
+                                    <th>Cuenta</th>
+                                    <th>Uso / Cuota</th>
+                                    <th>Estado</th>
+                                    <th>Reenvíos</th>
+                                    <th style="text-align:right;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($domainEmails as $email)
+                                <tr>
+                                    <td>
+                                        <strong style="color:var(--text-primary);font-size:13px;">{{ $email->email }}</strong>
+                                    </td>
+                                    <td>
+                                        <div style="display:flex;align-items:center;gap:8px;">
+                                            <span style="font-size:11px;font-weight:500;white-space:nowrap;">{{ $email->usedFormatted() }} / {{ $email->quotaFormatted() }}</span>
+                                            @php $percent = $email->quota_bytes > 0 ? ($email->used_bytes / $email->quota_bytes) * 100 : 0; @endphp
+                                            <div style="width:40px;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;flex-shrink:0;">
+                                                <div style="width:{{ min(100, $percent) }}%;height:100%;background:{{ $percent > 85 ? 'var(--danger)' : 'var(--accent-light)' }};"></div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span wire:click="toggleStatus({{ $email->id }})" class="badge {{ $email->is_active ? 'badge-success' : 'badge-danger' }}" style="cursor:pointer;font-size:11px;">
-                                        {{ $email->is_active ? 'Activo' : 'Suspendido' }}
-                                    </span>
-                                </td>
-                                <td>
-                                    @if(empty($email->forwarders))
-                                    <span style="color:var(--text-muted);font-size:11px;">Ninguno</span>
-                                    @else
-                                    <span class="badge badge-accent" style="font-size:11px;">{{ count($email->forwarders) }} destino(s)</span>
-                                    @endif
-                                </td>
-                                <td style="text-align:right;">
-                                    <div class="lp-row-actions">
-                                        {{-- Webmail auto-login --}}
-                                        <button wire:click="openWebmail({{ $email->id }})" class="btn btn-ghost btn-sm" title="Abrir Webmail">
-                                            <i class="fa-solid fa-envelope-open-text" style="color:#10b981;"></i>
-                                        </button>
-                                        {{-- Backup --}}
-                                        <a href="{{ route('email.backup', $email->id) }}" class="btn btn-ghost btn-sm" title="Descargar Respaldo" target="_blank">
-                                            <i class="fa-solid fa-floppy-disk" style="color:var(--warning);"></i>
-                                        </a>
-                                        {{-- Forwarders --}}
-                                        <button wire:click="editForwarders({{ $email->id }})" class="btn btn-ghost btn-sm" title="Redirecciones">
-                                            <i class="fa-solid fa-route" style="color:var(--accent-light);"></i>
-                                        </button>
-                                        {{-- Change Password --}}
-                                        <button wire:click="confirmChangePassword({{ $email->id }})" class="btn btn-ghost btn-sm" title="Cambiar Contraseña">
-                                            <i class="fa-solid fa-key" style="color:var(--text-muted);"></i>
-                                        </button>
-                                        {{-- Delete --}}
-                                        <button wire:click="deleteEmail({{ $email->id }})" class="btn btn-danger btn-sm" onclick="return confirm('¿Seguro que desea eliminar esta cuenta de correo?')" title="Eliminar">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                                    </td>
+                                    <td>
+                                        <span wire:click="toggleStatus({{ $email->id }})" class="badge {{ $email->is_active ? 'badge-success' : 'badge-danger' }}" style="cursor:pointer;font-size:11px;">
+                                            {{ $email->is_active ? 'Activo' : 'Suspendido' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if(empty($email->forwarders))
+                                        <span style="color:var(--text-muted);font-size:11px;">Ninguno</span>
+                                        @else
+                                        <span class="badge badge-accent" style="font-size:11px;">{{ count($email->forwarders) }} destino(s)</span>
+                                        @endif
+                                    </td>
+                                    <td style="text-align:right;">
+                                        <div class="lp-row-actions">
+                                            {{-- Webmail auto-login --}}
+                                            <button wire:click="openWebmail({{ $email->id }})" class="btn btn-ghost btn-sm" title="Abrir Webmail">
+                                                <i class="fa-solid fa-envelope-open-text" style="color:#10b981;"></i>
+                                            </button>
+                                            {{-- Backup --}}
+                                            <a href="{{ route('email.backup', $email->id) }}" class="btn btn-ghost btn-sm" title="Descargar Respaldo" target="_blank">
+                                                <i class="fa-solid fa-floppy-disk" style="color:var(--warning);"></i>
+                                            </a>
+                                            {{-- Forwarders --}}
+                                            <button wire:click="editForwarders({{ $email->id }})" class="btn btn-ghost btn-sm" title="Redirecciones">
+                                                <i class="fa-solid fa-route" style="color:var(--accent-light);"></i>
+                                            </button>
+                                            {{-- Change Password --}}
+                                            <button wire:click="confirmChangePassword({{ $email->id }})" class="btn btn-ghost btn-sm" title="Cambiar Contraseña">
+                                                <i class="fa-solid fa-key" style="color:var(--text-muted);"></i>
+                                            </button>
+                                            {{-- Delete --}}
+                                            <button wire:click="deleteEmail({{ $email->id }})" class="btn btn-danger btn-sm" onclick="return confirm('¿Seguro que desea eliminar esta cuenta de correo?')" title="Eliminar">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 @endforeach
             @endif
