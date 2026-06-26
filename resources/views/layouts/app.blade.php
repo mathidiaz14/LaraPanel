@@ -101,10 +101,10 @@
                         <span class="nav-icon"><i class="fa-solid fa-database"></i></span>
                         Bases de Datos
                     </a>
-                    <a href="{{ route('adminer.index') }}" target="_blank"
-                        class="nav-item {{ request()->routeIs('adminer.index') ? 'active' : '' }}">
+                    <a href="{{ route('admin.db') }}" target="_blank"
+                        class="nav-item {{ request()->routeIs('admin.db') ? 'active' : '' }}">
                         <span class="nav-icon"><i class="fa-solid fa-table-list"></i></span>
-                        Gestor DB (Adminer)
+                        phpMyAdmin
                     </a>
                 @endif
 
