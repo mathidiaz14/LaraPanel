@@ -1,12 +1,12 @@
 <div>
     {{-- Header --}}
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px;flex-wrap:wrap;">
+    <div class="page-header" style="justify-content: flex-start; gap: 14px;">
         <a href="{{ route('dns.index') }}" class="btn btn-ghost btn-sm">
             <i class="fa-solid fa-arrow-left"></i>
         </a>
         <div>
-            <h1 style="font-size:20px;font-weight:700;margin-bottom:2px;">{{ $zone->name }}</h1>
-            <p style="color:var(--text-secondary);font-size:13px;">
+            <h1 class="page-title">{{ $zone->name }}</h1>
+            <p class="page-subtitle">
                 Editor de registros DNS · Tipo: {{ $zone->type }} · Serial: {{ $zone->serial }}
             </p>
         </div>
@@ -21,8 +21,8 @@
     @endif
 
     {{-- Add Record Form --}}
-    <div class="glass" style="padding:20px;margin-bottom:20px;">
-        <h2 style="font-size:14px;font-weight:700;margin-bottom:14px;color:var(--text-primary);">
+    <div class="glass lp-panel" style="margin-bottom:20px;">
+        <h2 class="panel-title">
             <i class="fa-solid fa-plus" style="color:var(--accent-light);margin-right:6px;"></i>
             Agregar Registro
         </h2>
@@ -30,7 +30,7 @@
             <div>
                 <label class="form-label" style="font-size:11px;">Nombre</label>
                 <input type="text" wire:model="newName" class="form-input" placeholder="@ o subdomain" style="font-family:monospace;font-size:12px;">
-                @error('newName') <div style="font-size:10px;color:var(--danger);">{{ $message }}</div> @enderror
+                @error('newName') <div class="form-error">{{ $message }}</div> @enderror
             </div>
             <div>
                 <label class="form-label" style="font-size:11px;">Tipo</label>
@@ -47,7 +47,7 @@
                     @if($newType === 'TXT') <span style="color:var(--text-muted);">(sin comillas)</span> @endif
                 </label>
                 <input type="text" wire:model="newContent" class="form-input" placeholder="{{ match($newType) { 'A' => '1.2.3.4', 'AAAA' => '2001:db8::1', 'MX' => 'mail.dominio.com', 'CNAME' => 'alias.dominio.com', 'TXT' => 'v=spf1 mx ~all', default => 'valor' } }}" style="font-family:monospace;font-size:12px;">
-                @error('newContent') <div style="font-size:10px;color:var(--danger);">{{ $message }}</div> @enderror
+                @error('newContent') <div class="form-error">{{ $message }}</div> @enderror
             </div>
             <div>
                 <label class="form-label" style="font-size:11px;">TTL</label>
@@ -79,9 +79,9 @@
     </div>
 
     {{-- Records Table --}}
-    <div class="glass" style="padding:20px;">
+    <div class="glass lp-panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-            <h2 style="font-size:14px;font-weight:700;margin:0;">
+            <h2 class="panel-title" style="margin:0;">
                 <i class="fa-solid fa-list" style="color:var(--accent-light);margin-right:6px;"></i>
                 Registros DNS ({{ $records->count() }})
             </h2>
@@ -94,7 +94,7 @@
         </div>
         @else
         <div style="overflow-x:auto;">
-            <table class="table" style="width:100%;">
+            <table class="lp-table">
                 <thead>
                     <tr>
                         <th>Nombre</th>
@@ -118,7 +118,7 @@
                         <td><input type="number" wire:model="editPriority" class="form-input" style="font-size:11px;padding:4px 8px;width:60px;"></td>
                         <td><span style="font-size:11px;color:var(--text-muted);">Editando...</span></td>
                         <td style="text-align:right;">
-                            <div style="display:inline-flex;gap:4px;">
+                            <div class="lp-row-actions">
                                 <button wire:click="saveEdit" class="btn btn-primary btn-sm" style="padding:4px 8px;">
                                     <i class="fa-solid fa-check"></i>
                                 </button>
@@ -154,7 +154,7 @@
                             @endif
                         </td>
                         <td style="text-align:right;">
-                            <div style="display:inline-flex;gap:4px;">
+                            <div class="lp-row-actions">
                                 <button wire:click="startEdit({{ $record->id }})" class="btn btn-ghost btn-sm" title="Editar">
                                     <i class="fa-solid fa-pen" style="color:var(--accent-light);"></i>
                                 </button>
@@ -172,9 +172,7 @@
         @endif
     </div>
 
-    <div wire:loading style="position:fixed;bottom:24px;right:24px;z-index:300;">
-        <div class="glass" style="padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:8px;">
-            <i class="fa-solid fa-spinner fa-spin"></i> Guardando en DNS...
-        </div>
+    <div wire:loading class="lp-loading-toast">
+        <i class="fa-solid fa-spinner fa-spin"></i> Guardando en DNS...
     </div>
 </div>

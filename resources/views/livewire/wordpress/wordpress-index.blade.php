@@ -1,7 +1,7 @@
 <div style="display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start;">
     {{-- Sidebar: Instalaciones y Dominios --}}
-    <div class="glass" style="padding:16px;">
-        <h2 style="font-size:14px;font-weight:700;margin-bottom:16px;"><i class="fa-brands fa-wordpress" style="color:#21759b;margin-right:8px;"></i> Dominios</h2>
+    <div class="glass lp-panel" style="padding:16px;">
+        <h2 class="panel-title" style="margin-bottom:16px;"><i class="fa-brands fa-wordpress" style="color:#21759b;margin-right:8px;"></i> Dominios</h2>
         
         <div style="display:flex;flex-direction:column;gap:8px;">
             @foreach($domains as $domain)
@@ -24,9 +24,9 @@
     {{-- Main Panel --}}
     <div>
         @if(!$selectedDomain)
-            <div class="glass" style="padding:60px 20px;text-align:center;">
+            <div class="glass lp-panel" style="padding:60px 20px;text-align:center;">
                 <i class="fa-brands fa-wordpress" style="font-size:48px;color:#21759b;opacity:0.2;margin-bottom:16px;display:block;"></i>
-                <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Instalador 1-Click</h3>
+                <h3 class="panel-title" style="font-size:18px;margin-bottom:8px;">Instalador 1-Click</h3>
                 <p style="color:var(--text-secondary);font-size:13px;max-width:400px;margin:0 auto;">
                     Selecciona un dominio en la barra lateral para instalar WordPress automáticamente o gestionar una instalación existente.
                 </p>
@@ -35,10 +35,10 @@
             @php $currentDomainInfo = collect($domains)->firstWhere('name', $selectedDomain); @endphp
 
             @if($currentDomainInfo && $currentDomainInfo['has_wp'])
-                <div class="glass" style="padding:24px;">
+                <div class="glass lp-panel" style="padding:24px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;border-bottom:1px solid var(--glass-border);padding-bottom:16px;">
                         <div>
-                            <h2 style="font-size:20px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:12px;">
+                            <h2 class="panel-title" style="font-size:20px;margin-bottom:4px;display:flex;align-items:center;gap:12px;">
                                 <i class="fa-brands fa-wordpress" style="color:#21759b;"></i> {{ $selectedDomain }}
                             </h2>
                             <p style="font-size:12px;color:var(--text-muted);">Gestionando instalación de WordPress</p>
@@ -66,9 +66,9 @@
                     </div>
                 </div>
             @else
-                <div class="glass" style="padding:24px;">
+                <div class="glass lp-panel" style="padding:24px;">
                     <div style="margin-bottom:24px;border-bottom:1px solid var(--glass-border);padding-bottom:16px;">
-                        <h2 style="font-size:20px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:12px;">
+                        <h2 class="panel-title" style="font-size:20px;margin-bottom:4px;display:flex;align-items:center;gap:12px;">
                             Instalar WordPress en <span style="color:var(--accent-light);">{{ $selectedDomain }}</span>
                         </h2>
                         <p style="font-size:12px;color:var(--text-muted);">El proceso configurará la Base de Datos, Nginx y descargará el core automáticamente.</p>

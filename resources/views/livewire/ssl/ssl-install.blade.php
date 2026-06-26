@@ -2,13 +2,13 @@
 <div style="max-width:740px;margin:0 auto;">
 
     {{-- Header --}}
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px;">
+    <div class="page-header" style="justify-content: flex-start; gap: 14px;">
         <a href="{{ route('ssl.index') }}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-arrow-left"></i></a>
         <div>
-            <h1 style="font-size:20px;font-weight:700;margin-bottom:2px;">
-                <i class="fa-solid fa-file-import" style="color:var(--accent-light);margin-right:8px;"></i>Instalar Certificado Propio
+            <h1 class="page-title">
+                <i class="fa-solid fa-file-import" style="color:var(--accent-light);"></i> Instalar Certificado Propio
             </h1>
-            <p style="font-size:13px;color:var(--text-secondary);">
+            <p class="page-subtitle">
                 Pega tu certificado SSL comprado (PEM format) para instalarlo en el servidor.
             </p>
         </div>
@@ -57,7 +57,7 @@
     </div>
     @endif
 
-    <div class="glass" style="padding:28px;">
+    <div class="glass lp-panel">
 
         {{-- Domain selector --}}
         <div class="form-group">
@@ -68,7 +68,7 @@
                 <option value="{{ $domain->id }}">{{ $domain->name }}</option>
                 @endforeach
             </select>
-            @error('domainId') <div style="font-size:12px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+            @error('domainId') <div class="form-error">{{ $message }}</div> @enderror
         </div>
 
         {{-- Certificate --}}
@@ -85,7 +85,7 @@
 MIIFazCCA1OgAwIBAgIRAIIQz7DSQONZRGPgu2OCiwAwDQYJKoZIhvcNAQELBQAw
 ...
 -----END CERTIFICATE-----"></textarea>
-            @error('certificate') <div style="font-size:12px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+            @error('certificate') <div class="form-error">{{ $message }}</div> @enderror
         </div>
 
         {{-- Private Key --}}
@@ -101,7 +101,7 @@ MIIFazCCA1OgAwIBAgIRAIIQz7DSQONZRGPgu2OCiwAwDQYJKoZIhvcNAQELBQAw
                       placeholder="-----BEGIN PRIVATE KEY-----
 MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC2...
 -----END PRIVATE KEY-----"></textarea>
-            @error('privateKey') <div style="font-size:12px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+            @error('privateKey') <div class="form-error">{{ $message }}</div> @enderror
             <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
                 <i class="fa-solid fa-shield-halved" style="color:var(--success);"></i>
                 La llave privada se encripta con AES-256 antes de almacenarse.

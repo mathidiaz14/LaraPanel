@@ -1,13 +1,15 @@
 <div wire:poll.5s="refreshMetrics">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
-        <h2 style="font-size:24px;font-weight:700;"><i class="fa-solid fa-gauge-high" style="color:var(--accent-light);"></i> Dashboard del Sistema</h2>
+    <div class="page-header">
+        <div>
+            <h1 class="page-title"><i class="fa-solid fa-gauge-high" style="color:var(--accent-light);"></i> Dashboard del Sistema</h1>
+        </div>
         <div style="font-size:12px;color:var(--text-muted);">
             Actualización: <span style="color:var(--success);">En vivo</span>
         </div>
     </div>
 
     {{-- Resumen Rápido (Top Widgets) --}}
-    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:20px;margin-bottom:24px;">
+    <div class="stats-row" style="margin-bottom:24px;">
         <div class="glass-elevated" style="padding:20px;display:flex;align-items:center;gap:16px;">
             <div style="width:48px;height:48px;border-radius:12px;background:rgba(99,102,241,0.1);color:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:24px;">
                 <i class="fa-solid fa-globe"></i>
@@ -62,12 +64,12 @@
 
     {{-- Estado de Recursos (Gráficas en Vivo) --}}
     @if(auth()->user()?->isAdmin() || config('larapanel.modules.monitoring'))
-    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--text-primary);border-bottom:1px solid var(--glass-border);padding-bottom:8px;">Uso de Recursos (En Vivo)</h3>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:20px;margin-bottom:24px;">
+    <h2 class="panel-title" style="margin-bottom:16px;border-bottom:1px solid var(--glass-border);padding-bottom:8px;">Uso de Recursos (En Vivo)</h2>
+    <div class="lp-three-col" style="margin-bottom:24px;">
         
         {{-- CPU --}}
-        <div class="glass" style="padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
-            <h4 style="font-size:14px;font-weight:600;margin-bottom:16px;color:var(--text-muted);align-self:flex-start;">Procesador (CPU)</h4>
+        <div class="glass lp-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
+            <h4 class="panel-title" style="margin-bottom:16px;color:var(--text-muted);align-self:flex-start;">Procesador (CPU)</h4>
             <div style="position:relative;width:140px;height:140px;margin:0 auto;">
                 <canvas id="cpuChart"></canvas>
                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);font-size:24px;font-weight:800;color:var(--text-primary);">
@@ -81,8 +83,8 @@
         </div>
 
         {{-- RAM --}}
-        <div class="glass" style="padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
-            <h4 style="font-size:14px;font-weight:600;margin-bottom:16px;color:var(--text-muted);align-self:flex-start;">Memoria RAM</h4>
+        <div class="glass lp-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
+            <h4 class="panel-title" style="margin-bottom:16px;color:var(--text-muted);align-self:flex-start;">Memoria RAM</h4>
             <div style="position:relative;width:140px;height:140px;margin:0 auto;">
                 <canvas id="ramChart"></canvas>
                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);font-size:24px;font-weight:800;color:var(--text-primary);">
@@ -95,8 +97,8 @@
         </div>
 
         {{-- Disk --}}
-        <div class="glass" style="padding:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
-            <h4 style="font-size:14px;font-weight:600;margin-bottom:16px;color:var(--text-muted);align-self:flex-start;">Almacenamiento (/)</h4>
+        <div class="glass lp-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
+            <h4 class="panel-title" style="margin-bottom:16px;color:var(--text-muted);align-self:flex-start;">Almacenamiento (/)</h4>
             <div style="position:relative;width:140px;height:140px;margin:0 auto;">
                 <canvas id="diskChart"></canvas>
                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);font-size:24px;font-weight:800;color:var(--text-primary);">
@@ -110,23 +112,23 @@
     </div>
 
     {{-- Historial de Recursos (Líneas) --}}
-    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;margin-top:32px;color:var(--text-primary);border-bottom:1px solid var(--glass-border);padding-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
-        Historial de Consumo
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;margin-top:32px;border-bottom:1px solid var(--glass-border);padding-bottom:8px;">
+        <h2 class="panel-title" style="margin:0;">Historial de Consumo</h2>
         <select wire:model.live="timeRange" class="form-select form-select-sm" style="width: auto; background: var(--glass-bg); color: var(--text-primary); border: 1px solid var(--glass-border);">
             <option value="1h">Última Hora</option>
             <option value="24h">Últimas 24 Horas</option>
             <option value="7d">Últimos 7 Días</option>
         </select>
-    </h3>
-    <div class="glass" style="padding:24px;margin-bottom:24px;height:300px;">
+    </div>
+    <div class="glass lp-panel" style="margin-bottom:24px;height:300px;">
         <canvas id="historyChart"></canvas>
     </div>
     @endif
 
     {{-- Estado de Servicios --}}
     @if(auth()->user()?->isAdmin() && !empty($services))
-    <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--text-primary);border-bottom:1px solid var(--glass-border);padding-bottom:8px;">Estado de Servicios</h3>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:16px;">
+    <h2 class="panel-title" style="margin-bottom:16px;border-bottom:1px solid var(--glass-border);padding-bottom:8px;">Estado de Servicios</h2>
+    <div class="stats-row">
         @foreach($services as $name => $status)
             <div style="background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);padding:16px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;">
                 <div style="font-size:14px;font-weight:600;color:var(--text-primary);text-transform:capitalize;">{{ $name }}</div>

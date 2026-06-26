@@ -1,18 +1,18 @@
 <div>
     <div class="page-header">
         <div>
-            <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">
+            <h1 class="page-title">
                 <i class="fa-solid fa-terminal" style="color:var(--accent-light);margin-right:10px;"></i>
                 Terminal Web
             </h1>
-            <p style="color:var(--text-secondary);font-size:13px;">Acceso CLI directo al servidor (Modo Pseudo-TTY).</p>
+            <p class="page-subtitle">Acceso CLI directo al servidor (Modo Pseudo-TTY).</p>
         </div>
         <div>
             <span class="badge badge-warning" style="font-size:11px;">MODO BÁSICO</span>
         </div>
     </div>
 
-    <div class="glass" style="padding:0;overflow:hidden;display:flex;flex-direction:column;height:65vh;border-color:rgba(99,102,241,0.3);">
+    <div class="glass lp-panel" style="padding:0;overflow:hidden;display:flex;flex-direction:column;height:65vh;border-color:rgba(99,102,241,0.3);">
         {{-- Terminal Header bar --}}
         <div style="background:rgba(0,0,0,0.4);padding:8px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--glass-border);">
             <div style="display:flex;gap:6px;">

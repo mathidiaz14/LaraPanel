@@ -2,11 +2,11 @@
     {{-- Header --}}
     <div class="page-header">
         <div>
-            <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">
+            <h1 class="page-title">
                 <i class="fa-solid fa-ban" style="color:{{ $isRunning ? 'var(--danger)' : 'var(--text-muted)' }};margin-right:10px;"></i>
                 Fail2ban
             </h1>
-            <p style="color:var(--text-secondary);font-size:13px;">Protección contra ataques de fuerza bruta. Bloqueo automático de IPs sospechosas.</p>
+            <p class="page-subtitle">Protección contra ataques de fuerza bruta. Bloqueo automático de IPs sospechosas.</p>
         </div>
         <div style="display:flex;gap:8px;">
             <button wire:click="reloadConfig" class="btn btn-ghost btn-sm">
@@ -29,28 +29,28 @@
     {{-- Status Cards --}}
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;">
         {{-- Running state --}}
-        <div class="glass" style="padding:14px;text-align:center;border-color:{{ $isRunning ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)' }};">
+        <div class="glass lp-panel" style="text-align:center;border-color:{{ $isRunning ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)' }};">
             <i class="fa-solid fa-{{ $isRunning ? 'circle-check' : 'circle-xmark' }}" style="font-size:22px;color:{{ $isRunning ? 'var(--success)' : 'var(--danger)' }};margin-bottom:8px;display:block;"></i>
             <div style="font-size:12px;font-weight:700;color:{{ $isRunning ? 'var(--success)' : 'var(--danger)' }};">{{ $isRunning ? 'ACTIVO' : 'DETENIDO' }}</div>
             <div style="font-size:10px;color:var(--text-muted);">Servicio</div>
         </div>
         {{-- Active bans --}}
-        <div class="glass" style="padding:14px;text-align:center;">
+        <div class="glass lp-panel" style="text-align:center;">
             <div style="font-size:26px;font-weight:800;color:var(--danger);">{{ $globalStats['total_active_bans'] }}</div>
             <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Baneadas Ahora</div>
         </div>
         {{-- Today's bans --}}
-        <div class="glass" style="padding:14px;text-align:center;">
+        <div class="glass lp-panel" style="text-align:center;">
             <div style="font-size:26px;font-weight:800;color:var(--warning);">{{ $globalStats['total_bans_today'] }}</div>
             <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Bans Hoy</div>
         </div>
         {{-- Active jails --}}
-        <div class="glass" style="padding:14px;text-align:center;">
+        <div class="glass lp-panel" style="text-align:center;">
             <div style="font-size:26px;font-weight:800;color:var(--accent-light);">{{ $globalStats['jails_active'] }}</div>
             <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Jails Activos</div>
         </div>
         {{-- Most attacked --}}
-        <div class="glass" style="padding:14px;text-align:center;">
+        <div class="glass lp-panel" style="text-align:center;">
             <div style="font-size:14px;font-weight:700;color:var(--text-primary);font-family:monospace;">{{ $globalStats['most_attacked_jail'] }}</div>
             <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Más Atacado</div>
         </div>
@@ -77,8 +77,8 @@
     <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:16px;align-items:start;">
 
         {{-- Manual Ban Form --}}
-        <div class="glass" style="padding:22px;">
-            <h2 style="font-size:14px;font-weight:700;margin-bottom:16px;">
+        <div class="glass lp-panel">
+            <h2 class="panel-title" style="margin-bottom:16px;">
                 <i class="fa-solid fa-ban" style="color:var(--danger);margin-right:8px;"></i>
                 Banear IP Manualmente
             </h2>
@@ -116,8 +116,8 @@
         </div>
 
         {{-- Top Banned IPs --}}
-        <div class="glass" style="padding:20px;">
-            <h2 style="font-size:14px;font-weight:700;margin-bottom:14px;">
+        <div class="glass lp-panel">
+            <h2 class="panel-title" style="margin-bottom:14px;">
                 <i class="fa-solid fa-fire" style="color:var(--danger);margin-right:8px;"></i>
                 IPs Más Atacantes
             </h2>
@@ -160,8 +160,8 @@
     <div style="display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start;">
 
         {{-- Jail List --}}
-        <div class="glass" style="padding:16px;">
-            <h2 style="font-size:13px;font-weight:700;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Jails Activos</h2>
+        <div class="glass lp-panel">
+            <h2 class="panel-title" style="margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Jails Activos</h2>
             @foreach($status['jails'] as $jail)
             <button wire:click="selectJail('{{ $jail }}')"
                 style="width:100%;text-align:left;background:{{ $selectedJail === $jail ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)' }};border:1px solid {{ $selectedJail === $jail ? 'rgba(99,102,241,0.4)' : 'var(--glass-border)' }};border-radius:8px;padding:9px 12px;cursor:pointer;margin-bottom:5px;display:flex;align-items:center;gap:8px;transition:all 0.15s;">
@@ -176,9 +176,9 @@
         <div style="display:flex;flex-direction:column;gap:14px;">
 
             {{-- Jail Stats --}}
-            <div class="glass" style="padding:20px;">
+            <div class="glass lp-panel">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                    <h2 style="font-size:15px;font-weight:700;margin:0;">
+                    <h2 class="panel-title" style="margin:0;">
                         Jail: <code style="color:var(--accent-light);">{{ $selectedJail }}</code>
                     </h2>
                     <button wire:click="refreshJail" class="btn btn-ghost btn-sm">
@@ -227,8 +227,8 @@
             </div>
 
             {{-- Raw jail status --}}
-            <div class="glass" style="padding:16px;">
-                <h3 style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--text-muted);">
+            <div class="glass lp-panel">
+                <h3 class="panel-title" style="margin-bottom:10px;color:var(--text-muted);">
                     <i class="fa-solid fa-terminal" style="margin-right:6px;"></i>
                     fail2ban-client status {{ $selectedJail }}
                 </h3>
@@ -246,9 +246,9 @@
 
     {{-- TAB: Log --}}
     @elseif($activeTab === 'log')
-    <div class="glass" style="padding:20px;">
+    <div class="glass lp-panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-            <h2 style="font-size:14px;font-weight:700;margin:0;">
+            <h2 class="panel-title" style="margin:0;">
                 <i class="fa-solid fa-file-lines" style="color:var(--accent-light);margin-right:8px;"></i>
                 /var/log/fail2ban.log — últimas 80 líneas
             </h2>
@@ -264,8 +264,8 @@
 
     {{-- TAB: History --}}
     @elseif($activeTab === 'history')
-    <div class="glass" style="padding:20px;">
-        <h2 style="font-size:14px;font-weight:700;margin-bottom:14px;">
+    <div class="glass lp-panel">
+        <h2 class="panel-title" style="margin-bottom:14px;">
             <i class="fa-solid fa-clock-rotate-left" style="color:var(--accent-light);margin-right:8px;"></i>
             Historial de Acciones (desde LaraPanel)
         </h2>
@@ -277,7 +277,7 @@
         </div>
         @else
         <div style="overflow-x:auto;">
-            <table class="table" style="width:100%;">
+            <table class="lp-table">
                 <thead>
                     <tr><th>Acción</th><th>IP</th><th>Jail</th><th>Motivo</th><th>Por</th><th>Cuándo</th></tr>
                 </thead>
@@ -305,11 +305,11 @@
 
     {{-- Unban Confirm Modal --}}
     @if($unbanIp)
-    <div style="position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:420px;width:100%;padding:28px;margin:16px;border-color:rgba(16,185,129,0.3);">
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal">
             <div style="text-align:center;margin-bottom:20px;">
                 <i class="fa-solid fa-circle-check" style="font-size:36px;color:var(--success);margin-bottom:12px;display:block;"></i>
-                <h3 style="font-size:17px;font-weight:700;margin-bottom:8px;">Desbanear IP</h3>
+                <h3 class="panel-title" style="font-size:17px;margin-bottom:8px;">Desbanear IP</h3>
                 <p style="font-size:13px;color:var(--text-secondary);">
                     Se eliminará el ban de <code style="color:var(--success);">{{ $unbanIp }}</code>
                     del jail <code style="color:var(--accent-light);">{{ $unbanJail }}</code>.
@@ -328,9 +328,8 @@
     </div>
     @endif
 
-    <div wire:loading style="position:fixed;bottom:24px;right:24px;z-index:300;">
-        <div class="glass" style="padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:8px;">
-            <i class="fa-solid fa-spinner fa-spin"></i> Comunicando con fail2ban...
-        </div>
+    <div wire:loading class="lp-loading-toast">
+        <i class="fa-solid fa-spinner fa-spin"></i> Comunicando con fail2ban...
+    </div>
     </div>
 </div>

@@ -1,8 +1,8 @@
 <div style="display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:start;">
     {{-- Sidebar --}}
-    <div class="glass" style="padding:16px;">
+    <div class="glass lp-panel" style="padding:16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-            <h2 style="font-size:14px;font-weight:700;">Repositorios</h2>
+            <h2 class="panel-title" style="margin:0;">Repositorios</h2>
             <button wire:click="createNew" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus"></i></button>
         </div>
 
@@ -35,8 +35,8 @@
 
         @if($isCreating)
             {{-- Create Form --}}
-            <div class="glass" style="padding:24px;">
-                <h2 style="font-size:18px;font-weight:700;margin-bottom:20px;">Configurar Nuevo Repositorio</h2>
+            <div class="glass lp-panel" style="padding:24px;">
+                <h2 class="panel-title" style="font-size:18px;margin-bottom:20px;">Configurar Nuevo Repositorio</h2>
                 
                 <form wire:submit.prevent="save">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
@@ -51,7 +51,7 @@
                                 </select>
                                 <i class="fa-solid fa-chevron-down" style="position:absolute;right:12px;top:12px;color:var(--text-muted);font-size:12px;pointer-events:none;"></i>
                             </div>
-                            @error('domain_name') <span style="color:var(--danger);font-size:11px;">{{ $message }}</span> @enderror
+                            @error('domain_name') <div class="form-error">{{ $message }}</div> @enderror
                         </div>
                         <div class="form-group">
                             <label class="form-label">URL del Repositorio (HTTPS/SSH)</label>
@@ -60,7 +60,7 @@
                                 Si es un repositorio privado, incluye el token: <br>
                                 <code>https://usuario:TOKEN@gitlab.com/usuario/repo.git</code>
                             </div>
-                            @error('repository_url') <span style="color:var(--danger);font-size:11px;">{{ $message }}</span> @enderror
+                            @error('repository_url') <div class="form-error">{{ $message }}</div> @enderror
                         </div>
                     </div>
 
@@ -71,14 +71,14 @@
                             <i class="fa-solid fa-info-circle" style="color:var(--accent-light);"></i> 
                             Puedes especificar la ruta de un repositorio que <b>ya hayas descargado</b> manualmente en el servidor. Si existe, LaraPanel sólo lo actualizará sin clonarlo de nuevo.
                         </div>
-                        @error('deploy_path') <span style="color:var(--danger);font-size:11px;">{{ $message }}</span> @enderror
+                        @error('deploy_path') <div class="form-error">{{ $message }}</div> @enderror
                     </div>
 
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
                         <div class="form-group">
                             <label class="form-label">Rama a trackear (Branch)</label>
                             <input type="text" wire:model="branch" class="form-input" placeholder="main">
-                            @error('branch') <span style="color:var(--danger);font-size:11px;">{{ $message }}</span> @enderror
+                            @error('branch') <div class="form-error">{{ $message }}</div> @enderror
                         </div>
                         <div class="form-group" style="display:flex;align-items:center;padding-top:28px;">
                             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
@@ -112,9 +112,9 @@
             </div>
 
             @if($activeTab === 'config')
-                <div class="glass" style="padding:24px;">
+                <div class="glass lp-panel" style="padding:24px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                        <h2 style="font-size:18px;font-weight:700;">
+                        <h2 class="panel-title" style="font-size:18px;margin:0;">
                             <i class="fa-brands fa-git-alt" style="color:#f14e32;margin-right:8px;"></i>
                             {{ $selectedDeployment->domain_name }}
                         </h2>
@@ -246,7 +246,7 @@
                 </div>
             @elseif($activeTab === 'logs')
                 @if($selectedLog)
-                    <div class="glass" style="padding:20px;">
+                    <div class="glass lp-panel" style="padding:20px;">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
                             <div>
                                 <button wire:click="$set('selectedLog', null)" class="btn btn-ghost btn-sm" style="margin-right:12px;">
@@ -264,14 +264,14 @@
                         <pre style="background:rgba(0,0,0,0.5);border:1px solid var(--glass-border);border-radius:8px;padding:16px;font-family:monospace;font-size:11px;color:#cdd6f4;line-height:1.6;white-space:pre-wrap;max-height:500px;overflow-y:auto;">{{ $selectedLog->output }}</pre>
                     </div>
                 @else
-                    <div class="glass" style="padding:0;">
+                    <div class="glass lp-panel" style="padding:0;">
                         @if($selectedDeployment->logs->isEmpty())
                         <div style="text-align:center;padding:40px;color:var(--text-muted);">
                             <i class="fa-solid fa-inbox" style="font-size:32px;opacity:0.3;margin-bottom:12px;display:block;"></i>
                             No hay despliegues registrados.
                         </div>
                         @else
-                        <table class="table" style="width:100%;">
+                        <table class="lp-table" style="margin:0;">
                             <thead>
                                 <tr>
                                     <th>Fecha</th>
@@ -303,9 +303,9 @@
                 @endif
             @endif
         @else
-            <div class="glass" style="padding:60px 20px;text-align:center;">
+            <div class="glass lp-panel" style="padding:60px 20px;text-align:center;">
                 <i class="fa-brands fa-git-alt" style="font-size:48px;opacity:0.2;margin-bottom:16px;display:block;"></i>
-                <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Git Deploy</h3>
+                <h3 class="panel-title" style="font-size:18px;margin-bottom:8px;">Git Deploy</h3>
                 <p style="color:var(--text-secondary);font-size:13px;max-width:400px;margin:0 auto 24px auto;">
                     Conecta tus repositorios de GitHub o GitLab para desplegar automáticamente tus aplicaciones cuando hagas push.
                 </p>

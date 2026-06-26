@@ -2,8 +2,8 @@
     {{-- Header --}}
     <div class="page-header">
         <div>
-            <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">Cuentas de Correo Electrónico</h1>
-            <p style="color:var(--text-secondary);font-size:13px;">
+            <h1 class="page-title">Cuentas de Correo Electrónico</h1>
+            <p class="page-subtitle">
                 Cree y gestione casillas de correo virtuales y redirecciones para sus dominios activos.
             </p>
         </div>
@@ -17,12 +17,12 @@
     <div class="alert alert-danger" style="margin-bottom:20px;"><i class="fa-solid fa-circle-exclamation"></i> {{ $errorMessage }}</div>
     @endif
 
-    <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;align-items:start;">
+    <div class="lp-two-col">
 
         {{-- Creation Panel --}}
-        <div class="glass" style="padding:24px;">
-            <h2 style="font-size:15px;font-weight:700;margin-bottom:14px;color:var(--text-primary);">
-                <i class="fa-solid fa-envelope" style="color:var(--accent-light);margin-right:8px;"></i>
+        <div class="glass lp-panel">
+            <h2 class="panel-title">
+                <i class="fa-solid fa-envelope" style="color:var(--accent-light);"></i>
                 Nueva Casilla
             </h2>
 
@@ -40,8 +40,8 @@
                             @endforeach
                         </select>
                     </div>
-                    @error('username') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
-                    @error('domainId') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                    @error('username') <div class="form-error">{{ $message }}</div> @enderror
+                    @error('domainId') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
 
                 {{-- Password --}}
@@ -53,14 +53,14 @@
                             Generar
                         </button>
                     </div>
-                    @error('password') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                    @error('password') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
 
                 {{-- Quota MB --}}
                 <div class="form-group">
                     <label class="form-label">Cuota de Almacenamiento (MB)</label>
                     <input type="number" wire:model="quotaMb" class="form-input" placeholder="500">
-                    @error('quotaMb') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                    @error('quotaMb') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
 
                 <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px;">
@@ -70,19 +70,17 @@
         </div>
 
         {{-- Email Accounts List --}}
-        <div class="glass" style="padding:24px;">
+        <div class="glass lp-panel">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap;">
-                <h2 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:0;">
-                    <i class="fa-solid fa-list" style="color:var(--accent-light);margin-right:8px;"></i>
+                <h2 class="panel-title" style="margin:0;">
+                    <i class="fa-solid fa-list" style="color:var(--accent-light);"></i>
                     Cuentas de Correo Activas
                 </h2>
                 <div style="display:flex;gap:8px;align-items:center;">
                     {{-- Buscador --}}
-                    <div style="position:relative;">
-                        <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:12px;"></i>
-                        <input type="text" wire:model.live.debounce.300ms="search"
-                               style="padding:6px 10px 6px 30px;border-radius:6px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.04);color:var(--text-primary);font-size:12px;width:180px;"
-                               placeholder="Buscar correo...">
+                    <div class="lp-search">
+                        <i class="fa-solid fa-magnifying-glass lp-search-icon"></i>
+                        <input type="text" wire:model.live.debounce.300ms="search" class="form-input" placeholder="Buscar correo...">
                     </div>
                     <button wire:click="openImportModal" class="btn btn-ghost btn-sm" style="color:var(--accent-light);">
                         <i class="fa-solid fa-file-zipper"></i> Importar ZIP
@@ -111,7 +109,7 @@
                 </div>
 
                 <div style="overflow-x:auto;margin-bottom:8px;">
-                    <table class="table" style="width:100%;">
+                    <table class="lp-table">
                         <thead>
                             <tr>
                                 <th>Cuenta</th>
@@ -149,7 +147,7 @@
                                     @endif
                                 </td>
                                 <td style="text-align:right;">
-                                    <div style="display:inline-flex;gap:4px;flex-wrap:nowrap;">
+                                    <div class="lp-row-actions">
                                         {{-- Webmail auto-login --}}
                                         <button wire:click="openWebmail({{ $email->id }})" class="btn btn-ghost btn-sm" title="Abrir Webmail">
                                             <i class="fa-solid fa-envelope-open-text" style="color:#10b981;"></i>
@@ -186,31 +184,33 @@
     {{-- Change Password Modal --}}
     @if($changingPasswordId)
     @php $acctToChange = $emailsByDomain->flatten()->firstWhere('id', $changingPasswordId); @endphp
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:440px;width:100%;padding:28px;margin:16px;">
-            <div style="display:flex;justify-content:between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
-                <h3 style="font-size:16px;font-weight:700;margin:0;">
-                    <i class="fa-solid fa-key" style="color:var(--warning);margin-right:8px;"></i>
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated">
+            <div class="lp-modal-header">
+                <h3 class="panel-title" style="margin:0;">
+                    <i class="fa-solid fa-key" style="color:var(--warning);"></i>
                     Cambiar Contraseña Correo
                 </h3>
-                <button wire:click="$set('changingPasswordId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;margin-left:auto;">
+                <button wire:click="$set('changingPasswordId', null)" class="lp-modal-close">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <p style="color:var(--text-secondary);font-size:12px;margin-bottom:16px;">
-                Actualizar contraseña para: <strong style="color:var(--text-primary);">{{ $acctToChange?->email }}</strong>
-            </p>
-            <div class="form-group">
-                <label class="form-label">Nueva Contraseña</label>
-                <div style="display:flex;gap:8px;">
-                    <input type="text" wire:model="newPassword" class="form-input" placeholder="Nueva contraseña segura" style="margin-bottom:0;" autofocus>
-                    <button type="button" wire:click="generateRandomNewPassword" class="btn btn-ghost" style="flex-shrink:0;">Generar</button>
+            <div class="lp-modal-body">
+                <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+                    Actualizar contraseña para: <strong style="color:var(--text-primary);">{{ $acctToChange?->email }}</strong>
+                </p>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Nueva Contraseña</label>
+                    <div style="display:flex;gap:8px;">
+                        <input type="text" wire:model="newPassword" class="form-input" placeholder="Nueva contraseña segura" style="margin-bottom:0;" autofocus>
+                        <button type="button" wire:click="generateRandomNewPassword" class="btn btn-ghost" style="flex-shrink:0;">Generar</button>
+                    </div>
+                    @error('newPassword') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
-                @error('newPassword') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
             </div>
-            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
-                <button wire:click="$set('changingPasswordId', null)" class="btn btn-ghost btn-sm">Cancelar</button>
-                <button wire:click="changePassword" class="btn btn-primary btn-sm" style="background:var(--warning);border-color:var(--warning);color:black;">
+            <div class="lp-modal-footer">
+                <button wire:click="$set('changingPasswordId', null)" class="btn btn-ghost">Cancelar</button>
+                <button wire:click="changePassword" class="btn btn-primary" style="background:var(--warning);border-color:var(--warning);color:black;">
                     Actualizar Contraseña
                 </button>
             </div>
@@ -221,28 +221,30 @@
     {{-- Edit Forwarders Modal --}}
     @if($editingForwardersId)
     @php $acctToForward = $emailsByDomain->flatten()->firstWhere('id', $editingForwardersId); @endphp
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:440px;width:100%;padding:28px;margin:16px;">
-            <div style="display:flex;justify-content:between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
-                <h3 style="font-size:16px;font-weight:700;margin:0;">
-                    <i class="fa-solid fa-route" style="color:var(--accent-light);margin-right:8px;"></i>
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated">
+            <div class="lp-modal-header">
+                <h3 class="panel-title" style="margin:0;">
+                    <i class="fa-solid fa-route" style="color:var(--accent-light);"></i>
                     Redirecciones de Correo
                 </h3>
-                <button wire:click="$set('editingForwardersId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;margin-left:auto;">
+                <button wire:click="$set('editingForwardersId', null)" class="lp-modal-close">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <p style="color:var(--text-secondary);font-size:12px;margin-bottom:16px;">
-                Configure correos externos donde se reenviarán los correos recibidos en <strong style="color:var(--text-primary);">{{ $acctToForward?->email }}</strong>.
-            </p>
-            <div class="form-group">
-                <label class="form-label">Direcciones de Destino (separadas por coma)</label>
-                <textarea wire:model="forwarderInput" class="form-input" style="height:100px;font-family:monospace;" placeholder="ej. usuario@gmail.com, admin@empresa.com" autofocus></textarea>
-                @error('forwarderInput') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+            <div class="lp-modal-body">
+                <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+                    Configure correos externos donde se reenviarán los correos recibidos en <strong style="color:var(--text-primary);">{{ $acctToForward?->email }}</strong>.
+                </p>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Direcciones de Destino (separadas por coma)</label>
+                    <textarea wire:model="forwarderInput" class="form-input" style="height:100px;font-family:monospace;" placeholder="ej. usuario@gmail.com, admin@empresa.com" autofocus></textarea>
+                    @error('forwarderInput') <div class="form-error">{{ $message }}</div> @enderror
+                </div>
             </div>
-            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
-                <button wire:click="$set('editingForwardersId', null)" class="btn btn-ghost btn-sm">Cancelar</button>
-                <button wire:click="saveForwarders" class="btn btn-primary btn-sm">Guardar Destinos</button>
+            <div class="lp-modal-footer">
+                <button wire:click="$set('editingForwardersId', null)" class="btn btn-ghost">Cancelar</button>
+                <button wire:click="saveForwarders" class="btn btn-primary">Guardar Destinos</button>
             </div>
         </div>
     </div>
@@ -250,47 +252,49 @@
 
     {{-- Import Modal --}}
     @if($showImportModal)
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:440px;width:100%;padding:28px;margin:16px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
-                <h3 style="font-size:16px;font-weight:700;margin:0;">
-                    <i class="fa-solid fa-file-zipper" style="color:var(--accent-light);margin-right:8px;"></i>
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated">
+            <div class="lp-modal-header">
+                <h3 class="panel-title" style="margin:0;">
+                    <i class="fa-solid fa-file-zipper" style="color:var(--accent-light);"></i>
                     Importar Correos (ZIP)
                 </h3>
-                <button wire:click="closeImportModal" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">
+                <button wire:click="closeImportModal" class="lp-modal-close">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <p style="color:var(--text-secondary);font-size:12px;margin-bottom:16px;">
-                Sube un archivo <code>.zip</code> (ej. de cPanel) que contenga las carpetas Maildir de los usuarios.
-            </p>
-            <form wire:submit.prevent="importFromZip">
-                <div class="form-group">
-                    <label class="form-label">Dominio Destino</label>
-                    <select wire:model="importDomainId" class="form-input" required>
-                        <option value="">Seleccione dominio...</option>
-                        @foreach($domains as $dom)
-                        <option value="{{ $dom->id }}">{{ $dom->name }}</option>
-                        @endforeach
-                    </select>
-                    @error('importDomainId') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Contraseña por defecto</label>
-                    <input type="text" wire:model="defaultImportPassword" class="form-input" placeholder="Para todas las cuentas" required>
-                    @error('defaultImportPassword') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Archivo ZIP (máx. 500MB)</label>
-                    <input type="file" wire:model="zipFile" class="form-input" accept=".zip" required>
-                    @error('zipFile') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
-                    <div wire:loading wire:target="zipFile" style="font-size:11px;color:var(--accent-light);margin-top:4px;">
-                        <i class="fa-solid fa-spinner fa-spin"></i> Subiendo archivo...
+            <form wire:submit.prevent="importFromZip" style="display:contents;">
+                <div class="lp-modal-body">
+                    <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+                        Sube un archivo <code>.zip</code> (ej. de cPanel) que contenga las carpetas Maildir de los usuarios.
+                    </p>
+                    <div class="form-group">
+                        <label class="form-label">Dominio Destino</label>
+                        <select wire:model="importDomainId" class="form-input" required>
+                            <option value="">Seleccione dominio...</option>
+                            @foreach($domains as $dom)
+                            <option value="{{ $dom->id }}">{{ $dom->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('importDomainId') <div class="form-error">{{ $message }}</div> @enderror
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Contraseña por defecto</label>
+                        <input type="text" wire:model="defaultImportPassword" class="form-input" placeholder="Para todas las cuentas" required>
+                        @error('defaultImportPassword') <div class="form-error">{{ $message }}</div> @enderror
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label class="form-label">Archivo ZIP (máx. 500MB)</label>
+                        <input type="file" wire:model="zipFile" class="form-input" accept=".zip" required>
+                        @error('zipFile') <div class="form-error">{{ $message }}</div> @enderror
+                        <div wire:loading wire:target="zipFile" style="font-size:11px;color:var(--accent-light);margin-top:4px;">
+                            <i class="fa-solid fa-spinner fa-spin"></i> Subiendo archivo...
+                        </div>
                     </div>
                 </div>
-                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
-                    <button type="button" wire:click="closeImportModal" class="btn btn-ghost btn-sm">Cancelar</button>
-                    <button type="submit" class="btn btn-primary btn-sm" wire:loading.attr="disabled" wire:target="importFromZip">
+                <div class="lp-modal-footer">
+                    <button type="button" wire:click="closeImportModal" class="btn btn-ghost">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" wire:loading.attr="disabled" wire:target="importFromZip">
                         <i class="fa-solid fa-upload"></i> Importar
                     </button>
                 </div>
@@ -299,10 +303,8 @@
     </div>
     @endif
 
-    <div wire:loading style="position:fixed;bottom:24px;right:24px;z-index:300;">
-        <div class="glass" style="padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:8px;">
-            <i class="fa-solid fa-spinner fa-spin"></i> Procesando...
-        </div>
+    <div wire:loading.delay class="lp-loading-toast">
+        <i class="fa-solid fa-spinner fa-spin"></i> Procesando...
     </div>
 </div>
 

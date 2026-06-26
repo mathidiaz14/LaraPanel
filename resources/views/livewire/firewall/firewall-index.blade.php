@@ -2,11 +2,11 @@
     {{-- Header --}}
     <div class="page-header">
         <div>
-            <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">
-                <i class="fa-solid fa-shield-halved" style="color:{{ $ufwEnabled ? 'var(--success)' : 'var(--danger)' }};margin-right:10px;"></i>
+            <h1 class="page-title">
+                <i class="fa-solid fa-shield-halved" style="color:{{ $ufwEnabled ? 'var(--success)' : 'var(--danger)' }};"></i>
                 Firewall — UFW
             </h1>
-            <p style="color:var(--text-secondary);font-size:13px;">Gestión de reglas de entrada y salida con Uncomplicated Firewall (UFW).</p>
+            <p class="page-subtitle">Gestión de reglas de entrada y salida con Uncomplicated Firewall (UFW).</p>
         </div>
 
         {{-- UFW toggle --}}
@@ -37,7 +37,7 @@
     @endif
 
     {{-- Status Cards --}}
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;">
+    <div class="stats-row">
         {{-- UFW State --}}
         <div class="glass" style="padding:14px;text-align:center;border-color:{{ $ufwEnabled ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)' }};">
             <i class="fa-solid fa-{{ $ufwEnabled ? 'shield-check' : 'shield-slash' }}" style="font-size:24px;color:{{ $ufwEnabled ? 'var(--success)' : 'var(--danger)' }};margin-bottom:8px;display:block;"></i>
@@ -81,17 +81,17 @@
     @endif
 
     {{-- Tabs --}}
-    <div style="display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
-        <button wire:click="$set('activeTab','rules')" class="btn {{ $activeTab === 'rules' ? 'btn-primary' : 'btn-ghost' }} btn-sm">
+    <div class="lp-tabs">
+        <button wire:click="$set('activeTab','rules')" class="lp-tab {{ $activeTab === 'rules' ? 'active' : '' }}">
             <i class="fa-solid fa-list-check"></i> Reglas ({{ $rules->count() }})
         </button>
-        <button wire:click="$set('activeTab','presets')" class="btn {{ $activeTab === 'presets' ? 'btn-primary' : 'btn-ghost' }} btn-sm">
+        <button wire:click="$set('activeTab','presets')" class="lp-tab {{ $activeTab === 'presets' ? 'active' : '' }}">
             <i class="fa-solid fa-layer-group"></i> Presets
         </button>
-        <button wire:click="$set('activeTab','raw')" class="btn {{ $activeTab === 'raw' ? 'btn-primary' : 'btn-ghost' }} btn-sm">
+        <button wire:click="$set('activeTab','raw')" class="lp-tab {{ $activeTab === 'raw' ? 'active' : '' }}">
             <i class="fa-solid fa-terminal"></i> UFW Status Raw
         </button>
-        <div style="margin-left:auto;">
+        <div class="lp-tabs-actions">
             <button wire:click="$set('confirmReset', true)" class="btn btn-ghost btn-sm" style="color:var(--danger);">
                 <i class="fa-solid fa-rotate-left"></i> Reset
             </button>
@@ -100,19 +100,19 @@
 
     {{-- TAB: Rules --}}
     @if($activeTab === 'rules')
-    <div style="display:grid;grid-template-columns:1fr 2.5fr;gap:16px;align-items:start;">
+    <div class="lp-two-col">
 
         {{-- Add Rule Form --}}
-        <div class="glass" style="padding:22px;">
-            <h2 style="font-size:14px;font-weight:700;margin-bottom:14px;">
-                <i class="fa-solid fa-plus" style="color:var(--accent-light);margin-right:6px;"></i>
+        <div class="glass lp-panel">
+            <h2 class="panel-title">
+                <i class="fa-solid fa-plus" style="color:var(--accent-light);"></i>
                 Nueva Regla
             </h2>
 
             <div class="form-group">
                 <label class="form-label" style="font-size:11px;">Nombre / Descripción</label>
                 <input type="text" wire:model="ruleName" class="form-input" placeholder="ej. Acceso DB desde oficina" style="font-size:12px;">
-                @error('ruleName') <div style="font-size:10px;color:var(--danger);margin-top:3px;">{{ $message }}</div> @enderror
+                @error('ruleName') <div class="form-error">{{ $message }}</div> @enderror
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
@@ -175,9 +175,9 @@
         </div>
 
         {{-- Rules Table --}}
-        <div class="glass" style="padding:20px;">
-            <h2 style="font-size:14px;font-weight:700;margin-bottom:14px;">
-                <i class="fa-solid fa-list-check" style="color:var(--accent-light);margin-right:6px;"></i>
+        <div class="glass lp-panel">
+            <h2 class="panel-title">
+                <i class="fa-solid fa-list-check" style="color:var(--accent-light);"></i>
                 Reglas Configuradas
             </h2>
 
@@ -191,7 +191,7 @@
             </div>
             @else
             <div style="overflow-x:auto;">
-                <table class="table" style="width:100%;">
+                <table class="lp-table">
                     <thead>
                         <tr>
                             <th>Regla</th>
@@ -236,7 +236,7 @@
                                 </span>
                             </td>
                             <td style="text-align:right;">
-                                <div style="display:inline-flex;gap:4px;">
+                                <div class="lp-row-actions">
                                     <button wire:click="toggleRule({{ $rule->id }})" class="btn btn-ghost btn-sm" title="{{ $rule->is_active ? 'Desactivar' : 'Activar' }}">
                                         <i class="fa-solid fa-{{ $rule->is_active ? 'pause' : 'play' }}" style="color:var(--{{ $rule->is_active ? 'warning' : 'success' }});"></i>
                                     </button>
@@ -264,11 +264,11 @@
 
     {{-- TAB: Presets --}}
     @elseif($activeTab === 'presets')
-    <div class="glass" style="padding:22px;">
+    <div class="glass lp-panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px;">
             <div>
-                <h2 style="font-size:15px;font-weight:700;margin-bottom:4px;">
-                    <i class="fa-solid fa-layer-group" style="color:var(--accent-light);margin-right:8px;"></i>
+                <h2 class="panel-title" style="margin-bottom:4px;">
+                    <i class="fa-solid fa-layer-group" style="color:var(--accent-light);"></i>
                     Presets de Firewall
                 </h2>
                 <p style="font-size:12px;color:var(--text-secondary);">Selecciona los servicios que tu servidor debe exponer y aplícalos de una vez.</p>
@@ -327,10 +327,10 @@
 
     {{-- TAB: Raw --}}
     @elseif($activeTab === 'raw')
-    <div class="glass" style="padding:22px;">
+    <div class="glass lp-panel">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-            <h2 style="font-size:14px;font-weight:700;margin:0;">
-                <i class="fa-solid fa-terminal" style="color:var(--accent-light);margin-right:8px;"></i>
+            <h2 class="panel-title" style="margin:0;">
+                <i class="fa-solid fa-terminal" style="color:var(--accent-light);"></i>
                 Salida de <code>ufw status verbose</code>
             </h2>
             <button wire:click="$refresh" class="btn btn-ghost btn-sm">
@@ -343,26 +343,24 @@
 
     {{-- Reset Confirm Modal --}}
     @if($confirmReset)
-    <div style="position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:440px;width:100%;padding:30px;margin:16px;border-color:rgba(239,68,68,0.4);">
-            <div style="text-align:center;margin-bottom:20px;">
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated" style="border-color:rgba(239,68,68,0.4);">
+            <div class="lp-modal-body" style="text-align:center;">
                 <i class="fa-solid fa-triangle-exclamation" style="font-size:40px;color:var(--danger);margin-bottom:12px;display:block;"></i>
                 <h3 style="font-size:17px;font-weight:700;color:var(--danger);margin-bottom:8px;">Resetear Firewall</h3>
-                <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;">Esto eliminará <strong>todas las reglas UFW</strong> y reiniciará el firewall a valores por defecto. <strong>El acceso SSH (puerto 22) se re-aplicará automáticamente.</strong></p>
-            </div>
-            <div style="display:flex;gap:10px;justify-content:center;">
-                <button wire:click="$set('confirmReset',false)" class="btn btn-ghost">Cancelar</button>
-                <button wire:click="resetFirewall" class="btn btn-danger">
-                    <i class="fa-solid fa-rotate-left"></i> Sí, resetear
-                </button>
+                <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:20px;">Esto eliminará <strong>todas las reglas UFW</strong> y reiniciará el firewall a valores por defecto. <strong>El acceso SSH (puerto 22) se re-aplicará automáticamente.</strong></p>
+                <div style="display:flex;gap:10px;justify-content:center;">
+                    <button wire:click="$set('confirmReset',false)" class="btn btn-ghost">Cancelar</button>
+                    <button wire:click="resetFirewall" class="btn btn-danger">
+                        <i class="fa-solid fa-rotate-left"></i> Sí, resetear
+                    </button>
+                </div>
             </div>
         </div>
     </div>
     @endif
 
-    <div wire:loading style="position:fixed;bottom:24px;right:24px;z-index:300;">
-        <div class="glass" style="padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:8px;">
-            <i class="fa-solid fa-spinner fa-spin"></i> Aplicando en UFW...
-        </div>
+    <div wire:loading.delay class="lp-loading-toast">
+        <i class="fa-solid fa-spinner fa-spin"></i> Aplicando en UFW...
     </div>
 </div>

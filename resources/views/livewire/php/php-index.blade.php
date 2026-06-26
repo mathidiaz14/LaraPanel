@@ -2,8 +2,8 @@
     {{-- Header --}}
     <div class="page-header">
         <div>
-            <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">PHP Multi-Version Manager</h1>
-            <p style="color:var(--text-secondary);font-size:13px;">
+            <h1 class="page-title">PHP Multi-Version Manager</h1>
+            <p class="page-subtitle">
                 Administre múltiples versiones de PHP-FPM, configure php.ini y cambie la versión de sus dominios en tiempo real.
             </p>
         </div>
@@ -24,7 +24,7 @@
             $cardBorder = $php['active'] ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.08)';
             $glow = $php['active'] ? 'box-shadow: 0 0 15px rgba(16, 185, 129, 0.05);' : '';
         @endphp
-        <div class="glass" style="padding:20px;border-color:{{ $cardBorder }};position:relative; {{ $glow }}">
+        <div class="glass lp-panel" style="border-color:{{ $cardBorder }};position:relative; {{ $glow }}">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <div style="display:flex;align-items:center;gap:12px;">
                     <div style="width:40px;height:40px;border-radius:10px;background:rgba(99,102,241,0.12);display:flex;align-items:center;justify-content:center;">
@@ -76,9 +76,9 @@
     {{-- Domain Assignment Table --}}
 
     {{-- FPM Pool Process Status --}}
-    <div class="glass" style="padding:20px;margin-bottom:20px;">
+    <div class="glass lp-panel" style="margin-bottom:20px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-            <h2 style="font-size:15px;font-weight:700;margin:0;">
+            <h2 class="panel-title" style="margin:0;">
                 <i class="fa-solid fa-microchip" style="color:var(--accent-light);margin-right:8px;"></i>
                 Estado de Pools FPM en Tiempo Real
             </h2>
@@ -135,8 +135,8 @@
 
     {{-- Domain Assignment Table --}}
 
-    <div class="glass" style="padding:24px;">
-        <h2 style="font-size:16px;font-weight:700;margin-bottom:6px;">Asignación de Versión por Dominio</h2>
+    <div class="glass lp-panel">
+        <h2 class="panel-title" style="margin-bottom:6px;">Asignación de Versión por Dominio</h2>
         <p style="color:var(--text-secondary);font-size:12px;margin-bottom:20px;">
             Cambie al instante la versión de PHP en cualquiera de sus dominios activos. El servidor web se actualizará y reiniciará automáticamente.
         </p>
@@ -152,7 +152,7 @@
         </div>
         @else
         <div style="overflow-x:auto;">
-            <table class="table" style="width:100%;">
+            <table class="lp-table">
                 <thead>
                     <tr>
                         <th>Dominio</th>
@@ -196,19 +196,20 @@
 
     {{-- php.ini Edit Modal --}}
     @if($selectedVersion)
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:540px;width:100%;padding:28px;margin:16px;">
-            <div style="display:flex;justify-content:between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
-                <h3 style="font-size:16px;font-weight:700;margin:0;">
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated" style="max-width:540px;">
+            <div class="lp-modal-header">
+                <h3 class="panel-title" style="margin:0;">
                     <i class="fa-solid fa-sliders" style="color:var(--accent-light);margin-right:8px;"></i>
                     Configurar php.ini para PHP {{ $selectedVersion }}
                 </h3>
-                <button wire:click="closeSettings" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;margin-left:auto;">
+                <button wire:click="closeSettings" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+            <div class="lp-modal-body">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
                 
                 {{-- Memory Limit --}}
                 <div class="form-group" style="margin-bottom:0;">
@@ -283,7 +284,9 @@
                 Al guardar, LaraPanel escribirá los valores en el archivo <code>99-larapanel.ini</code> y reiniciará el servicio <code>php{{ $selectedVersion }}-fpm</code> automáticamente.
             </div>
 
-            <div style="display:flex;gap:10px;justify-content:flex-end;">
+            </div>
+
+            <div class="lp-modal-footer">
                 <button wire:click="closeSettings" class="btn btn-ghost btn-sm" wire:loading.attr="disabled">Cancelar</button>
                 <button wire:click="saveSettings" class="btn btn-primary btn-sm" wire:loading.attr="disabled">
                     <span wire:loading.remove>Guardar y Aplicar</span>
@@ -294,10 +297,8 @@
     </div>
     @endif
 
-    <div wire:loading.delay style="position:fixed;bottom:24px;right:24px;z-index:300;">
-        <div class="glass" style="padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:8px;">
-            <i class="fa-solid fa-spinner fa-spin"></i> Procesando cambios...
-        </div>
+    <div wire:loading.delay class="lp-loading-toast">
+        <i class="fa-solid fa-spinner fa-spin"></i> Procesando cambios...
     </div>
 
     <style>

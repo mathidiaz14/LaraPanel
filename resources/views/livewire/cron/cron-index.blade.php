@@ -2,8 +2,8 @@
     {{-- Header --}}
     <div class="page-header">
         <div>
-            <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">Tareas Programadas (Cron Jobs)</h1>
-            <p style="color:var(--text-secondary);font-size:13px;">
+            <h1 class="page-title">Tareas Programadas (Cron Jobs)</h1>
+            <p class="page-subtitle">
                 Configure comandos automáticos que se ejecutarán periódicamente en el servidor.
             </p>
         </div>
@@ -20,8 +20,8 @@
     <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;align-items:start;">
 
         {{-- Creation Panel --}}
-        <div class="glass" style="padding:24px;">
-            <h2 style="font-size:15px;font-weight:700;margin-bottom:14px;color:var(--text-primary);">
+        <div class="glass lp-panel">
+            <h2 class="panel-title">
                 <i class="fa-solid fa-clock" style="color:var(--accent-light);margin-right:8px;"></i>
                 Nueva Tarea
             </h2>
@@ -31,14 +31,14 @@
                 <div class="form-group">
                     <label class="form-label">Etiqueta Identificadora</label>
                     <input type="text" wire:model="label" class="form-input" placeholder="ej. Renovar Certificados o Ejecutar Laravel Schedule">
-                    @error('label') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                    @error('label') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
 
                 {{-- Command --}}
                 <div class="form-group">
                     <label class="form-label">Comando a Ejecutar</label>
                     <input type="text" wire:model="command" class="form-input" placeholder="ej. php /var/www/miweb.com/artisan schedule:run">
-                    @error('command') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                    @error('command') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
 
                 {{-- Presets dropdown --}}
@@ -59,7 +59,7 @@
                 <div class="form-group">
                     <label class="form-label">Expresión Cron (minutos hora día mes semana)</label>
                     <input type="text" wire:model="schedule" class="form-input" style="font-family:monospace;" placeholder="* * * * *" {{ $preset !== 'custom' ? 'disabled' : '' }}>
-                    @error('schedule') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                    @error('schedule') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
 
                 <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px;">
@@ -69,8 +69,8 @@
         </div>
 
         {{-- Cron List Panel --}}
-        <div class="glass" style="padding:24px;">
-            <h2 style="font-size:15px;font-weight:700;margin-bottom:14px;color:var(--text-primary);">
+        <div class="glass lp-panel">
+            <h2 class="panel-title">
                 <i class="fa-solid fa-list" style="color:var(--accent-light);margin-right:8px;"></i>
                 Tareas Configuradas
             </h2>
@@ -82,7 +82,7 @@
             </div>
             @else
             <div style="overflow-x:auto;">
-                <table class="table" style="width:100%;">
+                <table class="lp-table">
                     <thead>
                         <tr>
                             <th>Etiqueta / Comando</th>
@@ -124,7 +124,7 @@
                                 </span>
                             </td>
                             <td style="text-align:right;">
-                                <div style="display:inline-flex;gap:6px;">
+                                <div class="lp-row-actions">
                                     <button wire:click="runJobNow({{ $job->id }})" class="btn btn-ghost btn-sm" title="Ejecutar Ahora">
                                         <i class="fa-solid fa-play" style="color:var(--success);"></i>
                                     </button>
@@ -156,25 +156,27 @@
     @php
         $jobToView = $jobs->firstWhere('id', $viewOutputId);
     @endphp
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:600px;width:100%;padding:28px;margin:16px;display:flex;flex-direction:column;max-height:80vh;">
-            <div style="display:flex;justify-content:between;align-items:center;margin-bottom:16px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;flex-shrink:0;">
-                <h3 style="font-size:16px;font-weight:700;margin:0;">
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated" style="max-width:600px;">
+            <div class="lp-modal-header">
+                <h3 class="panel-title" style="margin:0;">
                     <i class="fa-solid fa-terminal" style="color:var(--accent-light);margin-right:8px;"></i>
                     Registro de Salida
                 </h3>
-                <button wire:click="$set('viewOutputId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;margin-left:auto;">
+                <button wire:click="$set('viewOutputId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <p style="color:var(--text-secondary);font-size:12px;margin-bottom:12px;flex-shrink:0;">
-                Salida generada en la última ejecución de: <strong style="color:var(--text-primary);">{{ $jobToView?->label }}</strong>
-            </p>
+            <div class="lp-modal-body" style="display:flex;flex-direction:column;gap:12px;">
+                <p style="color:var(--text-secondary);font-size:12px;margin:0;">
+                    Salida generada en la última ejecución de: <strong style="color:var(--text-primary);">{{ $jobToView?->label }}</strong>
+                </p>
 
-            <div style="flex:1;overflow-y:auto;background:black;color:#00ff00;padding:16px;border-radius:8px;font-family:monospace;font-size:12px;white-space:pre-wrap;border:1px solid var(--glass-border);">{{ $jobToView?->last_run_output }}</div>
+                <div style="flex:1;overflow-y:auto;background:black;color:#00ff00;padding:16px;border-radius:8px;font-family:monospace;font-size:12px;white-space:pre-wrap;border:1px solid var(--glass-border);max-height:50vh;">{{ $jobToView?->last_run_output }}</div>
+            </div>
 
-            <div style="display:flex;justify-content:flex-end;margin-top:16px;flex-shrink:0;">
+            <div class="lp-modal-footer">
                 <button wire:click="$set('viewOutputId', null)" class="btn btn-ghost btn-sm">Cerrar</button>
             </div>
         </div>
@@ -186,73 +188,73 @@
     @php
         $jobWithHistory = $jobs->firstWhere('id', $viewHistoryId);
     @endphp
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:680px;width:100%;padding:28px;margin:16px;display:flex;flex-direction:column;max-height:85vh;">
-            <div style="display:flex;justify-content:between;align-items:center;margin-bottom:16px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;flex-shrink:0;">
-                <h3 style="font-size:16px;font-weight:700;margin:0;">
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated" style="max-width:680px;">
+            <div class="lp-modal-header">
+                <h3 class="panel-title" style="margin:0;">
                     <i class="fa-solid fa-clock-rotate-left" style="color:var(--accent-light);margin-right:8px;"></i>
                     Historial: {{ $jobWithHistory?->label }}
                 </h3>
-                <button wire:click="$set('viewHistoryId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;margin-left:auto;">
+                <button wire:click="$set('viewHistoryId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <div style="flex:1;overflow-y:auto;">
+            <div class="lp-modal-body" style="padding:0;">
                 @if($runLogs->isEmpty())
                 <div style="text-align:center;padding:40px;color:var(--text-muted);">
                     <i class="fa-solid fa-list" style="font-size:32px;opacity:0.2;margin-bottom:10px;display:block;"></i>
                     No hay ejecuciones registradas aún. Use el botón <strong>Play</strong> para ejecutar la tarea.
                 </div>
                 @else
-                <table class="table" style="width:100%;">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Estado</th>
-                            <th>Duración</th>
-                            <th>Cód. Salida</th>
-                            <th>Salida</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($runLogs as $log)
-                        <tr>
-                            <td><span style="font-size:12px;">{{ $log->ran_at->format('d/m/Y H:i:s') }}</span></td>
-                            <td>
-                                <span class="badge {{ $log->status === 'success' ? 'badge-success' : 'badge-danger' }}" style="font-size:11px;">
-                                    {{ $log->status === 'success' ? 'Éxito' : 'Fallo' }}
-                                </span>
-                            </td>
-                            <td><code style="font-size:11px;">{{ $log->durationFormatted() }}</code></td>
-                            <td><code style="font-size:11px;color:{{ $log->exit_code === 0 ? 'var(--success)' : 'var(--danger)' }};">{{ $log->exit_code }}</code></td>
-                            <td>
-                                @if($log->output)
-                                <details style="cursor:pointer;">
-                                    <summary style="font-size:11px;color:var(--accent-light);">Ver output</summary>
-                                    <pre style="font-size:11px;background:rgba(0,0,0,0.4);padding:8px;border-radius:6px;margin-top:6px;max-height:120px;overflow-y:auto;white-space:pre-wrap;color:#00ff00;">{{ $log->output }}</pre>
-                                </details>
-                                @else
-                                <span style="color:var(--text-muted);font-size:11px;">(sin salida)</span>
-                                @endif
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                <div style="max-height:50vh;overflow-y:auto;padding:16px;">
+                    <table class="lp-table" style="margin:0;">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Estado</th>
+                                <th>Duración</th>
+                                <th>Cód. Salida</th>
+                                <th>Salida</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($runLogs as $log)
+                            <tr>
+                                <td><span style="font-size:12px;">{{ $log->ran_at->format('d/m/Y H:i:s') }}</span></td>
+                                <td>
+                                    <span class="badge {{ $log->status === 'success' ? 'badge-success' : 'badge-danger' }}" style="font-size:11px;">
+                                        {{ $log->status === 'success' ? 'Éxito' : 'Fallo' }}
+                                    </span>
+                                </td>
+                                <td><code style="font-size:11px;">{{ $log->durationFormatted() }}</code></td>
+                                <td><code style="font-size:11px;color:{{ $log->exit_code === 0 ? 'var(--success)' : 'var(--danger)' }};">{{ $log->exit_code }}</code></td>
+                                <td>
+                                    @if($log->output)
+                                    <details style="cursor:pointer;">
+                                        <summary style="font-size:11px;color:var(--accent-light);">Ver output</summary>
+                                        <pre style="font-size:11px;background:rgba(0,0,0,0.4);padding:8px;border-radius:6px;margin-top:6px;max-height:120px;overflow-y:auto;white-space:pre-wrap;color:#00ff00;">{{ $log->output }}</pre>
+                                    </details>
+                                    @else
+                                    <span style="color:var(--text-muted);font-size:11px;">(sin salida)</span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
                 @endif
             </div>
 
-            <div style="display:flex;justify-content:flex-end;margin-top:16px;flex-shrink:0;">
+            <div class="lp-modal-footer">
                 <button wire:click="$set('viewHistoryId', null)" class="btn btn-ghost btn-sm">Cerrar</button>
             </div>
         </div>
     </div>
     @endif
 
-    <div wire:loading style="position:fixed;bottom:24px;right:24px;z-index:300;">
-        <div class="glass" style="padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:8px;">
-            <i class="fa-solid fa-spinner fa-spin"></i> Procesando...
-        </div>
+    <div wire:loading class="lp-loading-toast">
+        <i class="fa-solid fa-spinner fa-spin"></i> Procesando...
     </div>
 </div>

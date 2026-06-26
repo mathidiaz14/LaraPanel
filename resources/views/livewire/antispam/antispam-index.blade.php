@@ -2,11 +2,11 @@
     {{-- Tab Navigation --}}
     <div class="page-header">
         <div>
-            <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">
+            <h1 class="page-title">
                 <i class="fa-solid fa-shield-virus" style="color:var(--accent-light);margin-right:8px;"></i>
                 Antispam — Rspamd
             </h1>
-            <p style="color:var(--text-secondary);font-size:13px;">Monitoreo en tiempo real, reglas personalizadas y análisis de mensajes.</p>
+            <p class="page-subtitle">Monitoreo en tiempo real, reglas personalizadas y análisis de mensajes.</p>
         </div>
     </div>
 
@@ -34,20 +34,20 @@
     @if($activeTab === 'dashboard')
     {{-- Stats Cards --}}
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
-        <div class="glass" style="padding:18px;text-align:center;">
+        <div class="glass lp-panel" style="text-align:center;">
             <div style="font-size:28px;font-weight:800;color:var(--text-primary);">{{ number_format($stats['scanned']) }}</div>
             <div style="font-size:11px;color:var(--text-secondary);">Mensajes Escaneados</div>
         </div>
-        <div class="glass" style="padding:18px;text-align:center;">
+        <div class="glass lp-panel" style="text-align:center;">
             <div style="font-size:28px;font-weight:800;color:var(--danger);">{{ number_format($stats['spam_count']) }}</div>
             <div style="font-size:11px;color:var(--text-secondary);">Spam Detectado</div>
             <div style="font-size:10px;color:var(--danger);margin-top:2px;">{{ $stats['spam_percentage'] }}% del total</div>
         </div>
-        <div class="glass" style="padding:18px;text-align:center;">
+        <div class="glass lp-panel" style="text-align:center;">
             <div style="font-size:28px;font-weight:800;color:var(--success);">{{ number_format($stats['ham_count']) }}</div>
             <div style="font-size:11px;color:var(--text-secondary);">Ham (Legítimos)</div>
         </div>
-        <div class="glass" style="padding:18px;text-align:center;">
+        <div class="glass lp-panel" style="text-align:center;">
             <div style="font-size:28px;font-weight:800;color:var(--accent-light);">{{ number_format($stats['learned']) }}</div>
             <div style="font-size:11px;color:var(--text-secondary);">Muestras Aprendidas</div>
         </div>
@@ -55,8 +55,8 @@
 
     {{-- Actions breakdown --}}
     @if(!empty($stats['actions']))
-    <div class="glass" style="padding:20px;margin-bottom:20px;">
-        <h2 style="font-size:14px;font-weight:700;margin-bottom:14px;">Acciones Tomadas</h2>
+    <div class="glass lp-panel" style="margin-bottom:20px;">
+        <h2 class="panel-title" style="margin-bottom:14px;">Acciones Tomadas</h2>
         @php $totalActions = array_sum($stats['actions']); @endphp
         <div style="display:flex;flex-direction:column;gap:8px;">
             @foreach($stats['actions'] as $action => $count)
@@ -85,10 +85,10 @@
 
     {{-- Recent History --}}
     @if(!empty($history))
-    <div class="glass" style="padding:20px;">
-        <h2 style="font-size:14px;font-weight:700;margin-bottom:14px;">Mensajes Recientes</h2>
+    <div class="glass lp-panel">
+        <h2 class="panel-title" style="margin-bottom:14px;">Mensajes Recientes</h2>
         <div style="overflow-x:auto;">
-            <table class="table" style="width:100%;">
+            <table class="lp-table">
                 <thead>
                     <tr>
                         <th>Asunto</th>
@@ -126,10 +126,10 @@
 
     {{-- TAB: Rules --}}
     @elseif($activeTab === 'rules')
-    <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;align-items:start;">
+    <div class="lp-two-col">
         {{-- Add Rule Form --}}
-        <div class="glass" style="padding:22px;">
-            <h2 style="font-size:14px;font-weight:700;margin-bottom:14px;">Nueva Regla</h2>
+        <div class="glass lp-panel">
+            <h2 class="panel-title" style="margin-bottom:14px;">Nueva Regla</h2>
 
             <div class="form-group">
                 <label class="form-label">Tipo</label>
@@ -178,13 +178,13 @@
         </div>
 
         {{-- Rules List --}}
-        <div class="glass" style="padding:20px;">
-            <h2 style="font-size:14px;font-weight:700;margin-bottom:14px;">Reglas Activas ({{ $rules->count() }})</h2>
+        <div class="glass lp-panel">
+            <h2 class="panel-title" style="margin-bottom:14px;">Reglas Activas ({{ $rules->count() }})</h2>
             @if($rules->isEmpty())
             <div style="text-align:center;padding:40px;color:var(--text-muted);">Sin reglas configuradas.</div>
             @else
             <div style="overflow-x:auto;">
-                <table class="table" style="width:100%;">
+                <table class="lp-table">
                     <thead>
                         <tr><th>Tipo</th><th>Valor</th><th>Acción</th><th>Estado</th><th style="text-align:right;">Ops</th></tr>
                     </thead>
@@ -219,9 +219,9 @@
 
     {{-- TAB: Test --}}
     @elseif($activeTab === 'test')
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-        <div class="glass" style="padding:22px;">
-            <h2 style="font-size:14px;font-weight:700;margin-bottom:14px;">Escanear Mensaje</h2>
+    <div class="lp-two-col">
+        <div class="glass lp-panel">
+            <h2 class="panel-title" style="margin-bottom:14px;">Escanear Mensaje</h2>
             <p style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;">Pega el contenido raw de un email (incluyendo headers) para analizarlo con Rspamd.</p>
             <textarea wire:model="testMessage" class="form-input" style="font-family:monospace;font-size:11px;height:250px;resize:vertical;" placeholder="From: sender@example.com&#10;To: recipient@example.com&#10;Subject: Test message&#10;&#10;This is the email body..."></textarea>
             <button wire:click="testScan" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;" wire:loading.attr="disabled">
@@ -230,8 +230,8 @@
             </button>
         </div>
 
-        <div class="glass" style="padding:22px;">
-            <h2 style="font-size:14px;font-weight:700;margin-bottom:14px;">Resultado del Análisis</h2>
+        <div class="glass lp-panel">
+            <h2 class="panel-title" style="margin-bottom:14px;">Resultado del Análisis</h2>
             @if($testResult)
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
                 <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:12px;text-align:center;">
@@ -273,9 +273,8 @@
     </div>
     @endif
 
-    <div wire:loading style="position:fixed;bottom:24px;right:24px;z-index:300;">
-        <div class="glass" style="padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:8px;">
-            <i class="fa-solid fa-spinner fa-spin"></i> Procesando...
-        </div>
+    <div wire:loading class="lp-loading-toast">
+        <i class="fa-solid fa-spinner fa-spin"></i> Procesando...
+    </div>
     </div>
 </div>

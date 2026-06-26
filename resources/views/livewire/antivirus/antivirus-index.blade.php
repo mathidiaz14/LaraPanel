@@ -1,4 +1,14 @@
 <div>
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">
+                <i class="fa-solid fa-shield-virus" style="color:var(--accent-light);margin-right:8px;"></i>
+                Antivirus
+            </h1>
+            <p class="page-subtitle">Escanea y administra archivos infectados con ClamAV.</p>
+        </div>
+    </div>
+
     {{-- ── Tabs Navigation ──────────────────────────────────────────────────── --}}
     <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
         <button wire:click="setTab('scanner')" class="btn {{ $activeTab === 'scanner' ? 'btn-primary' : 'btn-ghost' }} btn-sm">
@@ -17,9 +27,9 @@
 
     {{-- ── ClamAV Not Installed Warning ────────────────────────────────────── --}}
     @if(!$isInstalled)
-        <div class="glass" style="padding:48px;text-align:center;">
+        <div class="glass lp-panel" style="padding:48px;text-align:center;">
             <i class="fa-solid fa-shield-virus" style="font-size:52px;color:#f38ba8;margin-bottom:20px;opacity:0.6;display:block;"></i>
-            <h3 style="font-size:20px;font-weight:700;margin-bottom:10px;color:var(--text-primary);">ClamAV no está instalado</h3>
+            <h3 class="panel-title" style="font-size:20px;margin-bottom:10px;">ClamAV no está instalado</h3>
             <p style="color:var(--text-secondary);font-size:14px;max-width:520px;margin:0 auto 24px;">
                 El motor de antivirus ClamAV no se detectó en este sistema. Instálalo para usar el módulo de escaneo.
             </p>
@@ -41,8 +51,8 @@
             {{-- Left column: Scan form + output --}}
             <div>
                 {{-- Scan Form --}}
-                <div class="glass" style="padding:24px;margin-bottom:20px;">
-                    <h3 style="font-size:15px;font-weight:700;margin-bottom:20px;color:var(--text-primary);">
+                <div class="glass lp-panel" style="margin-bottom:20px;">
+                    <h3 class="panel-title" style="margin-bottom:20px;">
                         <i class="fa-solid fa-virus-slash" style="color:#a6e3a1;margin-right:8px;"></i>
                         Escanear Directorio
                     </h3>
@@ -108,12 +118,12 @@
                         $accentColor = $isClean ? '#a6e3a1' : ($isInfected ? '#f38ba8' : '#f9e2af');
                         $bgColor     = $isClean ? 'rgba(166,227,161,0.05)' : ($isInfected ? 'rgba(243,139,168,0.05)' : 'rgba(249,226,175,0.05)');
                     @endphp
-                    <div class="glass" style="padding:20px;margin-bottom:20px;border-color:{{ $accentColor }}22;background:{{ $bgColor }};">
+                    <div class="glass lp-panel" style="margin-bottom:20px;border-color:{{ $accentColor }}22;background:{{ $bgColor }};">
                         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
                             <i class="fa-solid {{ $isClean ? 'fa-shield-check' : ($isInfected ? 'fa-biohazard' : 'fa-triangle-exclamation') }}"
                                style="font-size:24px;color:{{ $accentColor }};"></i>
                             <div>
-                                <div style="font-size:15px;font-weight:700;color:var(--text-primary);">
+                                <div class="panel-title" style="font-size:15px;margin-bottom:0;">
                                     {{ $isClean ? '✅ Sistema Limpio' : ($isInfected ? '🦠 Amenazas Detectadas' : '⚠️ Error en el Escaneo') }}
                                 </div>
                                 <div style="font-size:11px;color:var(--text-muted);">{{ $scanPath }}</div>
@@ -142,8 +152,8 @@
 
                 {{-- Scan output terminal --}}
                 @if($scanOutput)
-                    <div class="glass" style="padding:20px;">
-                        <h4 style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text-primary);">
+                    <div class="glass lp-panel">
+                        <h4 class="panel-title" style="font-size:13px;margin-bottom:12px;">
                             <i class="fa-solid fa-terminal"></i> Salida del Escaneo
                         </h4>
                         <pre style="background:rgba(0,0,0,0.85);border:1px solid var(--glass-border);border-radius:8px;padding:16px;font-family:monospace;font-size:11px;color:#a6e3a1;line-height:1.6;white-space:pre-wrap;max-height:350px;overflow-y:auto;text-align:left;">{{ $scanOutput }}</pre>
@@ -153,8 +163,8 @@
 
             {{-- Right column: History --}}
             <div>
-                <div class="glass" style="padding:16px;">
-                    <h3 style="font-size:13px;font-weight:700;margin-bottom:14px;color:var(--text-primary);">
+                <div class="glass lp-panel" style="padding:16px;">
+                    <h3 class="panel-title" style="font-size:13px;margin-bottom:14px;">
                         <i class="fa-solid fa-clock-rotate-left"></i> Historial de Escaneos
                     </h3>
 
@@ -194,10 +204,10 @@
     {{-- TAB: QUARANTINE                                                       --}}
     {{-- ══════════════════════════════════════════════════════════════════════ --}}
     @if($activeTab === 'quarantine')
-        <div class="glass" style="padding:24px;">
+        <div class="glass lp-panel">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                 <div>
-                    <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);">
+                    <h3 class="panel-title" style="margin:0;">
                         <i class="fa-solid fa-box-archive" style="color:#f38ba8;margin-right:8px;"></i>
                         Archivos en Cuarentena
                     </h3>
@@ -218,7 +228,7 @@
                 </div>
             @else
                 <div style="overflow-x:auto;">
-                    <table class="table" style="width:100%;">
+                    <table class="lp-table">
                         <thead>
                             <tr>
                                 <th>Amenaza detectada</th>
@@ -279,11 +289,11 @@
     {{-- TAB: DEFINITIONS                                                      --}}
     {{-- ══════════════════════════════════════════════════════════════════════ --}}
     @if($activeTab === 'definitions')
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+        <div class="lp-two-col">
 
             {{-- Status card --}}
-            <div class="glass" style="padding:24px;">
-                <h3 style="font-size:15px;font-weight:700;margin-bottom:20px;color:var(--text-primary);">
+            <div class="glass lp-panel">
+                <h3 class="panel-title" style="margin-bottom:20px;">
                     <i class="fa-solid fa-circle-info" style="color:#89b4fa;margin-right:8px;"></i>
                     Estado del Motor
                 </h3>
@@ -322,8 +332,8 @@
             </div>
 
             {{-- Update card --}}
-            <div class="glass" style="padding:24px;">
-                <h3 style="font-size:15px;font-weight:700;margin-bottom:8px;color:var(--text-primary);">
+            <div class="glass lp-panel">
+                <h3 class="panel-title" style="margin-bottom:8px;">
                     <i class="fa-solid fa-cloud-arrow-down" style="color:#a6e3a1;margin-right:8px;"></i>
                     Actualizar Definiciones
                 </h3>

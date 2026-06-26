@@ -2,13 +2,13 @@
 <div style="max-width:680px;margin:0 auto;">
 
     {{-- Header --}}
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px;">
+    <div class="page-header" style="justify-content: flex-start; gap: 14px;">
         <a href="{{ route('ssl.index') }}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-arrow-left"></i></a>
         <div>
-            <h1 style="font-size:20px;font-weight:700;margin-bottom:2px;">
-                <i class="fa-solid fa-certificate" style="color:#f0a500;margin-right:8px;"></i>Emitir con Let's Encrypt
+            <h1 class="page-title">
+                <i class="fa-solid fa-certificate" style="color:#f0a500;"></i> Emitir con Let's Encrypt
             </h1>
-            <p style="font-size:13px;color:var(--text-secondary);">
+            <p class="page-subtitle">
                 Certificado SSL gratuito y automático. Válido 90 días, con auto-renovación.
             </p>
         </div>
@@ -35,7 +35,7 @@
 
     {{-- Loading overlay --}}
     @if($isLoading)
-    <div class="glass" style="padding:40px;text-align:center;margin-bottom:20px;">
+    <div class="glass lp-panel" style="text-align:center;margin-bottom:20px;">
         <i class="fa-solid fa-shield-halved fa-spin" style="font-size:40px;color:var(--success);display:block;margin-bottom:16px;"></i>
         <div style="font-size:15px;font-weight:600;margin-bottom:8px;">Contactando a Let's Encrypt...</div>
         <div style="font-size:13px;color:var(--text-secondary);">
@@ -49,7 +49,7 @@
     <style>@keyframes progress-anim{0%{width:5%}50%{width:70%}100%{width:95%}}</style>
     @else
 
-    <div class="glass" style="padding:28px;">
+    <div class="glass lp-panel">
 
         {{-- Domain selector --}}
         <div class="form-group">
@@ -63,7 +63,7 @@
                 </option>
                 @endforeach
             </select>
-            @error('domainId') <div style="font-size:12px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+            @error('domainId') <div class="form-error">{{ $message }}</div> @enderror
         </div>
 
         {{-- Options --}}

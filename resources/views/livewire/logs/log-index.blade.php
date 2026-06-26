@@ -1,8 +1,8 @@
 <div style="display:flex;height:calc(100vh - 140px);gap:20px;">
     {{-- Sidebar Selector --}}
-    <div class="glass" style="width:280px;display:flex;flex-direction:column;padding:0;">
+    <div class="glass lp-panel" style="width:280px;display:flex;flex-direction:column;padding:0;">
         <div style="padding:20px;border-bottom:1px solid var(--glass-border);">
-            <h3 style="font-size:16px;font-weight:700;"><i class="fa-solid fa-file-waveform" style="color:var(--accent-light);margin-right:8px;"></i> Archivos de Log</h3>
+            <h3 class="panel-title" style="margin:0;"><i class="fa-solid fa-file-waveform" style="color:var(--accent-light);margin-right:8px;"></i> Archivos de Log</h3>
         </div>
         
         <div style="flex:1;overflow-y:auto;padding:10px;">
@@ -29,7 +29,7 @@
     </div>
 
     {{-- Log Viewer Area --}}
-    <div class="glass" style="flex:1;display:flex;flex-direction:column;padding:0;overflow:hidden;">
+    <div class="glass lp-panel" style="flex:1;display:flex;flex-direction:column;padding:0;overflow:hidden;">
         
         {{-- Toolbar --}}
         <div style="padding:16px 20px;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">

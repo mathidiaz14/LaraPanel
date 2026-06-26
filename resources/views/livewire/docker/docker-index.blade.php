@@ -19,7 +19,7 @@
     </div>
 
     @if(!$daemonRunning)
-        <div class="glass" style="padding:40px;text-align:center;">
+        <div class="glass lp-panel" style="text-align:center;padding:40px;">
             <i class="fa-brands fa-docker" style="font-size:48px;color:#2496ed;margin-bottom:16px;opacity:0.5;"></i>
             <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--text-primary);">Docker no está corriendo</h3>
             <p style="color:var(--text-secondary);font-size:13px;max-width:500px;margin:0 auto;">
@@ -31,9 +31,9 @@
         @if($activeTab === 'containers')
             <div style="display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start;">
                 {{-- Sidebar: Containers list --}}
-                <div class="glass" style="padding:16px;">
+                <div class="glass lp-panel" style="padding:16px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                        <h2 style="font-size:14px;font-weight:700;color:var(--text-primary);">Contenedores</h2>
+                        <h2 class="panel-title" style="margin:0;">Contenedores</h2>
                         <button wire:click="loadContainers" class="btn btn-ghost btn-sm" title="Refrescar Lista">
                             <i class="fa-solid fa-rotate"></i>
                         </button>
@@ -103,10 +103,10 @@
                     @endif
 
                     @if($selectedContainer)
-                        <div class="glass" style="padding:24px;margin-bottom:20px;">
+                        <div class="glass lp-panel" style="margin-bottom:20px;">
                             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
                                 <div>
-                                    <h2 style="font-size:20px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">
+                                    <h2 class="panel-title" style="font-size:20px;margin-bottom:4px;">
                                         <i class="fa-solid fa-box" style="color:#2496ed;margin-right:8px;"></i>
                                         {{ $selectedContainer['name'] }}
                                     </h2>
@@ -174,9 +174,9 @@
 
                         {{-- Logs Terminal Panel --}}
                         @if($showLogs)
-                            <div class="glass" style="padding:20px;">
+                            <div class="glass lp-panel">
                                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                                    <h3 style="font-size:14px;font-weight:700;color:var(--text-primary);"><i class="fa-solid fa-terminal"></i> Terminal Logs</h3>
+                                    <h3 class="panel-title" style="margin:0;"><i class="fa-solid fa-terminal"></i> Terminal Logs</h3>
                                     <div style="display:flex;align-items:center;gap:12px;">
                                         <div style="display:flex;align-items:center;gap:6px;">
                                             <span style="font-size:11px;color:var(--text-muted);">Líneas:</span>
@@ -194,7 +194,7 @@
                             </div>
                         @endif
                     @else
-                        <div class="glass" style="padding:80px 20px;text-align:center;">
+                        <div class="glass lp-panel" style="padding:80px 20px;text-align:center;">
                             <i class="fa-solid fa-cube" style="font-size:48px;opacity:0.2;margin-bottom:16px;display:block;"></i>
                             <h3 style="font-size:16px;font-weight:700;margin-bottom:8px;color:var(--text-primary);">Gestión de Contenedores</h3>
                             <p style="color:var(--text-secondary);font-size:13px;max-width:400px;margin:0 auto;">
@@ -210,8 +210,8 @@
         @if($activeTab === 'images')
             <div style="display:grid;grid-template-columns:1fr;gap:24px;">
                 {{-- Downloader image form --}}
-                <div class="glass" style="padding:24px;">
-                    <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--text-primary);"><i class="fa-solid fa-cloud-arrow-down"></i> Descargar Imagen (Pull Image)</h3>
+                <div class="glass lp-panel">
+                    <h3 class="panel-title"><i class="fa-solid fa-cloud-arrow-down"></i> Descargar Imagen (Pull Image)</h3>
                     <form wire:submit.prevent="pullImageAction">
                         <div style="display:flex;gap:12px;align-items:flex-start;">
                             <div style="flex:1;">
@@ -233,16 +233,16 @@
                 </div>
 
                 {{-- Local Images table --}}
-                <div class="glass" style="padding:20px;">
+                <div class="glass lp-panel">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                        <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);"><i class="fa-solid fa-compact-disc"></i> Imágenes Locales</h3>
+                        <h3 class="panel-title" style="margin:0;"><i class="fa-solid fa-compact-disc"></i> Imágenes Locales</h3>
                         <button wire:click="pruneImages" class="btn btn-ghost btn-sm" onclick="return confirm('¿Eliminar todas las imágenes sin usar para liberar espacio?')">
                             <i class="fa-solid fa-broom"></i> Limpiar no usadas (Prune)
                         </button>
                     </div>
 
                     <div style="overflow-x:auto;">
-                        <table class="table" style="width:100%;">
+                        <table class="lp-table">
                             <thead>
                                 <tr>
                                     <th>Imagen / Repositorio</th>
@@ -286,8 +286,8 @@
         {{-- TAB: COMPOSE --}}
         @if($activeTab === 'compose')
             <div style="display:grid;grid-template-columns:1fr;gap:24px;">
-                <div class="glass" style="padding:24px;">
-                    <h3 style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--text-primary);"><i class="fa-solid fa-cube"></i> Docker Compose Stacks</h3>
+                <div class="glass lp-panel">
+                    <h3 class="panel-title"><i class="fa-solid fa-cube"></i> Docker Compose Stacks</h3>
                     
                     <form wire:submit.prevent="deployCompose">
                         <div style="margin-bottom:16px;">
@@ -318,15 +318,15 @@
                 </div>
 
                 @if($composeOutput)
-                    <div class="glass" style="padding:20px;">
-                        <h4 style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text-primary);"><i class="fa-solid fa-terminal"></i> Salida de Comandos</h4>
+                    <div class="glass lp-panel">
+                        <h4 class="panel-title"><i class="fa-solid fa-terminal"></i> Salida de Comandos</h4>
                         <pre style="background:rgba(0,0,0,0.8);border:1px solid var(--glass-border);border-radius:8px;padding:16px;font-family:monospace;font-size:11px;color:#cdd6f4;line-height:1.6;white-space:pre-wrap;max-height:300px;overflow-y:auto;text-align:left;">{{ $composeOutput }}</pre>
                     </div>
                 @endif
             </div>
         {{-- TAB: DEPLOY --}}
         @elseif($activeTab === 'deploy')
-            <div class="glass" style="padding:24px;max-width:800px;margin:0 auto;">
+            <div class="glass lp-panel" style="max-width:800px;margin:0 auto;">
                 <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
                     <div style="width:48px;height:48px;border-radius:12px;background:rgba(99,102,241,0.1);display:flex;align-items:center;justify-content:center;">
                         <i class="fa-solid fa-rocket" style="font-size:24px;color:var(--accent-light);"></i>
@@ -406,9 +406,9 @@
                     </p>
                 </div>
 
-                <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:20px;">
+                <div class="lp-two-col">
                     @foreach($marketplaceTemplates as $key => $tpl)
-                        <div class="glass" style="padding:24px;display:flex;flex-direction:column;justify-content:space-between;transition:all 0.2s;border:1px solid var(--glass-border);border-radius:12px;background:var(--glass-bg);" 
+                        <div class="glass lp-panel" style="display:flex;flex-direction:column;justify-content:space-between;transition:all 0.2s;" 
                              onmouseover="this.style.transform='translateY(-4px)';this.style.borderColor='rgba(99,102,241,0.4)';" 
                              onmouseout="this.style.transform='none';this.style.borderColor='var(--glass-border)';">
                             <div>
@@ -434,10 +434,10 @@
 
     {{-- Terminal Modal --}}
     @if($showTerminal)
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.8);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:800px;width:100%;padding:24px;margin:16px;display:flex;flex-direction:column;max-height:90vh;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
-                <h3 style="font-size:16px;font-weight:700;margin:0;color:var(--accent-light);">
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated" style="max-width:800px;">
+            <div class="lp-modal-header">
+                <h3 class="panel-title" style="margin:0;color:var(--accent-light);">
                     <i class="fa-solid fa-terminal"></i> Consola: {{ $terminalContainer }}
                 </h3>
                 <button wire:click="closeTerminal" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">
@@ -445,8 +445,9 @@
                 </button>
             </div>
 
-            {{-- Output Area --}}
-            <div style="flex:1;overflow-y:auto;background:rgba(0,0,0,0.6);border:1px solid var(--glass-border);border-radius:8px;padding:16px;margin-bottom:16px;" id="terminal-output-container">
+            <div class="lp-modal-body" style="display:flex;flex-direction:column;">
+                {{-- Output Area --}}
+                <div style="flex:1;overflow-y:auto;background:rgba(0,0,0,0.6);border:1px solid var(--glass-border);border-radius:8px;padding:16px;margin-bottom:16px;max-height:50vh;" id="terminal-output-container">
                 <pre style="margin:0;font-family:monospace;font-size:13px;color:#a8b2d1;white-space:pre-wrap;word-break:break-all;">{{ $terminalOutput }}</pre>
             </div>
 
@@ -472,6 +473,7 @@
                     })
                 });
             </script>
+            </div>
         </div>
     </div>
     @endif

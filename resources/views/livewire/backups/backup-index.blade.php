@@ -2,15 +2,15 @@
     {{-- Header --}}
     <div class="page-header">
         <div>
-            <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">Backups del Servidor</h1>
-            <p style="color:var(--text-secondary);font-size:13px;">
+            <h1 class="page-title">Backups del Servidor</h1>
+            <p class="page-subtitle">
                 Cree y gestione copias de seguridad de archivos y bases de datos. Los backups se almacenan localmente en el servidor.
             </p>
         </div>
     </div>
 
     {{-- Stats Row --}}
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;">
+    <div class="stats-row">
         @php
             $completedCount = $backups->where('status', 'completed')->count();
             $totalSize = $backups->where('status', 'completed')->sum('size_bytes');
@@ -48,12 +48,12 @@
     <div class="alert alert-danger" style="margin-bottom:20px;"><i class="fa-solid fa-circle-exclamation"></i> {{ $errorMessage }}</div>
     @endif
 
-    <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;align-items:start;">
+    <div class="lp-two-col">
 
         {{-- Create Backup Panel --}}
-        <div class="glass" style="padding:24px;">
-            <h2 style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">
-                <i class="fa-solid fa-plus-circle" style="color:var(--accent-light);margin-right:8px;"></i>
+        <div class="glass lp-panel">
+            <h2 class="panel-title">
+                <i class="fa-solid fa-plus-circle" style="color:var(--accent-light);"></i>
                 Nuevo Backup
             </h2>
 
@@ -61,7 +61,7 @@
                 <div class="form-group">
                     <label class="form-label">Etiqueta del Backup</label>
                     <input type="text" wire:model="label" class="form-input" placeholder="ej. Backup previo actualización">
-                    @error('label') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                    @error('label') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
 
                 {{-- Type Selector --}}
@@ -115,9 +115,9 @@
         </div>
 
         {{-- Create Schedule Panel --}}
-        <div class="glass" style="padding:24px;margin-top:20px;">
-            <h2 style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">
-                <i class="fa-solid fa-clock" style="color:var(--accent-light);margin-right:8px;"></i>
+        <div class="glass lp-panel" style="margin-top:20px;">
+            <h2 class="panel-title">
+                <i class="fa-solid fa-clock" style="color:var(--accent-light);"></i>
                 Programar Backups (Cron)
             </h2>
 
@@ -175,13 +175,13 @@
         <div>
             {{-- Schedules List --}}
             @if($schedules->isNotEmpty())
-            <div class="glass" style="padding:24px;margin-bottom:20px;">
-                <h2 style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">
-                    <i class="fa-solid fa-calendar-check" style="color:var(--accent-light);margin-right:8px;"></i>
+            <div class="glass lp-panel" style="margin-bottom:20px;">
+                <h2 class="panel-title">
+                    <i class="fa-solid fa-calendar-check" style="color:var(--accent-light);"></i>
                     Backups Programados Activos
                 </h2>
                 <div style="overflow-x:auto;">
-                    <table class="table" style="width:100%;">
+                    <table class="lp-table">
                         <thead>
                             <tr>
                                 <th>Tipo</th>
@@ -215,9 +215,9 @@
             @endif
 
             {{-- Backups List --}}
-            <div class="glass" style="padding:24px;">
-            <h2 style="font-size:15px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">
-                <i class="fa-solid fa-list" style="color:var(--accent-light);margin-right:8px;"></i>
+            <div class="glass lp-panel">
+            <h2 class="panel-title">
+                <i class="fa-solid fa-list" style="color:var(--accent-light);"></i>
                 Historial de Backups
             </h2>
 
@@ -228,7 +228,7 @@
             </div>
             @else
             <div style="overflow-x:auto;">
-                <table class="table" style="width:100%;">
+                <table class="lp-table">
                     <thead>
                         <tr>
                             <th>Etiqueta</th>
@@ -278,7 +278,7 @@
                                 <span style="font-size:12px;color:var(--text-secondary);">{{ $backup->created_at->format('d M H:i') }}</span>
                             </td>
                             <td style="text-align:right;">
-                                <div style="display:inline-flex;gap:6px;">
+                                <div class="lp-row-actions">
                                     <button wire:click="viewBackup({{ $backup->id }})" class="btn btn-ghost btn-sm" title="Ver detalles">
                                         <i class="fa-solid fa-eye" style="color:var(--accent-light);"></i>
                                     </button>
@@ -307,17 +307,19 @@
 
     {{-- View Detail Modal --}}
     @if($viewingId && $viewing)
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:520px;width:100%;padding:28px;margin:16px;">
-            <div style="display:flex;justify-content:between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
-                <h3 style="font-size:16px;font-weight:700;margin:0;">
-                    <i class="fa-solid fa-box-archive" style="color:var(--accent-light);margin-right:8px;"></i>
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated" style="max-width:520px;">
+            <div class="lp-modal-header">
+                <h3 class="panel-title" style="margin:0;">
+                    <i class="fa-solid fa-box-archive" style="color:var(--accent-light);"></i>
                     Detalles del Backup
                 </h3>
-                <button wire:click="$set('viewingId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;margin-left:auto;">
+                <button wire:click="$set('viewingId', null)" class="lp-modal-close">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
+            
+            <div class="lp-modal-body">
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
                 @foreach([
@@ -358,16 +360,16 @@
             </div>
             @endif
 
-            <div style="display:flex;justify-content:flex-end;">
-                <button wire:click="$set('viewingId', null)" class="btn btn-ghost btn-sm">Cerrar</button>
+            </div>
+
+            <div class="lp-modal-footer">
+                <button wire:click="$set('viewingId', null)" class="btn btn-ghost">Cerrar</button>
             </div>
         </div>
     </div>
     @endif
 
-    <div wire:loading style="position:fixed;bottom:24px;right:24px;z-index:300;">
-        <div class="glass" style="padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:8px;">
-            <i class="fa-solid fa-spinner fa-spin"></i> Procesando...
-        </div>
+    <div wire:loading.delay class="lp-loading-toast">
+        <i class="fa-solid fa-spinner fa-spin"></i> Procesando...
     </div>
 </div>

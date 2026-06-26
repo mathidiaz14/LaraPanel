@@ -2,8 +2,8 @@
     {{-- Header --}}
     <div class="page-header">
         <div>
-            <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">Bases de Datos MySQL</h1>
-            <p style="color:var(--text-secondary);font-size:13px;">
+            <h1 class="page-title">Bases de Datos MySQL</h1>
+            <p class="page-subtitle">
                 Cree esquemas de base de datos y usuarios con privilegios completos para sus aplicaciones web.
             </p>
         </div>
@@ -32,12 +32,12 @@
     <div class="alert alert-danger" style="margin-bottom:20px;"><i class="fa-solid fa-circle-exclamation"></i> {{ $errorMessage }}</div>
     @endif
 
-    <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;align-items:start;">
+    <div class="lp-two-col">
         
         {{-- Creation Panel --}}
-        <div class="glass" style="padding:24px;">
-            <h2 style="font-size:15px;font-weight:700;margin-bottom:14px;color:var(--text-primary);">
-                <i class="fa-solid fa-database" style="color:var(--accent-light);margin-right:8px;"></i>
+        <div class="glass lp-panel">
+            <h2 class="panel-title">
+                <i class="fa-solid fa-database" style="color:var(--accent-light);"></i>
                 Crear Base de Datos
             </h2>
             
@@ -45,25 +45,21 @@
                 {{-- DB Name --}}
                 <div class="form-group">
                     <label class="form-label">Nombre de Base de Datos</label>
-                    <div style="display:flex;align-items:center;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:8px;overflow:hidden;">
-                        <span style="padding:10px 14px;background:rgba(255,255,255,0.05);color:var(--text-muted);font-size:13px;border-right:1px solid var(--glass-border);">
-                            {{ $dbPrefix }}
-                        </span>
-                        <input type="text" wire:model="dbNameSuffix" class="form-input" style="border:none;background:none;margin:0;" placeholder="dbname">
+                    <div class="input-prefix-wrap">
+                        <span class="input-prefix">{{ $dbPrefix }}</span>
+                        <input type="text" wire:model="dbNameSuffix" class="form-input" placeholder="dbname">
                     </div>
-                    @error('dbNameSuffix') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                    @error('dbNameSuffix') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
 
                 {{-- DB User --}}
                 <div class="form-group">
                     <label class="form-label">Usuario de la Base de Datos</label>
-                    <div style="display:flex;align-items:center;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:8px;overflow:hidden;">
-                        <span style="padding:10px 14px;background:rgba(255,255,255,0.05);color:var(--text-muted);font-size:13px;border-right:1px solid var(--glass-border);">
-                            {{ $dbPrefix }}
-                        </span>
-                        <input type="text" wire:model="dbUserSuffix" class="form-input" style="border:none;background:none;margin:0;" placeholder="dbuser">
+                    <div class="input-prefix-wrap">
+                        <span class="input-prefix">{{ $dbPrefix }}</span>
+                        <input type="text" wire:model="dbUserSuffix" class="form-input" placeholder="dbuser">
                     </div>
-                    @error('dbUserSuffix') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                    @error('dbUserSuffix') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
 
                 {{-- Password --}}
@@ -75,7 +71,7 @@
                             Generar
                         </button>
                     </div>
-                    @error('dbPassword') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                    @error('dbPassword') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
 
                 {{-- Associated Domain --}}
@@ -96,9 +92,9 @@
         </div>
 
         {{-- Databases List Panel --}}
-        <div class="glass" style="padding:24px;">
-            <h2 style="font-size:15px;font-weight:700;margin-bottom:14px;color:var(--text-primary);">
-                <i class="fa-solid fa-list" style="color:var(--accent-light);margin-right:8px;"></i>
+        <div class="glass lp-panel">
+            <h2 class="panel-title">
+                <i class="fa-solid fa-list" style="color:var(--accent-light);"></i>
                 Bases de Datos Activas
             </h2>
 
@@ -109,7 +105,7 @@
             </div>
             @else
             <div style="overflow-x:auto;">
-                <table class="table" style="width:100%;">
+                <table class="lp-table">
                     <thead>
                         <tr>
                             <th>Base de Datos</th>
@@ -143,7 +139,7 @@
                                 @endif
                             </td>
                             <td style="text-align:right;">
-                                <div style="display:inline-flex;gap:6px;">
+                                <div class="lp-row-actions">
                                     <button wire:click="exportDatabase({{ $db->id }})" class="btn btn-ghost btn-sm" title="Exportar SQL (.sql)">
                                         <i class="fa-solid fa-file-export" style="color:var(--success);"></i>
                                     </button>
@@ -173,36 +169,38 @@
     @php
         $dbToChange = $databases->firstWhere('id', $changingPasswordId);
     @endphp
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:440px;width:100%;padding:28px;margin:16px;">
-            <div style="display:flex;justify-content:between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
-                <h3 style="font-size:16px;font-weight:700;margin:0;">
-                    <i class="fa-solid fa-key" style="color:var(--warning);margin-right:8px;"></i>
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated">
+            <div class="lp-modal-header">
+                <h3 class="panel-title">
+                    <i class="fa-solid fa-key" style="color:var(--warning);"></i>
                     Cambiar Contraseña
                 </h3>
-                <button wire:click="$set('changingPasswordId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;margin-left:auto;">
+                <button wire:click="$set('changingPasswordId', null)" class="lp-modal-close">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <p style="color:var(--text-secondary);font-size:12px;margin-bottom:16px;">
-                Actualizar contraseña de usuario para: <strong style="color:var(--text-primary);">{{ $dbToChange?->db_user }}</strong>
-            </p>
+            <div class="lp-modal-body">
+                <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+                    Actualizar contraseña de usuario para: <strong style="color:var(--text-primary);">{{ $dbToChange?->db_user }}</strong>
+                </p>
 
-            <div class="form-group">
-                <label class="form-label">Nueva Contraseña</label>
-                <div style="display:flex;gap:8px;">
-                    <input type="text" wire:model="newPassword" class="form-input" placeholder="Nueva contraseña segura" style="margin-bottom:0;">
-                    <button type="button" wire:click="generateRandomNewPassword" class="btn btn-ghost" style="flex-shrink:0;">
-                        Generar
-                    </button>
+                <div class="form-group">
+                    <label class="form-label">Nueva Contraseña</label>
+                    <div style="display:flex;gap:8px;">
+                        <input type="text" wire:model="newPassword" class="form-input" placeholder="Nueva contraseña segura" style="margin-bottom:0;">
+                        <button type="button" wire:click="generateRandomNewPassword" class="btn btn-ghost" style="flex-shrink:0;">
+                            Generar
+                        </button>
+                    </div>
+                    @error('newPassword') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
-                @error('newPassword') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
             </div>
 
-            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
-                <button wire:click="$set('changingPasswordId', null)" class="btn btn-ghost btn-sm">Cancelar</button>
-                <button wire:click="changePassword" class="btn btn-primary btn-sm" style="background:var(--warning);border-color:var(--warning);color:black;">
+            <div class="lp-modal-footer">
+                <button wire:click="$set('changingPasswordId', null)" class="btn btn-ghost">Cancelar</button>
+                <button wire:click="changePassword" class="btn btn-primary" style="background:var(--warning);border-color:var(--warning);color:black;">
                     Actualizar Contraseña
                 </button>
             </div>
@@ -215,20 +213,22 @@
     @php
         $dbToDelete = $databases->firstWhere('id', $deletingId);
     @endphp
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:420px;width:100%;padding:32px;margin:16px;text-align:center;">
-            <div style="width:52px;height:52px;border-radius:50%;background:rgba(239,68,68,0.15);border:2px solid rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-                <i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);font-size:20px;"></i>
-            </div>
-            <h2 style="font-size:17px;font-weight:700;margin-bottom:8px;">¿Eliminar Base de Datos?</h2>
-            <p style="color:var(--text-secondary);font-size:13px;margin-bottom:22px;line-height:1.6;">
-                Esta acción eliminará de forma irreversible el esquema <strong style="color:var(--text-primary);">{{ $dbToDelete?->db_name }}</strong> y el usuario de base de datos asociado. Todos los datos se perderán para siempre.
-            </p>
-            <div style="display:flex;gap:10px;">
-                <button wire:click="$set('deletingId', null)" class="btn btn-ghost" style="flex:1;justify-content:center;">Cancelar</button>
-                <button wire:click="deleteDatabase" class="btn btn-danger" style="flex:1;justify-content:center;">
-                    <i class="fa-solid fa-trash"></i> Eliminar
-                </button>
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated" style="text-align:center;">
+            <div class="lp-modal-body" style="padding-top:32px;">
+                <div style="width:52px;height:52px;border-radius:50%;background:rgba(239,68,68,0.15);border:2px solid rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                    <i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);font-size:20px;"></i>
+                </div>
+                <h2 style="font-size:17px;font-weight:700;margin-bottom:8px;">¿Eliminar Base de Datos?</h2>
+                <p style="color:var(--text-secondary);font-size:13px;margin-bottom:22px;line-height:1.6;">
+                    Esta acción eliminará de forma irreversible el esquema <strong style="color:var(--text-primary);">{{ $dbToDelete?->db_name }}</strong> y el usuario de base de datos asociado. Todos los datos se perderán para siempre.
+                </p>
+                <div style="display:flex;gap:10px;">
+                    <button wire:click="$set('deletingId', null)" class="btn btn-ghost" style="flex:1;justify-content:center;">Cancelar</button>
+                    <button wire:click="deleteDatabase" class="btn btn-danger" style="flex:1;justify-content:center;">
+                        <i class="fa-solid fa-trash"></i> Eliminar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -239,34 +239,36 @@
     @php
         $dbToImport = $databases->firstWhere('id', $importingId);
     @endphp
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:440px;width:100%;padding:28px;margin:16px;">
-            <div style="display:flex;justify-content:between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
-                <h3 style="font-size:16px;font-weight:700;margin:0;">
-                    <i class="fa-solid fa-file-import" style="color:var(--accent-light);margin-right:8px;"></i>
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated">
+            <div class="lp-modal-header">
+                <h3 class="panel-title">
+                    <i class="fa-solid fa-file-import" style="color:var(--accent-light);"></i>
                     Importar SQL
                 </h3>
-                <button wire:click="$set('importingId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;margin-left:auto;">
+                <button wire:click="$set('importingId', null)" class="lp-modal-close">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <p style="color:var(--text-secondary);font-size:12px;margin-bottom:16px;">
-                Importar archivo SQL en la base de datos: <strong style="color:var(--text-primary);">{{ $dbToImport?->db_name }}</strong>
-            </p>
-            <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--danger);">
-                <i class="fa-solid fa-triangle-exclamation"></i>
-                La importación ejecutará el SQL sobre la base de datos existente. Haz un export primero como respaldo.
-            </div>
-            <div class="form-group">
-                <label class="form-label">Archivo .sql</label>
-                <input type="file" wire:model="importFile" accept=".sql,.txt" class="form-input" style="padding:10px;">
-                @error('importFile') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+            <div class="lp-modal-body">
+                <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+                    Importar archivo SQL en la base de datos: <strong style="color:var(--text-primary);">{{ $dbToImport?->db_name }}</strong>
+                </p>
+                <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--danger);">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    La importación ejecutará el SQL sobre la base de datos existente. Haz un export primero como respaldo.
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Archivo .sql</label>
+                    <input type="file" wire:model="importFile" accept=".sql,.txt" class="form-input" style="padding:10px;">
+                    @error('importFile') <div class="form-error">{{ $message }}</div> @enderror
+                </div>
             </div>
 
-            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
-                <button wire:click="$set('importingId', null)" class="btn btn-ghost btn-sm">Cancelar</button>
-                <button wire:click="importDatabase" class="btn btn-primary btn-sm" wire:loading.attr="disabled">
+            <div class="lp-modal-footer">
+                <button wire:click="$set('importingId', null)" class="btn btn-ghost">Cancelar</button>
+                <button wire:click="importDatabase" class="btn btn-primary" wire:loading.attr="disabled">
                     <span wire:loading.remove><i class="fa-solid fa-upload"></i> Importar SQL</span>
                     <span wire:loading><i class="fa-solid fa-spinner fa-spin"></i> Importando...</span>
                 </button>
@@ -275,9 +277,7 @@
     </div>
     @endif
 
-    <div wire:loading style="position:fixed;bottom:24px;right:24px;z-index:300;">
-        <div class="glass" style="padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:8px;">
-            <i class="fa-solid fa-spinner fa-spin"></i> Procesando...
-        </div>
+    <div wire:loading.delay class="lp-loading-toast">
+        <i class="fa-solid fa-spinner fa-spin"></i> Procesando...
     </div>
 </div>

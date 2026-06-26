@@ -2,8 +2,8 @@
     {{-- Header --}}
     <div class="page-header">
         <div>
-            <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">SSL / TLS Manager</h1>
-            <p style="color:var(--text-secondary);font-size:13px;">
+            <h1 class="page-title">SSL / TLS Manager</h1>
+            <p class="page-subtitle">
                 {{ $certificates->count() }} certificado(s) gestionados · Auto-renovación activa
             </p>
         </div>
@@ -163,16 +163,14 @@
     @endif
 
     {{-- Auto-renewal info box --}}
-    <div style="margin-top:24px;" class="glass" style="padding:18px;">
-        <div class="glass" style="padding:18px;">
-            <div style="display:flex;align-items:center;gap:12px;">
-                <i class="fa-solid fa-rotate" style="color:var(--accent-light);font-size:20px;"></i>
-                <div>
-                    <div style="font-size:13px;font-weight:600;">Auto-renovación activa</div>
-                    <div style="font-size:12px;color:var(--text-secondary);">
-                        Los certificados Let's Encrypt se renuevan automáticamente 30 días antes de expirar
-                        vía el scheduler de Laravel. No necesitas hacer nada.
-                    </div>
+    <div class="glass lp-panel" style="margin-top:24px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+            <i class="fa-solid fa-rotate" style="color:var(--accent-light);font-size:20px;"></i>
+            <div>
+                <div style="font-size:13px;font-weight:600;">Auto-renovación activa</div>
+                <div style="font-size:12px;color:var(--text-secondary);">
+                    Los certificados Let's Encrypt se renuevan automáticamente 30 días antes de expirar
+                    vía el scheduler de Laravel. No necesitas hacer nada.
                 </div>
             </div>
         </div>
@@ -180,16 +178,18 @@
 
     {{-- Revoke Modal --}}
     @if($revokingId)
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:420px;width:100%;padding:32px;margin:16px;text-align:center;">
-            <div style="width:52px;height:52px;border-radius:50%;background:rgba(239,68,68,0.15);border:2px solid rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-                <i class="fa-solid fa-lock-open" style="color:var(--danger);font-size:20px;"></i>
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated" style="max-width:420px;text-align:center;">
+            <div class="lp-modal-body">
+                <div style="width:52px;height:52px;border-radius:50%;background:rgba(239,68,68,0.15);border:2px solid rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                    <i class="fa-solid fa-lock-open" style="color:var(--danger);font-size:20px;"></i>
+                </div>
+                <h2 style="font-size:17px;font-weight:700;margin-bottom:8px;">Revocar certificado SSL</h2>
+                <p style="color:var(--text-secondary);font-size:13px;margin-bottom:22px;">
+                    El dominio pasará a HTTP. Si es Let's Encrypt, el certificado se revocará en los servidores de ACME.
+                </p>
             </div>
-            <h2 style="font-size:17px;font-weight:700;margin-bottom:8px;">Revocar certificado SSL</h2>
-            <p style="color:var(--text-secondary);font-size:13px;margin-bottom:22px;">
-                El dominio pasará a HTTP. Si es Let's Encrypt, el certificado se revocará en los servidores de ACME.
-            </p>
-            <div style="display:flex;gap:10px;">
+            <div class="lp-modal-footer">
                 <button wire:click="$set('revokingId', null)" class="btn btn-ghost" style="flex:1;justify-content:center;">Cancelar</button>
                 <button wire:click="revokeCertificate" class="btn btn-danger" style="flex:1;justify-content:center;">
                     <i class="fa-solid fa-lock-open"></i> Revocar
@@ -199,9 +199,7 @@
     </div>
     @endif
 
-    <div wire:loading.delay style="position:fixed;bottom:24px;right:24px;z-index:300;">
-        <div class="glass" style="padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:8px;">
-            <i class="fa-solid fa-spinner fa-spin"></i> Procesando...
-        </div>
+    <div wire:loading.delay class="lp-loading-toast">
+        <i class="fa-solid fa-spinner fa-spin"></i> Procesando...
     </div>
 </div>

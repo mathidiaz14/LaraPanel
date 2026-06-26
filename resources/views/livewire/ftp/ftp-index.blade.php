@@ -2,8 +2,8 @@
     {{-- Header --}}
     <div class="page-header">
         <div>
-            <h1 style="font-size:20px;font-weight:700;margin-bottom:4px;">Cuentas FTP</h1>
-            <p style="color:var(--text-secondary);font-size:13px;">
+            <h1 class="page-title">Cuentas FTP</h1>
+            <p class="page-subtitle">
                 Cree usuarios FTP adicionales para permitir la carga y descarga de archivos en directorios específicos.
             </p>
         </div>
@@ -20,8 +20,8 @@
     <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;align-items:start;">
 
         {{-- Creation Panel --}}
-        <div class="glass" style="padding:24px;">
-            <h2 style="font-size:15px;font-weight:700;margin-bottom:14px;color:var(--text-primary);">
+        <div class="glass lp-panel">
+            <h2 class="panel-title">
                 <i class="fa-solid fa-user-shield" style="color:var(--accent-light);margin-right:8px;"></i>
                 Nuevo Usuario FTP
             </h2>
@@ -40,8 +40,8 @@
                             @endforeach
                         </select>
                     </div>
-                    @error('usernameSuffix') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
-                    @error('domainId') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                    @error('usernameSuffix') <div class="form-error">{{ $message }}</div> @enderror
+                    @error('domainId') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
 
                 {{-- Password --}}
@@ -53,7 +53,7 @@
                             Generar
                         </button>
                     </div>
-                    @error('password') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                    @error('password') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
 
                 {{-- Subdirectory under domain --}}
@@ -65,14 +65,14 @@
                         </span>
                         <input type="text" wire:model="subdir" class="form-input" style="border:none;background:none;margin:0;" placeholder="ej. assets/img">
                     </div>
-                    @error('subdir') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                    @error('subdir') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
 
                 {{-- Quota MB --}}
                 <div class="form-group">
                     <label class="form-label">Límite de Espacio (MB) <span style="font-weight:400;color:var(--text-muted);">— 0 para ilimitado</span></label>
                     <input type="number" wire:model="quotaMb" class="form-input" placeholder="0">
-                    @error('quotaMb') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                    @error('quotaMb') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
 
                 {{-- Read only checkbox --}}
@@ -111,8 +111,8 @@
         </div>
 
         {{-- FTP Accounts List --}}
-        <div class="glass" style="padding:24px;">
-            <h2 style="font-size:15px;font-weight:700;margin-bottom:14px;color:var(--text-primary);">
+        <div class="glass lp-panel">
+            <h2 class="panel-title">
                 <i class="fa-solid fa-list" style="color:var(--accent-light);margin-right:8px;"></i>
                 Usuarios FTP Activos
             </h2>
@@ -124,7 +124,7 @@
             </div>
             @else
             <div style="overflow-x:auto;">
-                <table class="table" style="width:100%;">
+                <table class="lp-table">
                     <thead>
                         <tr>
                             <th>Usuario</th>
@@ -187,10 +187,10 @@
     {{-- IP / Bandwidth Restriction Modal --}}
     @if($editIpId)
     @php $ftpForIp = $ftps->firstWhere('id', $editIpId); @endphp
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:480px;width:100%;padding:28px;margin:16px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
-                <h3 style="font-size:16px;font-weight:700;margin:0;">
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated" style="max-width:480px;">
+            <div class="lp-modal-header">
+                <h3 class="panel-title" style="margin:0;">
                     <i class="fa-solid fa-network-wired" style="color:var(--accent-light);margin-right:8px;"></i>
                     Restricciones: <span style="color:var(--accent-light);">{{ $ftpForIp?->username }}</span>
                 </h3>
@@ -199,7 +199,8 @@
                 </button>
             </div>
 
-            <div class="form-group">
+            <div class="lp-modal-body">
+                <div class="form-group">
                 <label class="form-label">IPs Permitidas <span style="color:var(--text-muted);font-weight:400;">— vacío = sin restricción</span></label>
                 <textarea wire:model="editAllowedIps" class="form-input" style="font-family:monospace;font-size:12px;height:80px;" placeholder="192.168.1.10&#10;10.0.0.0/8&#10;203.0.113.5"></textarea>
                 <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Una IP o rango CIDR por línea, o separados por coma.</div>
@@ -210,7 +211,7 @@
                 <input type="number" wire:model="editBandwidthMb" class="form-input" min="0" placeholder="0">
             </div>
 
-            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+            <div class="lp-modal-footer">
                 <button wire:click="$set('editIpId', null)" class="btn btn-ghost btn-sm">Cancelar</button>
                 <button wire:click="saveIpEdit" class="btn btn-primary btn-sm">
                     <i class="fa-solid fa-floppy-disk"></i> Guardar
@@ -226,23 +227,24 @@
     @php
         $ftpToChange = $ftps->firstWhere('id', $changingPasswordId);
     @endphp
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="max-width:440px;width:100%;padding:28px;margin:16px;">
-            <div style="display:flex;justify-content:between;align-items:center;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
-                <h3 style="font-size:16px;font-weight:700;margin:0;">
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated" style="max-width:440px;">
+            <div class="lp-modal-header">
+                <h3 class="panel-title" style="margin:0;">
                     <i class="fa-solid fa-key" style="color:var(--warning);margin-right:8px;"></i>
                     Cambiar Contraseña FTP
                 </h3>
-                <button wire:click="$set('changingPasswordId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;margin-left:auto;">
+                <button wire:click="$set('changingPasswordId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <p style="color:var(--text-secondary);font-size:12px;margin-bottom:16px;">
-                Actualizar contraseña para el usuario FTP: <strong style="color:var(--text-primary);">{{ $ftpToChange?->username }}</strong>
-            </p>
+            <div class="lp-modal-body">
+                <p style="color:var(--text-secondary);font-size:12px;margin-bottom:16px;">
+                    Actualizar contraseña para el usuario FTP: <strong style="color:var(--text-primary);">{{ $ftpToChange?->username }}</strong>
+                </p>
 
-            <div class="form-group">
+                <div class="form-group">
                 <label class="form-label">Nueva Contraseña</label>
                 <div style="display:flex;gap:8px;">
                     <input type="text" wire:model="newPassword" class="form-input" placeholder="Nueva contraseña segura" style="margin-bottom:0;" autofocus>
@@ -250,10 +252,10 @@
                         Generar
                     </button>
                 </div>
-                @error('newPassword') <div style="font-size:11px;color:var(--danger);margin-top:4px;">{{ $message }}</div> @enderror
+                @error('newPassword') <div class="form-error">{{ $message }}</div> @enderror
             </div>
 
-            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+            <div class="lp-modal-footer">
                 <button wire:click="$set('changingPasswordId', null)" class="btn btn-ghost btn-sm">Cancelar</button>
                 <button wire:click="changePassword" class="btn btn-primary btn-sm" style="background:var(--warning);border-color:var(--warning);color:black;">
                     Actualizar Contraseña
@@ -263,9 +265,7 @@
     </div>
     @endif
 
-    <div wire:loading style="position:fixed;bottom:24px;right:24px;z-index:300;">
-        <div class="glass" style="padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:8px;">
-            <i class="fa-solid fa-spinner fa-spin"></i> Procesando...
-        </div>
+    <div wire:loading class="lp-loading-toast">
+        <i class="fa-solid fa-spinner fa-spin"></i> Procesando...
     </div>
 </div>
