@@ -45,5 +45,20 @@ class AppServiceProvider extends ServiceProvider
     {
         // Enforce 2FA for admin users (Phase 0 stub — full impl in Phase 1)
         // \Illuminate\Support\Facades\Gate::define('admin', fn($user) => $user->isAdmin());
+
+        // Cargar credenciales AWS globales desde Settings
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('settings')) {
+                config([
+                    'filesystems.disks.s3.key' => \App\Models\Setting::get('aws_access_key_id', env('AWS_ACCESS_KEY_ID')),
+                    'filesystems.disks.s3.secret' => \App\Models\Setting::get('aws_secret_access_key', env('AWS_SECRET_ACCESS_KEY')),
+                    'filesystems.disks.s3.region' => \App\Models\Setting::get('aws_default_region', env('AWS_DEFAULT_REGION', 'us-east-1')),
+                    'filesystems.disks.s3.bucket' => \App\Models\Setting::get('aws_bucket', env('AWS_BUCKET')),
+                    'filesystems.disks.s3.endpoint' => \App\Models\Setting::get('aws_endpoint', env('AWS_ENDPOINT')),
+                ]);
+            }
+        } catch (\Exception $e) {
+            // Ignorar si la base de datos no está lista (ej. durante php artisan migrate)
+        }
     }
 }
