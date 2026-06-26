@@ -270,8 +270,8 @@
                             <i class="fa-solid fa-inbox" style="font-size:32px;opacity:0.3;margin-bottom:12px;display:block;"></i>
                             No hay despliegues registrados.
                         </div>
-                        @else
-                        <table class="lp-table" style="margin:0;">
+                        <div class="table-responsive">
+                            <table class="lp-table" style="margin:0;">
                             <thead>
                                 <tr>
                                     <th>Fecha</th>
@@ -298,6 +298,7 @@
                                 @endforeach
                             </tbody>
                         </table>
+                        </div>
                         @endif
                     </div>
                 @endif

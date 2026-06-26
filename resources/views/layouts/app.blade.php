@@ -273,7 +273,7 @@
 
         {{-- ── Topbar ──────────────────────────────────── --}}
         <header class="topbar">
-            <button class="topbar-btn" id="sidebar-toggle" style="display:none">
+            <button class="topbar-btn sidebar-toggle-btn" id="sidebar-toggle">
                 <i class="fa-solid fa-bars"></i>
             </button>
             <div class="topbar-breadcrumb">
@@ -335,9 +335,6 @@
         if (toggle) toggle.addEventListener('click', toggleSidebar);
         if (overlay) overlay.addEventListener('click', toggleSidebar);
 
-        // Check initially
-        if (window.innerWidth <= 768 && toggle) toggle.style.display = 'flex';
-
         // Also close on any nav link click on mobile
         document.querySelectorAll('.nav-item').forEach(link => {
             link.addEventListener('click', () => {
@@ -345,6 +342,15 @@
                     toggleSidebar();
                 }
             });
+        });
+        
+        // Handle resize events
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                sidebar.classList.remove('open');
+                if (overlay) overlay.classList.remove('show');
+                document.body.style.overflow = '';
+            }
         });
     </script>
 </body>

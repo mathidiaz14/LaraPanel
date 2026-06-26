@@ -48,8 +48,8 @@
                     <i class="fa-solid fa-plus"></i> Crear primer dominio
                 </a>
             </div>
-        @else
-        <table class="lp-table">
+        <div class="table-responsive">
+            <table class="lp-table">
             <thead>
                 <tr>
                     <th>Dominio</th>
@@ -147,6 +147,9 @@
                 @endforeach
             </tbody>
         </table>
+        @endif
+        @if(!$domains->isEmpty())
+        </div>
         @endif
     </div>
 

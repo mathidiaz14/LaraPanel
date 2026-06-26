@@ -151,7 +151,7 @@
             No hay dominios activos creados todavía.
         </div>
         @else
-        <div style="overflow-x:auto;">
+        <div class="table-responsive">
             <table class="lp-table">
                 <thead>
                     <tr>

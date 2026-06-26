@@ -330,13 +330,9 @@ select.form-input option {
     
     .page { padding: 16px; }
     
-    .lp-table {
-        display: block; width: 100%; overflow-x: auto;
-        -webkit-overflow-scrolling: touch; white-space: nowrap;
-    }
-    
-    .page-header { flex-direction: column; align-items: stretch; }
-    .page-header .btn { width: 100%; justify-content: center; }
+    .page-header { flex-direction: column; align-items: stretch; gap: 12px; }
+    .page-header .page-actions { display: flex; width: 100%; gap: 8px; }
+    .page-header .btn { flex: 1; justify-content: center; }
     
     .filters-bar { flex-direction: column; align-items: stretch; }
     .filters-bar > div { max-width: 100% !important; }
@@ -344,7 +340,11 @@ select.form-input option {
 
     /* Responsive Layout Additions */
     .lp-three-col { grid-template-columns: 1fr !important; }
+    
+    .sidebar-toggle-btn { display: flex !important; }
 }
+
+.sidebar-toggle-btn { display: none; }
 
 /* ── Estándares Añadidos (LaraPanel UI Standardization) ──────────────── */
 
@@ -400,3 +400,14 @@ select.form-input option {
 .input-prefix-wrap .form-input { border: none; background: transparent; margin: 0; border-radius: 0; }
 .input-prefix-wrap .form-input:focus { box-shadow: none; }
 .input-prefix-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+/* Table Responsive */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-sm);
+}
+.table-responsive .lp-table {
+    min-width: 600px;
+}

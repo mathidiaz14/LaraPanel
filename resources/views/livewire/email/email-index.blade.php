@@ -115,7 +115,7 @@
                         </div>
                     </div>
 
-                    <div x-show="open" x-collapse style="overflow-x:auto;">
+                    <div x-show="open" x-collapse class="table-responsive" style="border-radius:0 0 8px 8px;">
                         <table class="lp-table" style="margin-bottom:0;border-top:1px solid var(--glass-border);">
                             <thead>
                                 <tr>

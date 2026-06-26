@@ -123,7 +123,7 @@
                 No tiene usuarios FTP configurados en este momento.
             </div>
             @else
-            <div style="overflow-x:auto;">
+            <div class="table-responsive">
                 <table class="lp-table">
                     <thead>
                         <tr>

@@ -104,7 +104,7 @@
                 No tiene bases de datos creadas. Use el formulario de la izquierda para comenzar.
             </div>
             @else
-            <div style="overflow-x:auto;">
+            <div class="table-responsive">
                 <table class="lp-table">
                     <thead>
                         <tr>
