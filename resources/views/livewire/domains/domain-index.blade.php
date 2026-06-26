@@ -48,6 +48,7 @@
                     <i class="fa-solid fa-plus"></i> Crear primer dominio
                 </a>
             </div>
+        @else
         <div class="table-responsive">
             <table class="lp-table">
             <thead>

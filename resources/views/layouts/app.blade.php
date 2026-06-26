@@ -281,14 +281,16 @@
             </div>
             <div class="topbar-actions">
                 @if(config('larapanel.modules.multiserver'))
-                    <livewire:servers.server-selector />
+                    <div class="hide-mobile">
+                        <livewire:servers.server-selector />
+                    </div>
                 @endif
                 <button class="topbar-btn" title="Notificaciones">
                     <i class="fa-solid fa-bell"></i>
                 </button>
                 <div class="user-chip">
                     <div class="user-avatar">{{ substr(auth()->user()?->name ?? 'A', 0, 1) }}</div>
-                    <span class="user-name">{{ auth()->user()?->name ?? 'Admin' }}</span>
+                    <span class="user-name hide-mobile">{{ auth()->user()?->name ?? 'Admin' }}</span>
                 </div>
             </div>
         </header>
