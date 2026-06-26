@@ -363,6 +363,52 @@ class DockerIndex extends Component
 
     // ─────────────────────────────────────────────────────────────────────────
 
+    public function selectMarketplaceTemplate(string $key): void
+    {
+        $templates = $this->getMarketplaceTemplates();
+        if (isset($templates[$key])) {
+            $tpl = $templates[$key];
+            $this->composeName = $tpl['default_name'];
+            $this->composeContent = $tpl['yaml'];
+            $this->composeOutput = '';
+            $this->activeTab = 'compose';
+        }
+    }
+
+    private function getMarketplaceTemplates(): array
+    {
+        return [
+            'wordpress' => [
+                'name' => 'WordPress (con MySQL)',
+                'icon' => 'fa-brands fa-wordpress',
+                'desc' => 'Despliega un sitio de WordPress con una base de datos MySQL dedicada y persistencia de archivos.',
+                'default_name' => 'wordpress-site',
+                'yaml' => "version: '3.8'\nservices:\n  db:\n    image: mysql:8.0\n    restart: always\n    environment:\n      MYSQL_ROOT_PASSWORD: root_password_change_me\n      MYSQL_DATABASE: wordpress\n      MYSQL_USER: wordpress\n      MYSQL_PASSWORD: wordpress_password_change_me\n    volumes:\n      - db_data:/var/lib/mysql\n\n  wordpress:\n    depends_on:\n      - db\n    image: wordpress:latest\n    ports:\n      - \"8080:80\"\n    restart: always\n    environment:\n      WORDPRESS_DB_HOST: db:3306\n      WORDPRESS_DB_USER: wordpress\n      WORDPRESS_DB_PASSWORD: wordpress_password_change_me\n      WORDPRESS_DB_NAME: wordpress\n    volumes:\n      - wp_data:/var/www/html\n\nvolumes:\n  db_data:\n  wp_data:\n"
+            ],
+            'postgres' => [
+                'name' => 'PostgreSQL + pgAdmin',
+                'icon' => 'fa-solid fa-database',
+                'desc' => 'Motor de base de datos PostgreSQL junto con la interfaz de administración web pgAdmin.',
+                'default_name' => 'postgres-stack',
+                'yaml' => "version: '3.8'\nservices:\n  db:\n    image: postgres:15-alpine\n    restart: always\n    environment:\n      POSTGRES_USER: admin\n      POSTGRES_PASSWORD: postgres_password_change_me\n      POSTGRES_DB: main_db\n    ports:\n      - \"5432:5432\"\n    volumes:\n      - pg_data:/var/lib/postgresql/data\n\n  pgadmin:\n    image: dpage/pgadmin4\n    restart: always\n    environment:\n      PGADMIN_DEFAULT_EMAIL: admin@example.com\n      PGADMIN_DEFAULT_PASSWORD: pgadmin_password_change_me\n    ports:\n      - \"5050:80\"\n    depends_on:\n      - db\n\nvolumes:\n  pg_data:\n"
+            ],
+            'redis' => [
+                'name' => 'Redis + Redis Insight',
+                'icon' => 'fa-solid fa-server',
+                'desc' => 'Servidor de caché en memoria Redis con la consola de visualización Redis Insight.',
+                'default_name' => 'redis-cache',
+                'yaml' => "version: '3.8'\nservices:\n  redis:\n    image: redis:7-alpine\n    command: redis-server --requirepass redis_password_change_me\n    ports:\n      - \"6379:6379\"\n    restart: always\n    volumes:\n      - redis_data:/data\n\n  insight:\n    image: redis/redisinsight:latest\n    ports:\n      - \"8001:8001\"\n    restart: always\n\nvolumes:\n  redis_data:\n"
+            ],
+            'node' => [
+                'name' => 'Node.js Express App',
+                'icon' => 'fa-brands fa-node-js',
+                'desc' => 'Entorno contenedorizado básico para una aplicación backend Node.js / Express listo para desarrollo.',
+                'default_name' => 'node-app',
+                'yaml' => "version: '3.8'\nservices:\n  web:\n    image: node:18-alpine\n    working_dir: /app\n    volumes:\n      - .:/app\n    ports:\n      - \"3000:3000\"\n    command: sh -c \"npm install && npm start\"\n    environment:\n      - NODE_ENV=development\n"
+            ]
+        ];
+    }
+
     public function setTab(string $tab, DockerService $docker): void
     {
         $this->activeTab = $tab;
@@ -382,7 +428,8 @@ class DockerIndex extends Component
             ->toArray();
 
         return view('livewire.docker.docker-index', [
-            'availableDomains' => $availableDomains
+            'availableDomains'     => $availableDomains,
+            'marketplaceTemplates' => $this->getMarketplaceTemplates()
         ])->layout('layouts.app', [
             'title'      => 'Docker',
             'breadcrumb' => '<span>Avanzado</span> / <strong>Docker</strong>',

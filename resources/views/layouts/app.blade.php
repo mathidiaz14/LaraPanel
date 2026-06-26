@@ -59,7 +59,8 @@
                         <i class="fa-solid fa-server fa-pulse"></i>
                         <div style="min-width:0;flex:1;">
                             <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                                {{ App\Shell\ServerContext::server()->name }}</div>
+                                {{ App\Shell\ServerContext::server()->name }}
+                            </div>
                             <div style="font-size:9px;opacity:0.7;">Modo Remoto Activo</div>
                         </div>
                     </div>
@@ -96,9 +97,14 @@
 
                 @if(config('larapanel.modules.databases'))
                     <a href="{{ route('databases.index') }}"
-                        class="nav-item {{ request()->routeIs('databases.*') ? 'active' : '' }}">
+                        class="nav-item {{ request()->routeIs('databases.index') ? 'active' : '' }}">
                         <span class="nav-icon"><i class="fa-solid fa-database"></i></span>
                         Bases de Datos
+                    </a>
+                    <a href="{{ route('adminer.index') }}" target="_blank"
+                        class="nav-item {{ request()->routeIs('adminer.index') ? 'active' : '' }}">
+                        <span class="nav-icon"><i class="fa-solid fa-table-list"></i></span>
+                        Gestor DB (Adminer)
                     </a>
                 @endif
 
@@ -234,8 +240,7 @@
                         Planes
                     </a>
                     <a href="{{ route('admin.settings') }}"
-                        class="nav-item {{ request()->routeIs('admin.settings') ? 'active' : '' }}"
-                        style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                        class="nav-item {{ request()->routeIs('admin.settings') ? 'active' : '' }}">
                         <span class="nav-icon"><i class="fa-solid fa-gear"></i></span>
                         Configuración
                         @if(\App\Services\UpdateService::isUpdateAvailableCached())

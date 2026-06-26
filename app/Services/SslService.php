@@ -40,12 +40,16 @@ class SslService
      * @param  array   $sanDomains  Additional SANs e.g. ['www.example.com']
      * @param  bool    $includeWww  Auto-add www. variant
      */
-    public function issueLetsEncrypt(Domain $domain, array $sanDomains = [], bool $includeWww = true): SslCertificate
+    public function issueLetsEncrypt(Domain $domain, array $sanDomains = [], bool $includeWww = true, bool $isWildcard = false): SslCertificate
     {
         // Build the full SAN list
         $allDomains = [$domain->name];
-        if ($includeWww && !str_starts_with($domain->name, 'www.')) {
-            $allDomains[] = 'www.' . $domain->name;
+        if ($isWildcard) {
+            $allDomains[] = '*.' . $domain->name;
+        } else {
+            if ($includeWww && !str_starts_with($domain->name, 'www.')) {
+                $allDomains[] = 'www.' . $domain->name;
+            }
         }
         $allDomains = array_unique(array_merge($allDomains, $sanDomains));
 
@@ -65,7 +69,7 @@ class SslService
 
         try {
             if (app()->isProduction()) {
-                $this->runAcmeSh($domain, $allDomains, $cert);
+                $this->runAcmeSh($domain, $allDomains, $cert, $isWildcard);
             } else {
                 // Development mode: simulate certificate issuance
                 $this->simulateCertificate($domain, $cert, 'letsencrypt');
@@ -90,23 +94,46 @@ class SslService
     /**
      * Run acme.sh to issue the certificate (production only).
      */
-    protected function runAcmeSh(Domain $domain, array $allDomains, SslCertificate $cert): void
+    protected function runAcmeSh(Domain $domain, array $allDomains, SslCertificate $cert, bool $isWildcard = false): void
     {
         // Build -d flags
         $dFlags = implode(' ', array_map(fn($d) => "-d {$d}", $allDomains));
 
-        // Webroot directory for ACME challenge
-        $webrootPath = '/var/www/letsencrypt';
-        $this->sudo->run(['mkdir', '-p', $webrootPath]);
+        if ($isWildcard) {
+            // Extracción y sanitización de credenciales de PowerDNS local para acme.sh
+            $pdnsUrl = config('larapanel.powerdns.api_url', 'http://127.0.0.1:8053/api/v1');
+            $basePdnsUrl = preg_replace('/\/api\/v1\/?$/i', '', $pdnsUrl);
+            $pdnsServer = config('larapanel.powerdns.server', 'localhost');
+            $pdnsToken = config('larapanel.powerdns.api_key', 'larapanel_pdns_secret');
 
-        // Issue via acme.sh webroot method
-        $result = $this->sudo->run([
-            $this->acmeSh, '--issue',
-            '--webroot', $webrootPath,
-            ...array_merge(...array_map(fn($d) => ['-d', $d], $allDomains)),
-            '--server', 'letsencrypt',
-            '--force',
-        ], checkExit: false);
+            $env = [
+                'PDNS_Url'      => $basePdnsUrl,
+                'PDNS_ServerId' => $pdnsServer,
+                'PDNS_Token'    => $pdnsToken,
+            ];
+
+            // Issue via acme.sh dns_pdns method
+            $result = $this->sudo->withEnv($env)->run([
+                $this->acmeSh, '--issue',
+                '--dns', 'dns_pdns',
+                ...array_merge(...array_map(fn($d) => ['-d', $d], $allDomains)),
+                '--server', 'letsencrypt',
+                '--force',
+            ], checkExit: false);
+        } else {
+            // Webroot directory for ACME challenge
+            $webrootPath = '/var/www/letsencrypt';
+            $this->sudo->run(['mkdir', '-p', $webrootPath]);
+
+            // Issue via acme.sh webroot method
+            $result = $this->sudo->run([
+                $this->acmeSh, '--issue',
+                '--webroot', $webrootPath,
+                ...array_merge(...array_map(fn($d) => ['-d', $d], $allDomains)),
+                '--server', 'letsencrypt',
+                '--force',
+            ], checkExit: false);
+        }
 
         if ($result->failed() && !str_contains($result->stdout, 'Cert success')) {
             throw new \RuntimeException("acme.sh failed: " . $result->stderr);
@@ -340,7 +367,26 @@ class SslService
                 continue;
             }
             try {
-                $this->issueLetsEncrypt($cert->domain, $cert->san_domains ?? []);
+                $isWildcard = false;
+                $sans = $cert->san_domains ?? [];
+                foreach ($sans as $san) {
+                    if (str_starts_with($san, '*.')) {
+                        $isWildcard = true;
+                        break;
+                    }
+                }
+
+                // Filtrar el dominio base y www para reconstruir los SAN adicionales
+                $extraSans = array_values(array_filter($sans, function($d) use ($cert) {
+                    return $d !== $cert->domain->name && $d !== 'www.' . $cert->domain->name && !str_starts_with($d, '*.');
+                }));
+
+                $this->issueLetsEncrypt(
+                    domain:     $cert->domain,
+                    sanDomains: $extraSans,
+                    includeWww: in_array('www.' . $cert->domain->name, $sans, true),
+                    isWildcard: $isWildcard
+                );
                 $cert->update(['last_renewed_at' => now()]);
                 $results['renewed'][] = $cert->domain->name;
             } catch (\Throwable $e) {

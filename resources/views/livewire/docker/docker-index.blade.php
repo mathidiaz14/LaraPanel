@@ -10,6 +10,9 @@
         <button wire:click="setTab('compose')" class="btn {{ $activeTab === 'compose' ? 'btn-primary' : 'btn-ghost' }} btn-sm">
             <i class="fa-solid fa-cubes"></i> Docker Compose
         </button>
+        <button wire:click="setTab('marketplace')" class="btn {{ $activeTab === 'marketplace' ? 'btn-primary' : 'btn-ghost' }} btn-sm">
+            <i class="fa-solid fa-store"></i> Marketplace
+        </button>
         <button wire:click="setTab('deploy')" class="btn {{ $activeTab === 'deploy' ? 'btn-primary' : 'btn-ghost' }} btn-sm" style="margin-left:auto;">
             <i class="fa-solid fa-rocket"></i> Desplegar App
         </button>
@@ -390,6 +393,41 @@
                         <pre style="background:rgba(0,0,0,0.3);padding:16px;border-radius:8px;border:1px solid var(--glass-border);font-family:monospace;font-size:12px;color:#a8b2d1;white-space:pre-wrap;max-height:400px;overflow-y:auto;">{{ $deployOutput }}</pre>
                     </div>
                 @endif
+            </div>
+        @elseif($activeTab === 'marketplace')
+            <div>
+                <div style="margin-bottom:20px;">
+                    <h2 style="font-size:18px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">
+                        <i class="fa-solid fa-store" style="color:var(--accent-light);margin-right:8px;"></i>
+                        Docker Marketplace
+                    </h2>
+                    <p style="font-size:13px;color:var(--text-muted);margin:0;">
+                        Selecciona una plantilla de Docker Compose preconfigurada para desplegarla en tu servidor al instante con un solo clic.
+                    </p>
+                </div>
+
+                <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:20px;">
+                    @foreach($marketplaceTemplates as $key => $tpl)
+                        <div class="glass" style="padding:24px;display:flex;flex-direction:column;justify-content:space-between;transition:all 0.2s;border:1px solid var(--glass-border);border-radius:12px;background:var(--glass-bg);" 
+                             onmouseover="this.style.transform='translateY(-4px)';this.style.borderColor='rgba(99,102,241,0.4)';" 
+                             onmouseout="this.style.transform='none';this.style.borderColor='var(--glass-border)';">
+                            <div>
+                                <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                                    <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--accent-light);flex-shrink:0;">
+                                        <i class="{{ $tpl['icon'] }}"></i>
+                                    </div>
+                                    <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:0;">{{ $tpl['name'] }}</h3>
+                                </div>
+                                <p style="font-size:12px;color:var(--text-secondary);line-height:1.5;margin-bottom:20px;min-height:54px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">
+                                    {{ $tpl['desc'] }}
+                                </p>
+                            </div>
+                            <button wire:click="selectMarketplaceTemplate('{{ $key }}')" class="btn btn-primary btn-sm" style="width:100%;justify-content:center;background:linear-gradient(135deg, var(--accent), var(--accent-light));border:none;color:black;font-weight:600;">
+                                <i class="fa-solid fa-code"></i> Usar plantilla
+                            </button>
+                        </div>
+                    @endforeach
+                </div>
             </div>
         @endif
     @endif

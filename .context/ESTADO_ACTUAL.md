@@ -21,13 +21,10 @@ La arquitectura monolítica definida en la documentación funciona exactamente c
 
 ## 2. El Próximo Paso Técnico Inmediato
 
-## 2. El Próximo Paso Técnico Inmediato
+La **Fase 4: Experiencia UI Devops** ha sido completada con éxito.
+Se integró Adminer de forma segura y encapsulada bajo autenticación de Laravel con bypass de CSRF, se habilitó el soporte para certificados comodín SSL Wildcard (DNS-01) usando `acme.sh` y variables de entorno de PowerDNS local, y se creó la pestaña "Marketplace" en el módulo de Docker con plantillas de un solo clic para WordPress, Postgres, Redis y Node.js.
 
-La **Fase 3: Backups Avanzados (Nube)** ha sido completada con éxito.
-Se integró `league/flysystem-aws-s3-v3` para subidas directas a S3/Backblaze usando credenciales globales configuradas desde el Panel de Administración.
-También se implementó la restauración destructiva automatizada y la programación recurrente usando `RunScheduledBackupsCommand` para retención inteligente.
-
-De acuerdo a la hoja de ruta, el **próximo paso técnico prioritario es iniciar la Fase 4: Despliegues Git y Docker.**
+De acuerdo a la hoja de ruta, el **próximo paso técnico prioritario es iniciar la Fase 5: Multi-Tenant y Resellers.**
 Las tareas de esta próxima fase involucrarán:
-1. Conectar los Webhooks de GitHub/GitLab con `GitDeploymentService` para hacer pulls automáticos.
-2. Interfaz para gestionar contenedores y stacks de `docker-compose`.
+1. Separación jerárquica: El admin global tiene acceso total, pero los clientes y resellers solo acceden a porciones controladas y limitadas por un Plan de cuotas.
+2. Interfaz y lógica para gestionar límites de bases de datos, dominios y cuentas de correo por usuario.

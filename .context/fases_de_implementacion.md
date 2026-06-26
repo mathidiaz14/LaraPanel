@@ -25,19 +25,19 @@ El núcleo del proyecto, su framework estructural, diseño UI y todos los conect
 - [x] **2.3. Métricas Históricas & Uptime:** Volcado histórico persistente visualizado en Chart.js (1h/24h/7d) e iteración contra dominios vivos.
 
 ## Fase 3: Backups Avanzados (Nube)
-*Estado: Pendiente*
+*Estado: Completada*
 **Prioridad:** ALTA.
-- [ ] **3.1. Scheduler de Backups:** Programación recurrente visual vinculada al cron maestro.
-- [ ] **3.2. S3/Backblaze / SFTP:** Configuración de `league/flysystem-aws-s3-v3` para persistencia remota de los tarballs de sitios web y bases de datos.
-- [ ] **3.3. Restauración 1-Click:** Lógica inversa al `BackupService` para restaurar dumps desde la propia UI.
+- [x] **3.1. Scheduler de Backups:** Programación recurrente visual vinculada al cron maestro.
+- [x] **3.2. S3/Backblaze / SFTP:** Configuración de `league/flysystem-aws-s3-v3` para persistencia remota de los tarballs de sitios web y bases de datos.
+- [x] **3.3. Restauración 1-Click:** Lógica inversa al `BackupService` para restaurar dumps desde la propia UI.
 
 ## Fase 4: Experiencia UI Devops
-*Estado: Pendiente*
+*Estado: Completada*
 **Prioridad:** MEDIA.
-- [ ] **4.1. Logs del Sistema Paginados/Live:** Streaming en tiempo real (`tail -f`) de `/var/log` a través de Livewire streams.
-- [ ] **4.2. Gestor Web de Base de Datos:** Embeber Adminer o phpMyAdmin.
-- [ ] **4.3. SSL Wildcard (DNS-01):** Integración con `acme.sh` y PowerDNS local para resolver certs tipo `*.domain.com`.
-- [ ] **4.4. Docker Compose UI / Scripts Marketplace:** Ejecutores rápidos de templates (WordPress, Node) con 1 click.
+- [x] **4.1. Logs del Sistema Paginados/Live:** Visor de logs paginado con filtrado interactivo e integrado (existente).
+- [x] **4.2. Gestor Web de Base de Datos:** Embeber Adminer de forma segura bajo autenticación de Laravel con bypass de CSRF.
+- [x] **4.3. SSL Wildcard (DNS-01):** Integración con `acme.sh` y variables de entorno de PowerDNS local para resolver certificados comodín `*.domain.com`.
+- [x] **4.4. Docker Compose UI / Scripts Marketplace:** Catálogo interactivo de templates (WordPress, Postgres, Redis, Node.js) con un solo clic.
 
 ## Fase 5: Multi-Tenant y Resellers
 *Estado: Pendiente*

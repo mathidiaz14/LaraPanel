@@ -34,6 +34,7 @@ use App\Livewire\Admin\UserIndex;
 use App\Livewire\Admin\ApiTokens;
 use App\Http\Controllers\GitWebhookController;
 use App\Http\Controllers\WebmailAutoLoginController;
+use App\Http\Controllers\AdminerController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -83,6 +84,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Databases
     Route::get('/databases', DatabaseIndex::class)->name('databases.index');
+    Route::any('/admin/db', [AdminerController::class, 'index'])->name('adminer.index');
 
     // File Manager
     Route::get('/files', FileManager::class)->name('files.index');

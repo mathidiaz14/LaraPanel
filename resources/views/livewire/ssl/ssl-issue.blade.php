@@ -69,16 +69,24 @@
         {{-- Options --}}
         <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:20px;">
             <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;cursor:pointer;">
-                <input type="checkbox" wire:model="includeWww" style="accent-color:var(--accent);width:16px;height:16px;">
+                <input type="checkbox" wire:model="includeWww" style="accent-color:var(--accent);width:16px;height:16px;" {{ $isWildcard ? 'disabled' : '' }}>
                 <div>
-                    <div style="font-size:13px;font-weight:600;">Incluir www.{{ $domainId ? ($domains->firstWhere('id',$domainId)?->name ?? 'dominio.com') : 'dominio.com' }}</div>
+                    <div style="font-size:13px;font-weight:600;{{ $isWildcard ? 'color:var(--text-muted);' : '' }}">Incluir www.{{ $domainId ? ($domains->firstWhere('id',$domainId)?->name ?? 'dominio.com') : 'dominio.com' }}</div>
                     <div style="font-size:11px;color:var(--text-muted);">Recomendado — cubre tanto dominio.com como www.dominio.com en el mismo cert.</div>
+                </div>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;cursor:pointer;">
+                <input type="checkbox" wire:model.live="isWildcard" style="accent-color:var(--accent);width:16px;height:16px;">
+                <div>
+                    <div style="font-size:13px;font-weight:600;">Certificado Wildcard (*.{{ $domainId ? ($domains->firstWhere('id',$domainId)?->name ?? 'dominio.com') : 'dominio.com' }})</div>
+                    <div style="font-size:11px;color:var(--text-muted);">Cubre el dominio principal y todos sus subdominios. Requiere validación local por DNS (PowerDNS).</div>
                 </div>
             </label>
         </div>
 
         {{-- Extra SANs --}}
-        <div class="form-group">
+        <div class="form-group" style="{{ $isWildcard ? 'display:none;' : '' }}">
             <label class="form-label">Dominios adicionales (SAN) <span style="color:var(--text-muted);font-weight:400;">opcional</span></label>
             <div style="display:flex;gap:8px;">
                 <input wire:model="newSan" type="text" class="form-input" placeholder="api.tudominio.com"
@@ -111,8 +119,13 @@
                 <i class="fa-solid fa-list-check"></i> Lo que ocurrirá
             </div>
             <ol style="font-size:12px;color:var(--text-secondary);padding-left:18px;line-height:2;">
+                @if($isWildcard)
+                <li>Se usará la validación por DNS (desafío DNS-01 en PowerDNS local) para demostrar la propiedad del dominio</li>
+                <li>Let's Encrypt emitirá un certificado Wildcard (*.{{ $domains->firstWhere('id',$domainId)?->name }}) válido por <strong>90 días</strong></li>
+                @else
                 <li>Se verificará que <strong>{{ $domains->firstWhere('id',$domainId)?->name }}</strong> apunta a este servidor</li>
                 <li>Let's Encrypt emitirá un certificado válido por <strong>90 días</strong></li>
+                @endif
                 <li>Se instalará en Nginx con HTTPS redirect automático (HTTP→HTTPS)</li>
                 <li>El certificado se <strong>renovará automáticamente</strong> antes de expirar</li>
             </ol>

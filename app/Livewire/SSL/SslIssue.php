@@ -13,6 +13,7 @@ class SslIssue extends Component
 {
     public ?int    $domainId   = null;
     public bool    $includeWww = true;
+    public bool    $isWildcard = false;
     public array   $extraSans  = [];
     public string  $newSan     = '';
     public bool    $isLoading  = false;
@@ -23,6 +24,7 @@ class SslIssue extends Component
     protected array $rules = [
         'domainId'   => 'required|integer|exists:domains,id',
         'includeWww' => 'boolean',
+        'isWildcard' => 'boolean',
         'newSan'     => 'nullable|string|max:253',
     ];
 
@@ -62,9 +64,10 @@ class SslIssue extends Component
 
         try {
             $cert = $sslService->issueLetsEncrypt(
-                domain:    $domain,
+                domain:     $domain,
                 sanDomains: $this->extraSans,
                 includeWww: $this->includeWww,
+                isWildcard: $this->isWildcard,
             );
 
             $this->success    = true;
