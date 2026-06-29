@@ -63,6 +63,11 @@
                             @endif
                         </td>
                         <td>
+                            @if($user->id !== auth()->id())
+                                <a href="{{ route('admin.impersonate.start', $user->id) }}" class="btn btn-ghost btn-sm" title="Iniciar sesión como {{ $user->name }}" style="color:var(--accent-light); margin-right: 4px;">
+                                    <i class="fa-solid fa-user-secret"></i>
+                                </a>
+                            @endif
                             <button wire:click="edit({{ $user->id }})" class="btn btn-ghost btn-sm" title="Editar"><i class="fa-solid fa-edit"></i></button>
                             @if($user->is_active)
                                 <button wire:click="suspend({{ $user->id }})" class="btn btn-ghost btn-sm" title="Suspender Cuenta" style="color:var(--danger);" onclick="return confirm('¿Suspender usuario? Se desactivarán sus dominios.')"><i class="fa-solid fa-ban"></i></button>
@@ -101,11 +106,15 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Rol del Sistema</label>
-                        <select wire:model="role" class="form-input">
-                            <option value="client">Cliente Normal</option>
-                            <option value="reseller">Reseller (Puede crear sub-clientes)</option>
-                            <option value="admin">Administrador Total</option>
-                        </select>
+                        @if(auth()->user()->isAdmin())
+                            <select wire:model="role" class="form-input">
+                                <option value="client">Cliente Normal</option>
+                                <option value="reseller">Reseller (Puede crear sub-clientes)</option>
+                                <option value="admin">Administrador Total</option>
+                            </select>
+                        @else
+                            <input type="text" class="form-input" value="Cliente Normal" readonly disabled>
+                        @endif
                     </div>
                 </div>
 

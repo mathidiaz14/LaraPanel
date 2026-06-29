@@ -64,6 +64,11 @@ class FtpIndex extends Component
         $this->errorMessage = '';
 
         try {
+            if (!auth()->user()->canAddFtpAccount()) {
+                $this->errorMessage = 'Has alcanzado el límite de cuentas FTP de tu plan.';
+                return;
+            }
+
             $ftpService->create(auth()->user(), [
                 'domain_id'             => $this->domainId,
                 'username'              => $this->usernameSuffix,

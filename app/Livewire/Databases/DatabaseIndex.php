@@ -62,6 +62,11 @@ class DatabaseIndex extends Component
         $this->errorMessage = '';
 
         try {
+            // Check plan quota
+            if (!auth()->user()->canAddDatabase()) {
+                throw new \RuntimeException('Has alcanzado el límite de bases de datos de tu plan.');
+            }
+
             // Verify if DB name or User already exists
             if (DatabaseInstance::where('db_name', $fullName)->exists()) {
                 throw new \RuntimeException("La base de datos {$fullName} ya existe en el panel.");

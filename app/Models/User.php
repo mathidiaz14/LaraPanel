@@ -28,6 +28,7 @@ class User extends Authenticatable
         'timezone',
         'language',
         'plan_id',
+        'parent_id',
         'last_login_at',
         'last_login_ip',
         'suspended_at',
@@ -72,6 +73,36 @@ class User extends Authenticatable
         return $this->hasMany(AuditLog::class);
     }
 
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'parent_id');
+    }
+
+    public function clients(): HasMany
+    {
+        return $this->hasMany(User::class, 'parent_id');
+    }
+
+    public function databases(): HasMany
+    {
+        return $this->hasMany(DatabaseInstance::class);
+    }
+
+    public function emailAccounts(): HasMany
+    {
+        return $this->hasMany(EmailAccount::class);
+    }
+
+    public function ftpAccounts(): HasMany
+    {
+        return $this->hasMany(FtpAccount::class);
+    }
+
+    public function cronJobs(): HasMany
+    {
+        return $this->hasMany(CronJob::class);
+    }
+
     // ────────────────────────────────────────────────────────────────
     // Role Helpers
     // ────────────────────────────────────────────────────────────────
@@ -110,6 +141,34 @@ class User extends Authenticatable
     public function domainQuotaUsed(): int
     {
         return $this->domains()->active()->count();
+    }
+
+    public function canAddDatabase(): bool
+    {
+        if ($this->isAdmin()) return true;
+        if (!$this->plan) return false;
+        return $this->databases()->count() < $this->plan->max_databases;
+    }
+
+    public function canAddEmailAccount(): bool
+    {
+        if ($this->isAdmin()) return true;
+        if (!$this->plan) return false;
+        return $this->emailAccounts()->count() < $this->plan->max_email_accounts;
+    }
+
+    public function canAddFtpAccount(): bool
+    {
+        if ($this->isAdmin()) return true;
+        if (!$this->plan) return false;
+        return $this->ftpAccounts()->count() < $this->plan->max_ftp_accounts;
+    }
+
+    public function canAddCronJob(): bool
+    {
+        if ($this->isAdmin()) return true;
+        if (!$this->plan) return false;
+        return $this->cronJobs()->count() < $this->plan->max_cron_jobs;
     }
 
     public function getDbPrefix(): string

@@ -37,6 +37,18 @@
 </head>
 
 <body>
+    @if(session()->has('impersonated_by'))
+        <div style="background:#f59e0b;color:#1e1e2e;padding:10px 20px;font-size:13px;display:flex;justify-content:space-between;align-items:center;z-index:99999;box-shadow:0 2px 10px rgba(0,0,0,0.3);position:sticky;top:0;font-weight:500;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <i class="fa-solid fa-user-secret" style="font-size:16px;"></i>
+                <span>Estás en una sesión de impersonación como <strong>{{ auth()->user()->name }}</strong> ({{ auth()->user()->email }}).</span>
+            </div>
+            <a href="{{ route('admin.impersonate.stop') }}" class="btn btn-primary btn-sm" style="background:#1e1e2e;color:#fff;border:none;padding:5px 12px;font-weight:600;border-radius:4px;text-decoration:none;font-size:12px;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s;">
+                <i class="fa-solid fa-right-from-bracket"></i> Volver a mi cuenta
+            </a>
+        </div>
+    @endif
+
     <div class="app-layout">
 
         <div id="sidebar-overlay"></div>
@@ -101,11 +113,13 @@
                         <span class="nav-icon"><i class="fa-solid fa-database"></i></span>
                         Bases de Datos
                     </a>
-                    <a href="{{ route('admin.db') }}" target="_blank"
-                        class="nav-item {{ request()->routeIs('admin.db') ? 'active' : '' }}">
-                        <span class="nav-icon"><i class="fa-solid fa-table-list"></i></span>
-                        phpMyAdmin
-                    </a>
+                    @if(auth()->user()?->isAdmin())
+                        <a href="{{ route('admin.db') }}" target="_blank"
+                            class="nav-item {{ request()->routeIs('admin.db') ? 'active' : '' }}">
+                            <span class="nav-icon"><i class="fa-solid fa-table-list"></i></span>
+                            phpMyAdmin
+                        </a>
+                    @endif
                 @endif
 
                 @if(config('larapanel.modules.filemanager'))
@@ -131,32 +145,34 @@
                     </a>
                 @endif
 
-                @if(config('larapanel.modules.firewall'))
-                    <a href="{{ route('firewall.index') }}"
-                        class="nav-item {{ request()->routeIs('firewall.*') ? 'active' : '' }}">
-                        <span class="nav-icon"><i class="fa-solid fa-shield-halved"></i></span>
-                        Firewall
+                @if(auth()->user()?->isAdmin())
+                    @if(config('larapanel.modules.firewall'))
+                        <a href="{{ route('firewall.index') }}"
+                            class="nav-item {{ request()->routeIs('firewall.*') ? 'active' : '' }}">
+                            <span class="nav-icon"><i class="fa-solid fa-shield-halved"></i></span>
+                            Firewall
+                        </a>
+                    @endif
+
+                    <a href="{{ route('fail2ban.index') }}"
+                        class="nav-item {{ request()->routeIs('fail2ban.*') ? 'active' : '' }}">
+                        <span class="nav-icon"><i class="fa-solid fa-ban"></i></span>
+                        Fail2ban
                     </a>
-                @endif
 
-                <a href="{{ route('fail2ban.index') }}"
-                    class="nav-item {{ request()->routeIs('fail2ban.*') ? 'active' : '' }}">
-                    <span class="nav-icon"><i class="fa-solid fa-ban"></i></span>
-                    Fail2ban
-                </a>
-
-                <a href="{{ route('antispam.index') }}"
-                    class="nav-item {{ request()->routeIs('antispam.*') ? 'active' : '' }}">
-                    <span class="nav-icon"><i class="fa-solid fa-shield-virus"></i></span>
-                    Antispam
-                </a>
-
-                @if(config('larapanel.modules.antivirus'))
-                    <a href="{{ route('antivirus.index') }}"
-                        class="nav-item {{ request()->routeIs('antivirus.*') ? 'active' : '' }}">
-                        <span class="nav-icon"><i class="fa-solid fa-shield-halved"></i></span>
-                        Antivirus
+                    <a href="{{ route('antispam.index') }}"
+                        class="nav-item {{ request()->routeIs('antispam.*') ? 'active' : '' }}">
+                        <span class="nav-icon"><i class="fa-solid fa-shield-virus"></i></span>
+                        Antispam
                     </a>
+
+                    @if(config('larapanel.modules.antivirus'))
+                        <a href="{{ route('antivirus.index') }}"
+                            class="nav-item {{ request()->routeIs('antivirus.*') ? 'active' : '' }}">
+                            <span class="nav-icon"><i class="fa-solid fa-shield-halved"></i></span>
+                            Antivirus
+                        </a>
+                    @endif
                 @endif
 
                 @if(config('larapanel.modules.cron'))
@@ -179,7 +195,7 @@
                     Git Deploy
                 </a>
 
-                @if(config('larapanel.modules.docker'))
+                @if(config('larapanel.modules.docker') && auth()->user()?->isAdmin())
                     <a href="{{ route('docker.index') }}"
                         class="nav-item {{ request()->routeIs('docker.*') ? 'active' : '' }}">
                         <span class="nav-icon"><i class="fa-brands fa-docker"></i></span>
@@ -187,7 +203,7 @@
                     </a>
                 @endif
 
-                @if(config('larapanel.modules.multiserver'))
+                @if(config('larapanel.modules.multiserver') && auth()->user()?->isAdmin())
                     <a href="{{ route('servers.index') }}"
                         class="nav-item {{ request()->routeIs('servers.*') ? 'active' : '' }}">
                         <span class="nav-icon"><i class="fa-solid fa-server"></i></span>
@@ -209,31 +225,36 @@
                     </a>
                 @endif
 
-                @if(config('larapanel.modules.monitoring') || config('larapanel.modules.phpmanager') || config('larapanel.modules.logs'))
-                    <div class="nav-section-title">Sistema</div>
-                @endif
-
-                @if(config('larapanel.modules.phpmanager'))
-                    <a href="{{ route('php.index') }}" class="nav-item {{ request()->routeIs('php.*') ? 'active' : '' }}">
-                        <span class="nav-icon"><i class="fa-brands fa-php"></i></span>
-                        PHP Manager
-                    </a>
-                @endif
-
-                @if(config('larapanel.modules.logs'))
-                    <a href="{{ route('logs.index') }}" class="nav-item {{ request()->routeIs('logs.*') ? 'active' : '' }}">
-                        <span class="nav-icon"><i class="fa-solid fa-scroll"></i></span>
-                        Logs
-                    </a>
-                @endif
-
                 @if(auth()->user()?->isAdmin())
+                    @if(config('larapanel.modules.monitoring') || config('larapanel.modules.phpmanager') || config('larapanel.modules.logs'))
+                        <div class="nav-section-title">Sistema</div>
+                    @endif
+
+                    @if(config('larapanel.modules.phpmanager'))
+                        <a href="{{ route('php.index') }}" class="nav-item {{ request()->routeIs('php.*') ? 'active' : '' }}">
+                            <span class="nav-icon"><i class="fa-brands fa-php"></i></span>
+                            PHP Manager
+                        </a>
+                    @endif
+
+                    @if(config('larapanel.modules.logs'))
+                        <a href="{{ route('logs.index') }}" class="nav-item {{ request()->routeIs('logs.*') ? 'active' : '' }}">
+                            <span class="nav-icon"><i class="fa-solid fa-scroll"></i></span>
+                            Logs
+                        </a>
+                    @endif
+                @endif
+
+                @if(auth()->user()?->isAdmin() || auth()->user()?->isReseller())
                     <div class="nav-section-title">Administración</div>
                     <a href="{{ route('admin.users.index') }}"
                         class="nav-item {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
                         <span class="nav-icon"><i class="fa-solid fa-users"></i></span>
                         Usuarios
                     </a>
+                @endif
+
+                @if(auth()->user()?->isAdmin())
                     <a href="{{ route('admin.plans.index') }}"
                         class="nav-item {{ request()->routeIs('admin.plans.*') ? 'active' : '' }}">
                         <span class="nav-icon"><i class="fa-solid fa-layer-group"></i></span>

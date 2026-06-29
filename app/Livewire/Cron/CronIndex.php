@@ -61,6 +61,11 @@ class CronIndex extends Component
         $this->errorMessage = '';
 
         try {
+            if (!auth()->user()->canAddCronJob()) {
+                $this->errorMessage = 'Has alcanzado el límite de tareas programadas (cron) de tu plan.';
+                return;
+            }
+
             $cronService->create(auth()->user(), [
                 'label' => $this->label,
                 'command' => $this->command,

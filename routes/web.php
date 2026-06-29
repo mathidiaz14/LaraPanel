@@ -71,8 +71,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/ssl/issue',   SslIssue::class)->name('ssl.issue');
     Route::get('/ssl/install', SslInstall::class)->name('ssl.install');
 
-    // PHP
-    Route::get('/php', PhpIndex::class)->name('php.index');
+
 
     // Email
     Route::get('/email',              EmailIndex::class)->name('email.index');
@@ -84,22 +83,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Databases
     Route::get('/databases', DatabaseIndex::class)->name('databases.index');
-    Route::get('/admin/db', function () {
-        $token = Str::random(40);
-        $tokenDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'larapanel_pma_sso';
-        
-        if (!is_dir($tokenDir)) {
-            mkdir($tokenDir, 0700, true);
-        }
-        
-        $dbUser = env('DB_USERNAME', 'root');
-        $dbPass = env('DB_PASSWORD', '');
-        
-        file_put_contents("$tokenDir/$token", "$dbUser:$dbPass");
-        chmod("$tokenDir/$token", 0600);
-        
-        return redirect('/pma/signon.php?token=' . $token);
-    })->name('admin.db');
+
 
     // File Manager
     Route::get('/files', FileManager::class)->name('files.index');
@@ -111,15 +95,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dns',       DnsIndex::class)->name('dns.index');
     Route::get('/dns/{zone}',DnsZoneEditor::class)->name('dns.zone');
 
-    // Antispam
-    Route::get('/antispam', AntispamIndex::class)->name('antispam.index');
 
-    // Firewall
-    Route::get('/firewall',  FirewallIndex::class)->name('firewall.index');
-    Route::get('/fail2ban',  Fail2banIndex::class)->name('fail2ban.index');
-
-    // Antivirus
-    Route::get('/antivirus', AntivirusIndex::class)->name('antivirus.index');
 
     // Antispam
     Route::get('/cron', CronIndex::class)->name('cron.index');
@@ -130,30 +106,63 @@ Route::middleware(['auth'])->group(function () {
     // Git Deploy
     Route::get('/git', GitIndex::class)->name('git.index');
 
-    // Docker
-    Route::get('/docker', DockerIndex::class)->name('docker.index');
+
 
     // WordPress
     Route::get('/wordpress', WordPressIndex::class)->name('wordpress.index');
 
-    // Terminal (admin only)
-    Route::get('/terminal', TerminalIndex::class)->name('terminal.index');
-
-    // Multi-Server Cluster Management
-    Route::get('/servers', ServersIndex::class)->name('servers.index');
-
-    // Logs
-    Route::get('/logs', LogIndex::class)->name('logs.index');
-
     // Profile
     Route::get('/profile', \App\Livewire\Profile::class)->name('profile');
 
-    // Admin routes
-    Route::prefix('admin')->name('admin.')->middleware('auth')->group(function () {
-        Route::get('/users',   UserIndex::class)->name('users.index');
-        Route::get('/plans',   PlanIndex::class)->name('plans.index');
-        Route::get('/api-tokens', ApiTokens::class)->name('api-tokens');
-        Route::get('/settings',   \App\Livewire\Admin\Settings::class)->name('settings');
+    // Impersonation routes
+    Route::get('/admin/impersonate/{user}', [\App\Http\Controllers\Admin\ImpersonationController::class, 'start'])
+        ->name('admin.impersonate.start')
+        ->middleware('role:admin,reseller');
+
+    Route::get('/impersonate/stop', [\App\Http\Controllers\Admin\ImpersonationController::class, 'stop'])
+        ->name('impersonate.stop');
+
+    // ── Admin-Only Global & System Routes ────────────────────────────
+    Route::middleware(['role:admin'])->group(function () {
+        Route::get('/php', PhpIndex::class)->name('php.index');
+        Route::get('/firewall',  FirewallIndex::class)->name('firewall.index');
+        Route::get('/fail2ban',  Fail2banIndex::class)->name('fail2ban.index');
+        Route::get('/antispam', AntispamIndex::class)->name('antispam.index');
+        Route::get('/antivirus', AntivirusIndex::class)->name('antivirus.index');
+        Route::get('/docker', DockerIndex::class)->name('docker.index');
+        Route::get('/terminal', TerminalIndex::class)->name('terminal.index');
+        Route::get('/servers', ServersIndex::class)->name('servers.index');
+        Route::get('/logs', LogIndex::class)->name('logs.index');
+        
+        // Root phpMyAdmin Sign-on
+        Route::get('/admin/db', function () {
+            $token = Str::random(40);
+            $tokenDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'larapanel_pma_sso';
+            
+            if (!is_dir($tokenDir)) {
+                mkdir($tokenDir, 0700, true);
+            }
+            
+            $dbUser = env('DB_USERNAME', 'root');
+            $dbPass = env('DB_PASSWORD', '');
+            
+            file_put_contents("$tokenDir/$token", "$dbUser:$dbPass");
+            chmod("$tokenDir/$token", 0600);
+            
+            return redirect('/pma/signon.php?token=' . $token);
+        })->name('admin.db');
+    });
+
+    // ── Reseller & Admin routes ──────────────────────────────────────
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::get('/users', UserIndex::class)->name('users.index')->middleware('role:admin,reseller');
+
+        // Admin-only management routes
+        Route::middleware('role:admin')->group(function () {
+            Route::get('/plans',   PlanIndex::class)->name('plans.index');
+            Route::get('/api-tokens', ApiTokens::class)->name('api-tokens');
+            Route::get('/settings',   \App\Livewire\Admin\Settings::class)->name('settings');
+        });
     });
 });
 

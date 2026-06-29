@@ -23,14 +23,17 @@ class UserIndex extends Component
     public ?int $plan_id = null;
     public bool $is_active = true;
 
-    protected array $rules = [
-        'name'      => 'required|string|max:255',
-        'email'     => 'required|email|max:255',
-        'password'  => 'nullable|min:8',
-        'role'      => 'required|in:admin,reseller,client',
-        'plan_id'   => 'nullable|exists:plans,id',
-        'is_active' => 'boolean',
-    ];
+    public function rules(): array
+    {
+        $roles = auth()->user()->isAdmin() ? 'admin,reseller,client' : 'client';
+        return [
+            'name'      => 'required|string|max:255',
+            'email'     => 'required|email|max:255',
+            'role'      => 'required|in:' . $roles,
+            'plan_id'   => 'nullable|exists:plans,id',
+            'is_active' => 'boolean',
+        ];
+    }
 
     public function mount()
     {
@@ -40,18 +43,33 @@ class UserIndex extends Component
 
     public function loadUsers()
     {
-        $this->users = User::with('plan')->withCount('domains')->get();
+        $query = User::with('plan')->withCount('domains');
+        
+        if (auth()->user()->isReseller()) {
+            $query->where('parent_id', auth()->id());
+        }
+        
+        $this->users = $query->get();
     }
 
     public function create()
     {
         $this->resetForm();
+        // Default role for resellers is client
+        if (auth()->user()->isReseller()) {
+            $this->role = 'client';
+        }
         $this->isEditing = true;
     }
 
     public function edit(int $id)
     {
-        $user = User::findOrFail($id);
+        $query = User::query();
+        if (auth()->user()->isReseller()) {
+            $query->where('parent_id', auth()->id());
+        }
+        
+        $user = $query->findOrFail($id);
         $this->userId    = $user->id;
         $this->name      = $user->name;
         $this->email     = $user->email;
@@ -78,8 +96,17 @@ class UserIndex extends Component
             $data['plan_id'] = null;
         }
 
+        if (auth()->user()->isReseller()) {
+            $data['parent_id'] = auth()->id();
+            $data['role'] = 'client';
+        }
+
         if ($this->userId) {
-            $user = User::findOrFail($this->userId);
+            $query = User::query();
+            if (auth()->user()->isReseller()) {
+                $query->where('parent_id', auth()->id());
+            }
+            $user = $query->findOrFail($this->userId);
             
             if (!empty($this->password)) {
                 $data['password'] = Hash::make($this->password);
@@ -92,7 +119,7 @@ class UserIndex extends Component
             // Suspension logic
             if (!$this->is_active && !$user->isSuspended()) {
                 $user->suspended_at = now();
-                $user->suspension_reason = 'Suspendido manualmente por administrador.';
+                $user->suspension_reason = 'Suspendido manualmente.';
                 $user->save();
                 // TODO: Dispatch Job to disable Nginx vhosts for all domains belonging to this user
             } elseif ($this->is_active && $user->isSuspended()) {
@@ -119,7 +146,12 @@ class UserIndex extends Component
 
     public function suspend(int $id)
     {
-        $user = User::findOrFail($id);
+        $query = User::query();
+        if (auth()->user()->isReseller()) {
+            $query->where('parent_id', auth()->id());
+        }
+        
+        $user = $query->findOrFail($id);
         if ($user->id === auth()->id()) {
             session()->flash('error', 'No puedes suspenderte a ti mismo.');
             return;
@@ -135,7 +167,12 @@ class UserIndex extends Component
 
     public function activate(int $id)
     {
-        $user = User::findOrFail($id);
+        $query = User::query();
+        if (auth()->user()->isReseller()) {
+            $query->where('parent_id', auth()->id());
+        }
+        
+        $user = $query->findOrFail($id);
         $user->is_active = true;
         $user->suspended_at = null;
         $user->save();

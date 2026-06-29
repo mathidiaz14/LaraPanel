@@ -70,6 +70,11 @@ class EmailIndex extends Component
         $this->errorMessage = '';
 
         try {
+            if (!auth()->user()->canAddEmailAccount()) {
+                $this->errorMessage = 'Has alcanzado el límite de cuentas de correo de tu plan.';
+                return;
+            }
+
             $emailService->create(auth()->user(), [
                 'domain_id' => $this->domainId,
                 'username' => $this->username,
@@ -188,6 +193,11 @@ class EmailIndex extends Component
         $this->errorMessage = '';
 
         try {
+            if (!auth()->user()->canAddEmailAccount()) {
+                $this->errorMessage = 'Has alcanzado el límite de cuentas de correo de tu plan.';
+                return;
+            }
+
             $domain = Domain::where('id', $this->importDomainId)
                 ->where('user_id', auth()->id())
                 ->firstOrFail();
