@@ -997,8 +997,8 @@ systemctl enable postfix
 # ══════════════════════════════════════════════════════════════════════════════
 step "Fase 17 — Instalando y configurando Webmail (Roundcube)"
 
-debconf-set-selections <<< "roundcube-core roundcube/dbconfig-install boolean true"
-debconf-set-selections <<< "roundcube-core roundcube/database-type select sqlite3"
+debconf-set-selections <<< "roundcube-core roundcube/dbconfig-install boolean true" 2>/dev/null || true
+debconf-set-selections <<< "roundcube-core roundcube/database-type select sqlite3" 2>/dev/null || true
 
 apt-get install -y -qq roundcube roundcube-core roundcube-sqlite3 roundcube-plugins sqlite3 php-mail-mime
 
