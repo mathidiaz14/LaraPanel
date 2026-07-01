@@ -142,7 +142,6 @@
         </div>
     </div>
     @endif
-    @endif
 
     {{-- Info footer --}}
     <div style="margin-top:14px;text-align:center;font-size:11px;color:var(--text-muted);">
