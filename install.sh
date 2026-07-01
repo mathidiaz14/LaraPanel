@@ -441,7 +441,6 @@ sudo -u "$PANEL_USER" npm run build
 
 info "Generando clave de aplicación..."
 sudo -u "$PANEL_USER" php artisan key:generate --force
-sudo -u "$PANEL_USER" php artisan package:discover --ansi
 
 info "Ejecutando migraciones..."
 sudo -u "$PANEL_USER" php artisan migrate --force
