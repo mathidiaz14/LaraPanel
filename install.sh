@@ -176,7 +176,6 @@ mysql -u root <<MYSQL_EOF
 CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER IF NOT EXISTS '${PANEL_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
 GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${PANEL_USER}'@'localhost';
-GRANT SUPER ON *.* TO '${PANEL_USER}'@'localhost';
 FLUSH PRIVILEGES;
 MYSQL_EOF
 
@@ -340,14 +339,7 @@ chmod 644 /etc/rspamd/local.d/larapanel_blacklist.conf
 systemctl enable rspamd
 systemctl restart rspamd
 
-# Guardar la contraseña en el .env de LaraPanel (se sobreescribirá si ya existe)
-if [[ -f "${INSTALL_DIR}/.env" ]]; then
-    if grep -q "RSPAMD_PASSWORD" "${INSTALL_DIR}/.env"; then
-        sed -i "s/RSPAMD_PASSWORD=.*/RSPAMD_PASSWORD=${RSPAMD_PASSWORD}/" "${INSTALL_DIR}/.env"
-    else
-        echo "RSPAMD_PASSWORD=${RSPAMD_PASSWORD}" >> "${INSTALL_DIR}/.env"
-    fi
-fi
+# RSPAMD_PASSWORD se escribirá al .env en la Fase 8, cuando el .env ya exista.
 
 success "Rspamd instalado. API local en http://127.0.0.1:11334"
 
@@ -431,6 +423,9 @@ BROADCAST_CONNECTION=log
 # DNS (PowerDNS)
 PDNS_ENABLED=true
 PDNS_API_KEY=${PDNS_API_KEY}
+
+# Antispam
+RSPAMD_PASSWORD=${RSPAMD_PASSWORD}
 ENV_EOF
 
 # Cambiar el propietario de .env al usuario del panel para que pueda escribir la clave
@@ -472,8 +467,6 @@ success "Aplicación Laravel configurada."
 #   FASE 9 — CREAR ADMIN POR CONSOLA
 # ══════════════════════════════════════════════════════════════════════════════
 step "Fase 9 — Creando usuario administrador"
-
-HASHED_PASSWORD=$(sudo -u "$PANEL_USER" php -r "echo password_hash('${ADMIN_PASSWORD}', PASSWORD_BCRYPT, ['cost' => 12]);")
 
 sudo -u "$PANEL_USER" php artisan tinker --no-interaction <<TINKER_EOF 2>/dev/null || true
 \$user = \App\Models\User::updateOrCreate(
@@ -986,10 +979,14 @@ if systemctl is-active --quiet rspamd; then
 fi
 
 sed -i '/^#submission/s/^#//g' /etc/postfix/master.cf
-sed -i '/^submission/a \  -o syslog_name=postfix/submission\n  -o smtpd_tls_security_level=encrypt\n  -o smtpd_sasl_auth_enable=yes\n  -o smtpd_relay_restrictions=permit_sasl_authenticated,reject' /etc/postfix/master.cf
+if ! grep -q 'syslog_name=postfix/submission' /etc/postfix/master.cf; then
+    sed -i '/^submission/a \  -o syslog_name=postfix/submission\n  -o smtpd_tls_security_level=encrypt\n  -o smtpd_sasl_auth_enable=yes\n  -o smtpd_relay_restrictions=permit_sasl_authenticated,reject' /etc/postfix/master.cf
+fi
 
 sed -i '/^#smtps/s/^#//g' /etc/postfix/master.cf
-sed -i '/^smtps/a \  -o syslog_name=postfix/smtps\n  -o smtpd_tls_wrappermode=yes\n  -o smtpd_sasl_auth_enable=yes\n  -o smtpd_relay_restrictions=permit_sasl_authenticated,reject' /etc/postfix/master.cf
+if ! grep -q 'syslog_name=postfix/smtps' /etc/postfix/master.cf; then
+    sed -i '/^smtps/a \  -o syslog_name=postfix/smtps\n  -o smtpd_tls_wrappermode=yes\n  -o smtpd_sasl_auth_enable=yes\n  -o smtpd_relay_restrictions=permit_sasl_authenticated,reject' /etc/postfix/master.cf
+fi
 
 systemctl restart dovecot
 systemctl enable dovecot
@@ -1004,7 +1001,7 @@ step "Fase 17 — Instalando y configurando Webmail (Roundcube)"
 debconf-set-selections <<< "roundcube-core roundcube/dbconfig-install boolean true"
 debconf-set-selections <<< "roundcube-core roundcube/database-type select sqlite3"
 
-apt-get install -y -qq roundcube roundcube-core roundcube-sqlite3 roundcube-plugins sqlite3 php-net-idna2 php-mail-mime
+apt-get install -y -qq roundcube roundcube-core roundcube-sqlite3 roundcube-plugins sqlite3 php-mail-mime
 
 # Configurar Roundcube
 ROUNDCUBE_DB_PATH="/var/lib/dbconfig-common/sqlite3/roundcube/roundcube"
@@ -1035,17 +1032,19 @@ MASTER_PWD_FILE="/etc/dovecot/master-users"
 ROUNDCUBE_PWD_FILE="/etc/roundcube/larapanel_master_pwd"
 
 MASTER_PWD=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)
-echo "*larapanel:{PLAIN}\$MASTER_PWD" > "\$MASTER_PWD_FILE"
-chmod 600 "\$MASTER_PWD_FILE"
-chown root:root "\$MASTER_PWD_FILE"
+echo "*larapanel:{PLAIN}${MASTER_PWD}" > "${MASTER_PWD_FILE}"
+chmod 600 "${MASTER_PWD_FILE}"
+chown root:root "${MASTER_PWD_FILE}"
 
-echo "\$MASTER_PWD" > "\$ROUNDCUBE_PWD_FILE"
-chmod 640 "\$ROUNDCUBE_PWD_FILE"
-chown root:www-data "\$ROUNDCUBE_PWD_FILE"
+echo "${MASTER_PWD}" > "${ROUNDCUBE_PWD_FILE}"
+chmod 640 "${ROUNDCUBE_PWD_FILE}"
+chown root:www-data "${ROUNDCUBE_PWD_FILE}"
 
 DOVECOT_CONF="/etc/dovecot/conf.d/10-auth.conf"
-sed -i '1s/^/auth_master_user_separator = \*\n/' "\$DOVECOT_CONF"
-cat >> "\$DOVECOT_CONF" << 'EOF'
+if ! grep -q 'auth_master_user_separator' "${DOVECOT_CONF}"; then
+    sed -i '1s/^/auth_master_user_separator = *\n/' "${DOVECOT_CONF}"
+fi
+cat >> "${DOVECOT_CONF}" << 'EOF'
 
 # LaraPanel Master User Auth
 passdb {
@@ -1059,9 +1058,9 @@ EOF
 systemctl restart dovecot || true
 
 PLUGIN_DIR="/usr/share/roundcube/plugins/larapanel_autologin"
-mkdir -p "\$PLUGIN_DIR"
+mkdir -p "${PLUGIN_DIR}"
 
-cat > "\$PLUGIN_DIR/larapanel_autologin.php" << 'EOF'
+cat > "${PLUGIN_DIR}/larapanel_autologin.php" << 'EOF'
 <?php
 /**
  * LaraPanel AutoLogin Plugin
@@ -1125,8 +1124,8 @@ class larapanel_autologin extends rcube_plugin
 }
 EOF
 
-chown -R root:root "\$PLUGIN_DIR"
-chmod -R 755 "\$PLUGIN_DIR"
+chown -R root:root "${PLUGIN_DIR}"
+chmod -R 755 "${PLUGIN_DIR}"
 
 mkdir -p /tmp/larapanel_autologin
 chmod 777 /tmp/larapanel_autologin
