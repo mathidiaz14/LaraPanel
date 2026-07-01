@@ -265,6 +265,49 @@
                     </div>
                 </div>
 
+                {{-- Bloque S3: Almacenamiento AWS S3 --}}
+                <div class="glass" style="padding:28px;border-radius:16px;background:rgba(255,255,255,0.01);">
+                    <h4 style="font-size:16px;font-weight:700;margin:0 0 20px;display:flex;align-items:center;gap:10px;">
+                        <div style="width:36px;height:36px;background:rgba(251,191,36,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fa-brands fa-aws" style="color:#fbbf24;font-size:20px;"></i>
+                        </div>
+                        Almacenamiento AWS S3
+                    </h4>
+
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:24px;">
+                        <div class="form-group" style="margin:0;">
+                            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">AWS Access Key ID</label>
+                            <input type="text" wire:model.defer="awsAccessKeyId" class="form-input" placeholder="Ej: AKIAIOSFODNN7EXAMPLE">
+                            @error('awsAccessKeyId') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+                        </div>
+                        
+                        <div class="form-group" style="margin:0;">
+                            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">AWS Secret Access Key</label>
+                            <input type="password" wire:model.defer="awsSecretAccessKey" class="form-input" placeholder="••••••••••••••••">
+                            @error('awsSecretAccessKey') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="form-group" style="margin:0;">
+                            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">AWS Default Region</label>
+                            <input type="text" wire:model.defer="awsDefaultRegion" class="form-input" placeholder="us-east-1">
+                            @error('awsDefaultRegion') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="form-group" style="margin:0;">
+                            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">AWS Bucket</label>
+                            <input type="text" wire:model.defer="awsBucket" class="form-input" placeholder="mi-bucket-backups">
+                            @error('awsBucket') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="form-group" style="grid-column: 1 / -1; margin:0;">
+                            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">AWS Endpoint URL (Opcional)</label>
+                            <input type="text" wire:model.defer="awsEndpoint" class="form-input" placeholder="https://s3.us-west-004.backblazeb2.com">
+                            <p style="font-size:11px;color:var(--text-muted);margin-top:6px;">Vacío para AWS estándar. Rellena si usas MinIO, Wasabi, Backblaze B2, DigitalOcean Spaces, etc.</p>
+                            @error('awsEndpoint') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                </div>
+
                 {{-- Bloque 3: Localización y Sistema --}}
                 <div class="glass" style="padding:28px;border-radius:16px;background:rgba(255,255,255,0.01);">
                     <h4 style="font-size:16px;font-weight:700;margin:0 0 20px;display:flex;align-items:center;gap:10px;">

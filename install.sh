@@ -81,6 +81,8 @@ INSTALL_DIR="${INSTALL_DIR:-/var/www/larapanel}"
 
 PANEL_USER="larapanel"
 DB_NAME="larapanel_db"
+DB_DATABASE="larapanel_db"
+DB_USERNAME="larapanel"
 PHP_VERSION="8.3"
 
 echo ""
