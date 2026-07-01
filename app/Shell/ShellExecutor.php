@@ -124,12 +124,24 @@ class ShellExecutor
         $cmdIndex = 0;
         if ($command[0] === 'sudo') {
             $cmdIndex = 1;
-            while (isset($command[$cmdIndex]) && str_starts_with($command[$cmdIndex], '-')) {
-                if ($command[$cmdIndex] === '-u' && isset($command[$cmdIndex + 1])) {
-                    $cmdIndex += 2;
-                } else {
-                    $cmdIndex++;
+            while (isset($command[$cmdIndex])) {
+                // Si empieza con guión, es un flag de sudo
+                if (str_starts_with($command[$cmdIndex], '-')) {
+                    if ($command[$cmdIndex] === '-u' && isset($command[$cmdIndex + 1])) {
+                        $cmdIndex += 2;
+                    } else {
+                        $cmdIndex++;
+                    }
+                    continue;
                 }
+                // Si contiene un '=', es una variable de entorno inyectada a sudo
+                if (str_contains($command[$cmdIndex], '=')) {
+                    $cmdIndex++;
+                    continue;
+                }
+                
+                // Si llegamos acá, ya pasamos los flags y vars de sudo, este es el comando
+                break;
             }
         }
 
