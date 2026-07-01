@@ -468,15 +468,17 @@ success "Aplicación Laravel configurada."
 step "Fase 9 — Creando usuario administrador"
 
 sudo -u "$PANEL_USER" php artisan tinker --no-interaction <<TINKER_EOF 2>/dev/null || true
+\$role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin']);
 \$user = \App\Models\User::updateOrCreate(
     ['email' => '${ADMIN_EMAIL}'],
     [
         'name'     => 'Administrador',
         'password' => bcrypt('${ADMIN_PASSWORD}'),
+        'role'     => 'admin',
     ]
 );
-\$user->assignRole('admin');
-echo "Admin creado: " . \$user->email;
+\$user->assignRole(\$role);
+echo "Admin creado y rol asignado: " . \$user->email;
 TINKER_EOF
 
 success "Usuario administrador creado: ${ADMIN_EMAIL}"
