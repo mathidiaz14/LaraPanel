@@ -21,8 +21,8 @@ return [
     'server' => [
         'os' => 'ubuntu',  // ubuntu | debian | almalinux | rocky
         'webserver' => env('LARAPANEL_WEBSERVER', 'nginx'),  // nginx | apache | both
-        'php_versions' => ['8.1', '8.2', '8.3'],
-        'default_php' => env('LARAPANEL_DEFAULT_PHP', '8.3'),
+        'php_versions' => ['8.1', '8.2', '8.3', '8.4'],
+        'default_php' => env('LARAPANEL_DEFAULT_PHP', '8.4'),
         'sudo_user' => env('LARAPANEL_SUDO_USER', 'www-data'),
     ],
 
@@ -192,8 +192,8 @@ return [
     'server' => [
         'os'         => 'ubuntu',
         'webserver'  => env('LARAPANEL_WEBSERVER', 'nginx'),
-        'php_versions' => ['8.1', '8.2', '8.3'],
-        'default_php'  => env('LARAPANEL_DEFAULT_PHP', '8.3'),
+        'php_versions' => ['8.1', '8.2', '8.3', '8.4'],
+        'default_php'  => env('LARAPANEL_DEFAULT_PHP', '8.4'),
         'sudo_user'    => env('LARAPANEL_SUDO_USER', 'www-data'),
         'public_ip'    => env('SERVER_PUBLIC_IP', '127.0.0.1'),
     ],

@@ -63,10 +63,51 @@ class DomainIndex extends Component
         $this->successMessage = "Dominio {$domain->name} reactivado.";
     }
 
-    public function render()
+    // Edit Domain Logic
+    public ?int $editingId = null;
+    public string $editPath = '';
+    public string $editPhp = '';
+
+    public function editDomain(int $id): void
+    {
+        $domain = Domain::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+        $this->editingId = $domain->id;
+        $this->editPath = $domain->document_root;
+        $this->editPhp = $domain->php_version;
+    }
+
+    public function cancelEdit(): void
+    {
+        $this->editingId = null;
+        $this->editPath = '';
+        $this->editPhp = '';
+    }
+
+    public function updateDomain(DomainService $service): void
+    {
+        $domain = Domain::where('id', $this->editingId)->where('user_id', auth()->id())->firstOrFail();
+        
+        $this->validate([
+            'editPath' => 'required|string|min:5|max:255',
+            'editPhp' => 'required|string',
+        ]);
+
+        $domain->update([
+            'document_root' => $this->editPath,
+            'php_version' => $this->editPhp,
+        ]);
+
+        $service->deployConfigs($domain);
+
+        $this->successMessage = "Configuración del dominio {$domain->name} actualizada.";
+        $this->cancelEdit();
+    }
+
+    public function render(DomainService $service)
     {
         return view('livewire.domains.domain-index', [
             'domains' => $this->getDomains(),
+            'phpVersions' => $service->getAvailablePhpVersions(),
         ])->layout('layouts.app', [
             'title'      => 'Dominios',
             'breadcrumb' => '<span>Hosting</span> / <strong>Dominios</strong>',

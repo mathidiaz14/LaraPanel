@@ -137,6 +137,12 @@
                             </button>
                             @endif
 
+                            {{-- Edit --}}
+                            <button wire:click="editDomain({{ $domain->id }})"
+                                    class="btn btn-ghost btn-sm" title="Editar Configuración">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+
                             {{-- Delete --}}
                             <button wire:click="confirmDelete({{ $domain->id }})"
                                     class="btn btn-danger btn-sm" title="Eliminar">
@@ -188,6 +194,46 @@
                     <i class="fa-solid fa-trash"></i>
                     Eliminar dominio
                 </button>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Edit Modal --}}
+    @if($editingId)
+    @php $editDom = $domains->firstWhere('id', $editingId); @endphp
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated" style="max-width:500px;">
+            <div class="lp-modal-header">
+                <h2>Editar {{ $editDom?->name }}</h2>
+                <button wire:click="cancelEdit" class="btn btn-ghost btn-sm" style="padding:0;width:32px;height:32px;justify-content:center;">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="lp-modal-body">
+                <div class="form-group">
+                    <label class="form-label">Ruta / Document Root</label>
+                    <input wire:model="editPath" type="text" class="form-input">
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Ruta absoluta hacia la carpeta public de la aplicación.</div>
+                    @error('editPath') <div class="form-error">{{ $message }}</div> @enderror
+                </div>
+                
+                <div class="form-group" style="margin-top:16px;">
+                    <label class="form-label">Versión de PHP</label>
+                    <select wire:model="editPhp" class="form-input">
+                        @foreach($phpVersions as $ver)
+                            <option value="{{ $ver }}">PHP {{ $ver }}</option>
+                        @endforeach
+                    </select>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">El servidor web (Nginx) se recargará automáticamente al aplicar.</div>
+                    @error('editPhp') <div class="form-error">{{ $message }}</div> @enderror
+                </div>
+            </div>
+
+            <div class="lp-modal-footer">
+                <button wire:click="cancelEdit" class="btn btn-ghost">Cancelar</button>
+                <button wire:click="updateDomain" class="btn btn-primary">Guardar Cambios</button>
             </div>
         </div>
     </div>
