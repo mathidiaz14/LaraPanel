@@ -70,7 +70,7 @@
         {{-- CPU --}}
         <div class="glass lp-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
             <h4 class="panel-title" style="margin-bottom:16px;color:var(--text-muted);align-self:flex-start;">Procesador (CPU)</h4>
-            <div style="position:relative;width:140px;height:140px;margin:0 auto;">
+            <div wire:ignore style="position:relative;width:140px;height:140px;margin:0 auto;">
                 <canvas id="cpuChart"></canvas>
                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);font-size:24px;font-weight:800;color:var(--text-primary);">
                     <span id="cpuValue">{{ $metrics['cpu'] ?? 0 }}</span>%
@@ -85,7 +85,7 @@
         {{-- RAM --}}
         <div class="glass lp-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
             <h4 class="panel-title" style="margin-bottom:16px;color:var(--text-muted);align-self:flex-start;">Memoria RAM</h4>
-            <div style="position:relative;width:140px;height:140px;margin:0 auto;">
+            <div wire:ignore style="position:relative;width:140px;height:140px;margin:0 auto;">
                 <canvas id="ramChart"></canvas>
                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);font-size:24px;font-weight:800;color:var(--text-primary);">
                     <span id="ramValue">{{ is_array($metrics['ram'] ?? null) ? ($metrics['ram']['usage'] ?? 0) : 0 }}</span>%
@@ -99,7 +99,7 @@
         {{-- Disk --}}
         <div class="glass lp-panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
             <h4 class="panel-title" style="margin-bottom:16px;color:var(--text-muted);align-self:flex-start;">Almacenamiento (/)</h4>
-            <div style="position:relative;width:140px;height:140px;margin:0 auto;">
+            <div wire:ignore style="position:relative;width:140px;height:140px;margin:0 auto;">
                 <canvas id="diskChart"></canvas>
                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%, -50%);font-size:24px;font-weight:800;color:var(--text-primary);">
                     <span id="diskValue">{{ is_array($metrics['disk'] ?? null) ? ($metrics['disk']['usage'] ?? 0) : 0 }}</span>%
@@ -120,7 +120,7 @@
             <option value="7d">Últimos 7 Días</option>
         </select>
     </div>
-    <div class="glass lp-panel" style="margin-bottom:24px;height:300px;">
+    <div wire:ignore class="glass lp-panel" style="margin-bottom:24px;height:300px;">
         <canvas id="historyChart"></canvas>
     </div>
     @endif
