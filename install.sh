@@ -73,6 +73,10 @@ read -rsp "  ► Contraseña para el usuario MySQL 'larapanel': " DB_PASSWORD
 echo ""
 [[ -z "$DB_PASSWORD" ]] && error "La contraseña de base de datos no puede estar vacía."
 
+read -rsp "  ► Contraseña para el usuario maestro (admin) de MySQL: " DB_ADMIN_PASSWORD
+echo ""
+[[ -z "$DB_ADMIN_PASSWORD" ]] && error "La contraseña maestra de MySQL no puede estar vacía."
+
 read -rp "  ► ¿Instalar SSL con Let's Encrypt? [S/n]: " INSTALL_SSL
 INSTALL_SSL="${INSTALL_SSL:-S}"
 
@@ -176,6 +180,8 @@ mysql -u root <<MYSQL_EOF
 CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER IF NOT EXISTS '${PANEL_USER}'@'localhost' IDENTIFIED BY '${DB_PASSWORD}';
 GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${PANEL_USER}'@'localhost';
+CREATE USER IF NOT EXISTS 'admin'@'localhost' IDENTIFIED BY '${DB_ADMIN_PASSWORD}';
+GRANT ALL PRIVILEGES ON *.* TO 'admin'@'localhost' WITH GRANT OPTION;
 FLUSH PRIVILEGES;
 MYSQL_EOF
 
