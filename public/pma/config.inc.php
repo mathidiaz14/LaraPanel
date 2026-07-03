@@ -2,9 +2,9 @@
 $cfg['blowfish_secret'] = 'xVkaZyyRCu6Wov4yvDCm1gYYpeJS16R1';
 $i = 0;
 $i++;
-$cfg['Servers'][$i]['auth_type'] = 'signon';
-$cfg['Servers'][$i]['SignonSession'] = 'SignonSession';
-$cfg['Servers'][$i]['SignonURL'] = '/login';
+$cfg['Servers'][$i]['auth_type'] = 'cookie';
+// $cfg['Servers'][$i]['SignonSession'] = 'SignonSession';
+// $cfg['Servers'][$i]['SignonURL'] = '/login';
 $cfg['Servers'][$i]['host'] = 'localhost';
 $cfg['Servers'][$i]['compress'] = false;
 $cfg['Servers'][$i]['AllowNoPassword'] = true;
