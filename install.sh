@@ -518,6 +518,7 @@ www-data ALL=(ALL) NOPASSWD: /usr/bin/mysql
 # Fail2ban
 www-data ALL=(ALL) NOPASSWD: /bin/systemctl restart fail2ban
 www-data ALL=(ALL) NOPASSWD: /bin/systemctl status fail2ban
+www-data ALL=(ALL) NOPASSWD: /bin/systemctl is-active fail2ban
 www-data ALL=(ALL) NOPASSWD: /bin/systemctl start fail2ban
 www-data ALL=(ALL) NOPASSWD: /bin/systemctl stop fail2ban
 www-data ALL=(ALL) NOPASSWD: /usr/bin/fail2ban-client
