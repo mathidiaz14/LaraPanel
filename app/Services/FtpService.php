@@ -34,8 +34,9 @@ class FtpService
             throw new \RuntimeException("La cuenta FTP {$ftpUsername} ya existe.");
         }
 
-        // Home directory is standard public_html folder under Nginx document root
-        $relativePath = $domain->name . '/public_html' . (isset($data['subdir']) ? '/' . trim($data['subdir'], '/') : '');
+        // Home directory is relative to the domain root
+        $subdir = trim($data['subdir'] ?? '', '/');
+        $relativePath = $domain->name . ($subdir ? '/' . $subdir : '');
         
         if (!app()->isProduction()) {
             $homeDir = storage_path('app/public/webroot/' . $relativePath);

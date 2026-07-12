@@ -58,12 +58,12 @@
 
                 {{-- Subdirectory under domain --}}
                 <div class="form-group">
-                    <label class="form-label">Directorio de Inicio <span style="font-weight:400;color:var(--text-muted);">— opcional</span></label>
+                    <label class="form-label">Directorio de Inicio (relativo al dominio) <span style="font-weight:400;color:var(--text-muted);">— opcional</span></label>
                     <div style="display:flex;align-items:center;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:8px;overflow:hidden;">
                         <span style="padding:10px 14px;background:rgba(255,255,255,0.05);color:var(--text-muted);font-size:13px;border-right:1px solid var(--glass-border);font-family:monospace;">
-                            public_html/
+                            /
                         </span>
-                        <input type="text" wire:model="subdir" class="form-input" style="border:none;background:none;margin:0;" placeholder="ej. assets/img">
+                        <input type="text" wire:model="subdir" class="form-input" style="border:none;background:none;margin:0;" placeholder="ej. public_html o dejar vacío para la raíz">
                     </div>
                     @error('subdir') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
