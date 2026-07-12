@@ -158,7 +158,7 @@ apt-get install -y -qq \
 for V in 8.1 8.2; do
     if [[ "$V" != "$PHP_VERSION" ]]; then
         info "Instalando PHP $V (soporte multi-versión)..."
-        apt-get install -y -qq "php${V}-fpm" "php${V}-cli" "php${V}-mysql" "php${V}-mbstring" "php${V}-xml" 2>/dev/null || warn "PHP $V no disponible, continuando..."
+        apt-get install -y -qq "php${V}-fpm" "php${V}-cli" "php${V}-mysql" "php${V}-mbstring" "php${V}-xml" "php${V}-zip" unzip 2>/dev/null || warn "PHP $V no disponible, continuando..."
     fi
 done
 

@@ -388,17 +388,16 @@ class FileService
                 $zip->close();
                 
                 if (app()->isProduction()) {
-                    // En producción los archivos creados pueden quedar con dueño www-data en lugar de larapanel.
-                    // Pero como corre bajo el pool de PHP, www-data es correcto para el servidor web.
-                    // Si necesitamos permisos específicos, podemos correr un chown al finalizar.
                     try {
                         $this->sudo->run(['chown', '-R', 'www-data:www-data', $destPath]);
                     } catch (\Throwable $e) {}
                 }
                 return true;
             }
+            throw new \RuntimeException("No se pudo abrir el archivo zip.");
         }
-        return false;
+        
+        throw new \RuntimeException("La extensión PHP ZipArchive no está instalada en el servidor.");
     }
 
     /**
