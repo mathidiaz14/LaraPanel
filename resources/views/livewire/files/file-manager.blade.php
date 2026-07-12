@@ -613,7 +613,7 @@
     @if($showUnzipModal)
     <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);backdrop-filter:blur(5px);z-index:9999;display:flex;align-items:center;justify-content:center;">
         <div style="background:rgba(15, 23, 42, 0.95);border:1px solid var(--glass-border);border-radius:12px;padding:32px;width:100%;max-width:500px;display:flex;flex-direction:column;"
-             wire:init="processUnzip">
+             x-data="{ isExtracting: false }">
             
             <div style="text-align:center;margin-bottom:16px;">
                 <i class="fa-solid fa-box-open" style="font-size:48px;color:var(--success);margin-bottom:16px;"></i>
@@ -621,22 +621,30 @@
                 <p style="font-size:13px;color:var(--text-muted);">{{ $unzipItemName }}</p>
             </div>
 
-            <div style="width:100%;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin-bottom:12px;">
-                <div wire:stream="unzip-progress" style="width: 0%" class="bg-blue-500 h-full rounded-full transition-all duration-300"></div>
-            </div>
-            
-            <div style="font-size:14px;font-weight:600;color:var(--text-secondary);text-align:center;margin-bottom:16px;">
-                <span wire:stream="unzip-percentage">0%</span> Completado
+            <div x-show="!isExtracting" style="display:flex;justify-content:center;gap:12px;margin-bottom:20px;">
+                <button wire:click="$set('showUnzipModal', false)" class="btn btn-ghost">Cancelar</button>
+                <button @click="isExtracting = true; $wire.processUnzip()" class="btn btn-primary" style="background:var(--success);color:black;border:none;font-weight:700;">
+                    <i class="fa-solid fa-play"></i> Iniciar Descompresión
+                </button>
             </div>
 
-            <div style="background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);border-radius:8px;padding:12px;height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;font-family:monospace;" id="unzip-log-container">
-                <div wire:stream="unzip-log">
-                    <div class="text-xs text-gray-500 italic">Iniciando extracción...</div>
+            <div x-show="isExtracting" style="display:none;" x-bind:style="isExtracting ? 'display:block;' : 'display:none;'">
+                <div style="width:100%;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin-bottom:12px;">
+                    <div wire:stream="unzip-progress" style="width: 0%" class="bg-blue-500 h-full rounded-full transition-all duration-300"></div>
+                </div>
+                
+                <div style="font-size:14px;font-weight:600;color:var(--text-secondary);text-align:center;margin-bottom:16px;">
+                    <span wire:stream="unzip-percentage">0%</span> Completado
+                </div>
+
+                <div style="background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);border-radius:8px;padding:12px;height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;font-family:monospace;" id="unzip-log-container">
+                    <div wire:stream="unzip-log">
+                        <div class="text-xs text-gray-500 italic">Esperando inicio...</div>
+                    </div>
                 </div>
             </div>
             
             <script>
-                // Auto-scroll the log container to the bottom as new elements stream in
                 const logContainer = document.getElementById('unzip-log-container');
                 if (logContainer) {
                     const observer = new MutationObserver(() => {

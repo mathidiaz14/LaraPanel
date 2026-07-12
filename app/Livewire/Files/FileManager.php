@@ -247,6 +247,7 @@ class FileManager extends Component
 
     public function startUnzip(string $name)
     {
+        \Illuminate\Support\Facades\Log::info("startUnzip called for: " . $name);
         $this->unzipItemName = $name;
         $this->showUnzipModal = true;
     }
@@ -254,6 +255,7 @@ class FileManager extends Component
     public function processUnzip(FileService $fileService): void
     {
         $path = $this->currentPath . '/' . $this->unzipItemName;
+        \Illuminate\Support\Facades\Log::info("processUnzip triggered for: " . $path);
         try {
             $fileService->unzipStream($path, function ($filename, $current, $total) {
                 // Enviar la línea extraída al log
