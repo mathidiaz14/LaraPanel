@@ -27,6 +27,10 @@ class FtpIndex extends Component
     public string $editAllowedIps = '';
     public int $editBandwidthMb  = 0;
 
+    // Path edit modal
+    public ?int $editPathId = null;
+    public string $editPath = '';
+
     // Modals
     public ?int $changingPasswordId = null;
     public string $newPassword = '';
@@ -127,6 +131,41 @@ class FtpIndex extends Component
         $this->editIpId       = $id;
         $this->editAllowedIps = implode(', ', $account->allowed_ips ?? []);
         $this->editBandwidthMb = (int)round(($account->bandwidth_limit_bytes ?? 0) / 1048576);
+    }
+
+    public function openPathEdit(int $id): void
+    {
+        $account = FtpAccount::with('domain')->where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+        $this->editPathId = $id;
+        
+        $basePath = config('larapanel.paths.webroots', '/var/www') . '/' . $account->domain->name;
+        if (!app()->isProduction()) {
+            $basePath = storage_path('app/public/webroot/' . $account->domain->name);
+        }
+
+        if (str_starts_with($account->home_directory, $basePath)) {
+            $relative = trim(substr($account->home_directory, strlen($basePath)), '/');
+            $this->editPath = $relative;
+        } else {
+            $this->editPath = $account->home_directory;
+        }
+    }
+
+    public function savePathEdit(FtpService $ftpService): void
+    {
+        $this->validate([
+            'editPath' => ['nullable', 'string', 'max:100', 'regex:/^[a-zA-Z0-9_\-\.\/]*$/'],
+        ]);
+
+        $account = FtpAccount::with('domain')->where('id', $this->editPathId)->where('user_id', auth()->id())->firstOrFail();
+
+        try {
+            $ftpService->changeHomeDirectory($account, $this->editPath);
+            $this->successMessage = "Directorio raíz actualizado con éxito.";
+            $this->editPathId = null;
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
     }
 
     public function saveIpEdit(): void

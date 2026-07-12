@@ -166,6 +166,9 @@
                                     <button wire:click="openIpEdit({{ $ftp->id }})" class="btn btn-ghost btn-sm" title="Restricciones de acceso">
                                         <i class="fa-solid fa-network-wired" style="color:var(--accent-light);"></i>
                                     </button>
+                                    <button wire:click="openPathEdit({{ $ftp->id }})" class="btn btn-ghost btn-sm" title="Editar Directorio Raíz">
+                                        <i class="fa-solid fa-folder-open" style="color:#10b981;"></i>
+                                    </button>
                                     <button wire:click="confirmChangePassword({{ $ftp->id }})" class="btn btn-ghost btn-sm" title="Cambiar Contraseña">
                                         <i class="fa-solid fa-key" style="color:var(--warning);"></i>
                                     </button>
@@ -214,6 +217,47 @@
             <div class="lp-modal-footer">
                 <button wire:click="$set('editIpId', null)" class="btn btn-ghost btn-sm">Cancelar</button>
                 <button wire:click="saveIpEdit" class="btn btn-primary btn-sm">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Change Path Modal --}}
+    @if($editPathId)
+    @php $ftpForPath = $ftps->firstWhere('id', $editPathId); @endphp
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated" style="max-width:480px;">
+            <div class="lp-modal-header">
+                <h3 class="panel-title" style="margin:0;">
+                    <i class="fa-solid fa-folder-open" style="color:#10b981;margin-right:8px;"></i>
+                    Editar Directorio Raíz: <span style="color:var(--accent-light);">{{ $ftpForPath?->username }}</span>
+                </h3>
+                <button wire:click="$set('editPathId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="lp-modal-body">
+                <div class="form-group">
+                    <label class="form-label">Nuevo Directorio de Inicio (relativo al dominio)</label>
+                    <div style="display:flex;align-items:center;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);border-radius:8px;overflow:hidden;">
+                        <span style="padding:10px 14px;background:rgba(255,255,255,0.05);color:var(--text-muted);font-size:13px;border-right:1px solid var(--glass-border);font-family:monospace;">
+                            /
+                        </span>
+                        <input type="text" wire:model="editPath" class="form-input" style="border:none;background:none;margin:0;" placeholder="ej. public_html o dejar vacío para la raíz">
+                    </div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+                        También puedes escribir una ruta absoluta empezando por `/` (ej. `/var/www`).
+                    </div>
+                    @error('editPath') <div class="form-error">{{ $message }}</div> @enderror
+                </div>
+            </div>
+
+            <div class="lp-modal-footer">
+                <button wire:click="$set('editPathId', null)" class="btn btn-ghost btn-sm">Cancelar</button>
+                <button wire:click="savePathEdit" class="btn btn-primary btn-sm">
                     <i class="fa-solid fa-floppy-disk"></i> Guardar
                 </button>
             </div>

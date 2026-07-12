@@ -109,6 +109,49 @@ class FtpService
     }
 
     /**
+     * Change FTP home directory.
+     */
+    public function changeHomeDirectory(FtpAccount $account, string $newSubdir): void
+    {
+        $rawSubdir = trim($newSubdir);
+        $domain = $account->domain;
+        
+        if (str_starts_with($rawSubdir, '/')) {
+            $homeDir = rtrim($rawSubdir, '/');
+            if (empty($homeDir)) $homeDir = '/';
+        } else {
+            $subdir = trim($rawSubdir, '/');
+            $relativePath = $domain->name . ($subdir ? '/' . $subdir : '');
+            
+            if (!app()->isProduction()) {
+                $homeDir = storage_path('app/public/webroot/' . $relativePath);
+            } else {
+                $homeDir = config('larapanel.paths.webroots', '/var/www') . '/' . $relativePath;
+            }
+        }
+
+        // Create home dir if not exists
+        if (!file_exists($homeDir)) {
+            if (!app()->isProduction()) {
+                @mkdir($homeDir, 0755, true);
+            } else {
+                try {
+                    $this->sudo->run(['mkdir', '-p', $homeDir]);
+                    $this->sudo->run(['chown', 'www-data:www-data', $homeDir]);
+                } catch (\Throwable $e) {
+                    Log::error("FtpService: Failed to create FTP home dir: " . $e->getMessage());
+                }
+            }
+        }
+
+        $account->update([
+            'home_directory' => $homeDir,
+        ]);
+
+        AuditLog::record('ftp.homedir.changed', $account->username, ['home_directory' => $homeDir]);
+    }
+
+    /**
      * Toggle read-only flag.
      */
     public function toggleReadonly(FtpAccount $account): void
