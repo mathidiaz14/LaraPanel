@@ -1002,6 +1002,46 @@ systemctl restart postfix
 systemctl enable postfix
 
 # ══════════════════════════════════════════════════════════════════════════════
+#   FASE 16.5 — SERVIDOR FTP (PURE-FTPD)
+# ══════════════════════════════════════════════════════════════════════════════
+step "Fase 16.5 — Instalando y configurando Pure-FTPd (MySQL)"
+
+apt-get install -y -qq pure-ftpd-mysql
+
+# Generar archivo de configuración MySQL para Pure-FTPd
+cat > /etc/pure-ftpd/db/mysql.conf <<EOF
+MYSQLServer     127.0.0.1
+MYSQLPort       3306
+MYSQLUser       root
+MYSQLPassword   ${DB_ROOT_PWD}
+MYSQLDatabase   ${DB_DATABASE}
+MYSQLCrypt      any
+MYSQLGetPW      SELECT password_hash FROM ftp_accounts WHERE username="\L" AND is_active=1
+MYSQLGetUID     SELECT 33 FROM ftp_accounts WHERE username="\L"
+MYSQLGetGID     SELECT 33 FROM ftp_accounts WHERE username="\L"
+MYSQLGetDir     SELECT home_directory FROM ftp_accounts WHERE username="\L"
+EOF
+
+chmod 600 /etc/pure-ftpd/db/mysql.conf
+
+# Configurar Jail y Creación de directorios
+echo "yes" > /etc/pure-ftpd/conf/ChrootEveryone
+echo "yes" > /etc/pure-ftpd/conf/CreateHomeDir
+echo "33" > /etc/pure-ftpd/conf/MinUID
+echo "yes" > /etc/pure-ftpd/conf/DontResolve
+echo "30000 35000" > /etc/pure-ftpd/conf/PassivePortRange
+echo "/etc/pure-ftpd/db/mysql.conf" > /etc/pure-ftpd/conf/MySQLConfigFile
+
+# Habilitar módulo MySQL y reiniciar
+ln -sf /etc/pure-ftpd/conf/MySQLConfigFile /etc/pure-ftpd/auth/50mysql
+systemctl restart pure-ftpd-mysql
+systemctl enable pure-ftpd-mysql
+
+ufw allow 21/tcp comment 'LaraPanel FTP' || true
+ufw allow 30000:35000/tcp comment 'LaraPanel FTP Passive' || true
+ufw reload || true
+
+# ══════════════════════════════════════════════════════════════════════════════
 #   FASE 17 — WEBMAIL (ROUNDCUBE)
 # ══════════════════════════════════════════════════════════════════════════════
 step "Fase 17 — Instalando y configurando Webmail (Roundcube)"

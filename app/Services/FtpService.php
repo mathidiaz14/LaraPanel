@@ -35,13 +35,22 @@ class FtpService
         }
 
         // Home directory is relative to the domain root
-        $subdir = trim($data['subdir'] ?? '', '/');
-        $relativePath = $domain->name . ($subdir ? '/' . $subdir : '');
+        $rawSubdir = trim($data['subdir'] ?? '');
         
-        if (!app()->isProduction()) {
-            $homeDir = storage_path('app/public/webroot/' . $relativePath);
+        if (str_starts_with($rawSubdir, '/')) {
+            // Absolute path
+            $homeDir = rtrim($rawSubdir, '/');
+            if (empty($homeDir)) $homeDir = '/';
         } else {
-            $homeDir = config('larapanel.paths.webroots', '/var/www') . '/' . $relativePath;
+            // Relative to domain root
+            $subdir = trim($rawSubdir, '/');
+            $relativePath = $domain->name . ($subdir ? '/' . $subdir : '');
+            
+            if (!app()->isProduction()) {
+                $homeDir = storage_path('app/public/webroot/' . $relativePath);
+            } else {
+                $homeDir = config('larapanel.paths.webroots', '/var/www') . '/' . $relativePath;
+            }
         }
 
         // Create home dir if not exists
