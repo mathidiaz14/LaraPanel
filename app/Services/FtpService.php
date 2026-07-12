@@ -83,7 +83,7 @@ class FtpService
     public function delete(FtpAccount $account): void
     {
         AuditLog::record('ftp.deleted', $account->username);
-        $account->delete();
+        $account->forceDelete();
     }
 
     /**
