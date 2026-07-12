@@ -283,7 +283,6 @@ class FileManager extends Component
             
             $this->successMessage = "Archivo descomprimido con éxito.";
             $this->showUnzipModal = false;
-            $this->loadItems($fileService);
         } catch (\Throwable $e) {
             $this->errorMessage = $e->getMessage();
             $this->showUnzipModal = false;
