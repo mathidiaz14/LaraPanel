@@ -62,17 +62,24 @@ class MonitoringService
 
         if (!app()->isProduction()) {
             return [
-                'nginx'      => true,
-                'mysql'      => true,
-                'php8.3-fpm' => true,
-                'fail2ban'   => true,
-                'postfix'    => true,
-                'dovecot'    => true,
-                'pdns'       => true,
+                'nginx'        => true,
+                'mysql'        => true,
+                'mariadb'      => true,
+                'php8.3-fpm'   => true,
+                'redis-server' => true,
+                'memcached'    => true,
+                'docker'       => true,
+                'fail2ban'     => true,
+                'postfix'      => true,
+                'dovecot'      => true,
+                'pdns'         => true,
+                'cron'         => true,
+                'sshd'         => true,
+                'clamav-daemon'=> true,
             ];
         }
 
-        $services = ['nginx', 'mysql', 'php8.3-fpm', 'fail2ban', 'postfix', 'dovecot', 'pdns'];
+        $services = ['nginx', 'mysql', 'mariadb', 'php8.3-fpm', 'redis-server', 'memcached', 'docker', 'fail2ban', 'postfix', 'dovecot', 'pdns', 'cron', 'sshd', 'clamav-daemon'];
         $statuses = [];
         foreach ($services as $svc) {
             $statuses[$svc] = trim(shell_exec("systemctl is-active {$svc} 2>/dev/null") ?? '') === 'active';
@@ -445,7 +452,7 @@ class MonitoringService
      */
     protected function getRemoteServicesStatus(\App\Shell\RemoteShellExecutor $executor): array
     {
-        $services = ['nginx', 'mysql', 'php8.3-fpm', 'fail2ban', 'postfix', 'dovecot', 'pdns'];
+        $services = ['nginx', 'mysql', 'mariadb', 'php8.3-fpm', 'redis-server', 'memcached', 'docker', 'fail2ban', 'postfix', 'dovecot', 'pdns', 'cron', 'sshd', 'clamav-daemon'];
         $statuses = [];
 
         foreach ($services as $svc) {
