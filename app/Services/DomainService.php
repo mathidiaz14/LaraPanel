@@ -6,6 +6,7 @@ use App\Models\Domain;
 use App\Models\User;
 use App\Models\AuditLog;
 use App\Shell\SudoExecutor;
+use App\Services\DnsService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -23,6 +24,7 @@ class DomainService
 {
     public function __construct(
         protected SudoExecutor $sudo,
+        protected DnsService $dns,
     ) {}
 
     // ────────────────────────────────────────────────────────────────
@@ -72,6 +74,14 @@ class DomainService
             'deployed_at' => now(),
             'is_active'   => true,
         ]);
+
+        if ($type === 'main') {
+            try {
+                $this->dns->createZone($user, $domain);
+            } catch (\Throwable $e) {
+                \Log::error("Failed to automatically create DNS zone for domain {$domain->name}: " . $e->getMessage());
+            }
+        }
 
         AuditLog::record('domain.created', $domainName, ['domain_id' => $domain->id]);
 

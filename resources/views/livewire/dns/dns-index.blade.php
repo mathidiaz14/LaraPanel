@@ -40,60 +40,76 @@
         </button>
     </div>
     @else
-    {{-- Zones Grid --}}
-    <div class="lp-two-col">
-        @foreach($zones as $zone)
-        <div class="glass lp-panel" style="border-color:{{ $zone->is_active ? 'rgba(99,102,241,0.2)' : 'var(--glass-border)' }};">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <div style="width:38px;height:38px;border-radius:10px;background:rgba(99,102,241,0.12);display:flex;align-items:center;justify-content:center;">
-                        <i class="fa-solid fa-globe" style="color:var(--accent-light);"></i>
-                    </div>
-                    <div>
-                        <div style="font-weight:700;font-size:14px;color:var(--text-primary);">{{ $zone->name }}</div>
-                        <div style="font-size:11px;color:var(--text-muted);">{{ $zone->type }} · Serial: {{ $zone->serial }}</div>
-                    </div>
-                </div>
-                <span class="badge {{ $zone->is_active ? 'badge-success' : 'badge-muted' }}" style="font-size:11px;">
-                    {{ $zone->is_active ? 'Activa' : 'Inactiva' }}
-                </span>
-            </div>
-
-            {{-- Records summary --}}
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
-                @foreach($zone->recordsCountByType() as $type => $count)
-                <span style="background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);border-radius:6px;padding:2px 8px;font-size:11px;font-family:monospace;">
-                    {{ $type }}: {{ $count }}
-                </span>
-                @endforeach
-                @if($zone->records->isEmpty())
-                <span style="font-size:11px;color:var(--text-muted);">Sin registros</span>
-                @endif
-            </div>
-
-            {{-- NS info --}}
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;line-height:1.7;">
-                <i class="fa-solid fa-server" style="margin-right:4px;"></i>
-                NS: <code>{{ $zone->primary_ns }}</code>
-                @if($zone->secondary_ns)
-                · <code>{{ $zone->secondary_ns }}</code>
-                @endif
-            </div>
-
-            {{-- Actions --}}
-            <div class="lp-row-actions" style="border-top:1px solid var(--glass-border);padding-top:12px;">
-                <a href="{{ route('dns.zone', $zone->id) }}" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;">
-                    <i class="fa-solid fa-pen-to-square"></i> Editar Registros
-                </a>
-                <button wire:click="applyEmailTemplate({{ $zone->id }})" class="btn btn-ghost btn-sm" title="Agregar registros MX, SPF, DMARC" style="color:var(--success);">
-                    <i class="fa-solid fa-envelope-circle-check"></i>
-                </button>
-                <button wire:click="deleteZone({{ $zone->id }})" class="btn btn-danger btn-sm" onclick="return confirm('¿Eliminar zona DNS {{ $zone->name }}? Todos los registros se perderán.')">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
-            </div>
+    {{-- Zones Table --}}
+    <div class="glass" style="overflow:hidden;">
+        <div class="table-responsive">
+            <table class="lp-table">
+                <thead>
+                    <tr>
+                        <th>Zona DNS</th>
+                        <th>Nameservers</th>
+                        <th>Registros</th>
+                        <th>Estado</th>
+                        <th style="text-align:right">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($zones as $zone)
+                    <tr wire:key="zone-{{ $zone->id }}">
+                        <td>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <div style="width:34px;height:34px;border-radius:8px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.2);display:flex;align-items:center;justify-content:center;">
+                                    <i class="fa-solid fa-globe" style="color:var(--accent-light);font-size:14px;"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight:600;font-size:14px;color:var(--text-primary);">{{ $zone->name }}</div>
+                                    <div style="font-size:11px;color:var(--text-muted);">{{ $zone->type }} · Serial: {{ $zone->serial }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-size:12px;color:var(--text-secondary);line-height:1.4;">
+                                <div><code style="color:var(--accent-light);">{{ $zone->primary_ns }}</code></div>
+                                @if($zone->secondary_ns)
+                                <div><code style="color:var(--accent-light);">{{ $zone->secondary_ns }}</code></div>
+                                @endif
+                            </div>
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:4px;flex-wrap:wrap;max-width:320px;">
+                                @foreach($zone->recordsCountByType() as $type => $count)
+                                <span style="background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);border-radius:4px;padding:1px 6px;font-size:10px;font-family:monospace;color:var(--text-primary);">
+                                    {{ $type }}:{{ $count }}
+                                </span>
+                                @endforeach
+                                @if($zone->records->isEmpty())
+                                <span style="font-size:11px;color:var(--text-muted);">Sin registros</span>
+                                @endif
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge {{ $zone->is_active ? 'badge-success' : 'badge-muted' }}">
+                                {{ $zone->is_active ? 'Activa' : 'Inactiva' }}
+                            </span>
+                        </td>
+                        <td style="text-align:right;">
+                            <div class="lp-row-actions" style="justify-content:flex-end;">
+                                <a href="{{ route('dns.zone', $zone->id) }}" class="btn btn-ghost btn-sm" title="Editar Registros">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </a>
+                                <button wire:click="applyEmailTemplate({{ $zone->id }})" class="btn btn-ghost btn-sm" title="Aplicar plantilla de email (MX, SPF, DMARC)" style="color:var(--success);">
+                                    <i class="fa-solid fa-envelope-circle-check"></i>
+                                </button>
+                                <button wire:click="deleteZone({{ $zone->id }})" class="btn btn-danger btn-sm" title="Eliminar Zona" onclick="return confirm('¿Eliminar zona DNS {{ $zone->name }}? Todos los registros se perderán.')">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
-        @endforeach
     </div>
     @endif
 
