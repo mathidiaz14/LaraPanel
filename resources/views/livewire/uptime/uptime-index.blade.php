@@ -27,75 +27,87 @@
             <button wire:click="$set('showCreateModal', true)" class="btn btn-primary mt-4">Añadir Monitor</button>
         </div>
     @else
-        <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(400px, 1fr));gap:20px;">
+        <div style="display:flex;flex-direction:column;gap:16px;">
             @foreach($monitors as $monitor)
-            <div class="glass" style="padding:20px;display:flex;flex-direction:column;gap:15px;position:relative;">
+            @php
+                $stats = $chartData[$monitor->id] ?? null;
+                $uptimePct = $stats['uptime'] ?? 0;
                 
-                {{-- Status Badge --}}
-                <div style="position:absolute;top:20px;right:20px;">
-                    @if($monitor->status === 'up')
-                        <span class="badge badge-success"><i class="fa-solid fa-check"></i> EN LÍNEA</span>
-                    @elseif($monitor->status === 'down')
-                        <span class="badge badge-danger"><i class="fa-solid fa-xmark"></i> CAÍDO</span>
-                    @elseif($monitor->status === 'paused')
-                        <span class="badge badge-muted"><i class="fa-solid fa-pause"></i> PAUSADO</span>
-                    @else
-                        <span class="badge badge-warning"><i class="fa-solid fa-hourglass-half"></i> ESPERANDO</span>
-                    @endif
+                if ($monitor->status === 'up') {
+                    $statusColor = 'var(--success)';
+                    $statusBg = 'rgba(16,185,129,0.1)';
+                    $statusBorder = 'rgba(16,185,129,0.2)';
+                    $icon = 'check';
+                } elseif ($monitor->status === 'down') {
+                    $statusColor = 'var(--danger)';
+                    $statusBg = 'rgba(239,68,68,0.1)';
+                    $statusBorder = 'rgba(239,68,68,0.2)';
+                    $icon = 'xmark';
+                } elseif ($monitor->status === 'paused') {
+                    $statusColor = 'var(--text-muted)';
+                    $statusBg = 'rgba(255,255,255,0.05)';
+                    $statusBorder = 'rgba(255,255,255,0.1)';
+                    $icon = 'pause';
+                } else {
+                    $statusColor = 'var(--warning)';
+                    $statusBg = 'rgba(245,158,11,0.1)';
+                    $statusBorder = 'rgba(245,158,11,0.2)';
+                    $icon = 'hourglass-half';
+                }
+            @endphp
+            <div class="glass" style="padding:16px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+                
+                {{-- Status Icon --}}
+                <div style="min-width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:{{ $statusBg }};border:1px solid {{ $statusBorder }};" title="Estado: {{ strtoupper($monitor->status) }}">
+                    <i class="fa-solid fa-{{ $icon }}" style="color:{{ $statusColor }};font-size:20px;"></i>
                 </div>
-
+                
                 {{-- Info --}}
-                <div>
-                    <h3 style="margin:0 0 5px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;">
-                        <i class="fa-solid fa-{{ $monitor->type === 'http' ? 'globe' : 'box-open' }}" style="color:var(--accent-light);"></i>
+                <div style="flex:1;min-width:200px;">
+                    <h3 style="margin:0 0 4px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;">
+                        <i class="fa-solid fa-{{ $monitor->type === 'http' ? 'globe' : 'box-open' }}" style="color:var(--accent-light);font-size:14px;"></i>
                         {{ $monitor->name }}
                     </h3>
-                    <div style="font-size:12px;color:var(--text-muted);font-family:monospace;">
+                    <div style="font-size:12px;color:var(--text-muted);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                         {{ $monitor->target }}
                     </div>
                 </div>
 
                 {{-- Chart Area --}}
-                @php
-                    $stats = $chartData[$monitor->id] ?? null;
-                @endphp
-                <div style="background:rgba(0,0,0,0.15);border:1px solid var(--glass-border);border-radius:10px;padding:15px;">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-                        <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;">Uptime 24hs</span>
-                        <span style="font-size:13px;font-weight:700;color:{{ ($stats['uptime'] ?? 0) >= 99 ? 'var(--success)' : 'var(--warning)' }};">
-                            {{ $stats['uptime'] ?? 0 }}%
-                        </span>
-                    </div>
-                    
-                    <div style="height:60px;width:100%;">
+                <div style="display:flex;flex-direction:column;align-items:flex-start;width:180px;">
+                    <span style="font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:4px;">UPTIME 24H: <strong style="color:{{ $uptimePct >= 99 ? 'var(--success)' : 'var(--warning)' }}">{{ $uptimePct }}%</strong></span>
+                    <div style="height:36px;width:100%;">
                         <canvas id="chart-{{ $monitor->id }}" data-labels='@json($stats['labels'] ?? [])' data-values='@json($stats['data'] ?? [])'></canvas>
                     </div>
                 </div>
                 
-                {{-- Last Check / Error --}}
-                <div style="font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;">
-                    <span>Última vez: {{ $monitor->last_checked_at ? $monitor->last_checked_at->diffForHumans() : 'Nunca' }}</span>
-                    <span>Intervalo: {{ $monitor->interval_minutes }}m</span>
+                {{-- Details --}}
+                <div style="display:flex;flex-direction:column;align-items:flex-start;width:130px;font-size:11px;color:var(--text-muted);gap:6px;">
+                    <div><i class="fa-regular fa-clock" style="margin-right:4px;"></i> Int: {{ $monitor->interval_minutes }} min</div>
+                    <div><i class="fa-solid fa-rotate" style="margin-right:4px;"></i> {{ $monitor->last_checked_at ? $monitor->last_checked_at->diffForHumans() : 'Nunca' }}</div>
                 </div>
-                @if($monitor->status === 'down' && $monitor->last_error)
-                <div style="font-size:11px;color:#f87171;background:rgba(239,68,68,0.1);padding:8px;border-radius:6px;border:1px solid rgba(239,68,68,0.2);">
-                    <strong>Error:</strong> {{ \Illuminate\Support\Str::limit($monitor->last_error, 80) }}
-                </div>
-                @endif
-
+                
                 {{-- Actions --}}
-                <div style="display:flex;gap:10px;margin-top:auto;padding-top:10px;border-top:1px solid var(--glass-border);">
-                    <button wire:click="togglePause({{ $monitor->id }})" class="btn btn-ghost btn-sm" style="flex:1;">
+                <div style="display:flex;gap:8px;margin-left:auto;">
+                    <button wire:click="togglePause({{ $monitor->id }})" class="btn btn-ghost btn-sm" title="{{ $monitor->status === 'paused' ? 'Reanudar' : 'Pausar' }}" style="padding:6px 12px;">
                         @if($monitor->status === 'paused')
-                            <i class="fa-solid fa-play"></i> Reanudar
+                            <i class="fa-solid fa-play"></i>
                         @else
-                            <i class="fa-solid fa-pause"></i> Pausar
+                            <i class="fa-solid fa-pause"></i>
                         @endif
                     </button>
-                    <button wire:click="deleteMonitor({{ $monitor->id }})" onclick="return confirm('¿Seguro que deseas eliminar este monitor?')" class="btn btn-danger btn-sm" style="flex:1;">
-                        <i class="fa-solid fa-trash"></i> Eliminar
+                    <button wire:click="deleteMonitor({{ $monitor->id }})" onclick="return confirm('¿Seguro que deseas eliminar este monitor?')" class="btn btn-danger btn-sm" title="Eliminar" style="padding:6px 12px;">
+                        <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
+                
+                {{-- Error Message (if down) --}}
+                @if($monitor->status === 'down' && $monitor->last_error)
+                <div style="width:100%;font-size:12px;color:#f87171;background:rgba(239,68,68,0.1);padding:10px 16px;border-radius:8px;border:1px solid rgba(239,68,68,0.2);margin-top:10px;">
+                    <strong><i class="fa-solid fa-triangle-exclamation"></i> Error detectado:</strong> {{ $monitor->last_error }}
+                </div>
+                @endif
+                
             </div>
             @endforeach
         </div>
