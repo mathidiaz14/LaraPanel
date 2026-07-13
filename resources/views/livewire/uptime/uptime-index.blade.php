@@ -1,9 +1,9 @@
 <div>
     {{-- Header --}}
-    <div class="header-banner">
+    <div class="header-banner" style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap;">
         <div>
-            <h1 class="page-title">Monitor de Servicios (Uptime)</h1>
-            <p class="page-subtitle">Monitorea tus sitios web y contenedores Docker en tiempo real.</p>
+            <h1 class="page-title" style="margin:0;">Monitor de Servicios (Uptime)</h1>
+            <p class="page-subtitle" style="margin: 8px 0 0 0;">Monitorea tus sitios web y contenedores Docker en tiempo real.</p>
         </div>
         <button wire:click="$set('showCreateModal', true)" class="btn btn-primary">
             <i class="fa-solid fa-plus"></i> Nuevo Monitor
