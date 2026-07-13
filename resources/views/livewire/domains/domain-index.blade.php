@@ -61,13 +61,22 @@
                     <th>Creado</th>
                     <th style="text-align:right">Acciones</th>
                 </tr>
-            </thead>
-            <tbody>
-                @foreach($domains as $domain)
+            @foreach($groupedDomains as $groupName => $groupData)
+            @php 
+                $domain = $groupData['main'];
+                $subdomains = $groupData['subdomains'];
+                $hasSubs = count($subdomains) > 0;
+            @endphp
+            <tbody x-data="{ expanded: false }">
                 <tr wire:key="domain-{{ $domain->id }}">
                     <td>
                         <div style="display:flex;align-items:center;gap:10px;">
-                            <div style="width:34px;height:34px;border-radius:8px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.2);display:flex;align-items:center;justify-content:center;">
+                            @if($hasSubs)
+                            <button @click="expanded = !expanded" class="btn btn-ghost btn-sm" style="padding:4px;border-radius:4px;width:24px;height:24px;margin-right:-4px;">
+                                <i class="fa-solid fa-chevron-right" style="font-size:11px;transition:transform 0.2s;" :style="expanded ? 'transform:rotate(90deg)' : ''"></i>
+                            </button>
+                            @endif
+                            <div style="width:34px;height:34px;border-radius:8px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.2);display:flex;align-items:center;justify-content:center;{{ !$hasSubs ? 'margin-left:24px;' : '' }}">
                                 <i class="fa-solid fa-globe" style="color:var(--accent-light);font-size:14px;"></i>
                             </div>
                             <div>
@@ -116,12 +125,9 @@
                     </td>
                     <td style="text-align:right;">
                         <div class="lp-row-actions">
-                            {{-- Manage SSL --}}
                             <a href="{{ route('ssl.index') }}" class="btn btn-ghost btn-sm" title="SSL">
                                 <i class="fa-solid fa-lock"></i>
                             </a>
-
-                            {{-- Suspend / Unsuspend --}}
                             @if($domain->status === 'active')
                             <button wire:click="suspendDomain({{ $domain->id }})"
                                     wire:confirm="¿Suspender el dominio {{ $domain->name }}?"
@@ -136,14 +142,10 @@
                                 <i class="fa-solid fa-play"></i>
                             </button>
                             @endif
-
-                            {{-- Edit --}}
                             <button wire:click="editDomain({{ $domain->id }})"
                                     class="btn btn-ghost btn-sm" title="Editar Configuración">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
-
-                            {{-- Delete --}}
                             <button wire:click="confirmDelete({{ $domain->id }})"
                                     class="btn btn-danger btn-sm" title="Eliminar">
                                 <i class="fa-solid fa-trash"></i>
@@ -151,8 +153,74 @@
                         </div>
                     </td>
                 </tr>
+
+                @foreach($subdomains as $sub)
+                <tr wire:key="domain-{{ $sub->id }}" x-show="expanded" style="background:rgba(255,255,255,0.015);display:none;" x-transition>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;padding-left:34px;">
+                            <div style="width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
+                                <i class="fa-solid fa-diagram-project" style="color:var(--text-secondary);font-size:12px;"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight:600;font-size:13px;color:var(--text-secondary);">{{ $sub->name }}</div>
+                                <div style="font-size:11px;color:var(--text-muted);">{{ $sub->document_root }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge badge-muted" style="text-transform:capitalize;">
+                            {{ $sub->type }}
+                        </span>
+                    </td>
+                    <td>
+                        <span style="font-family:monospace;font-size:12px;color:var(--text-secondary);">
+                            PHP {{ $sub->php_version }}
+                        </span>
+                    </td>
+                    <td>
+                        @if($sub->ssl_enabled)
+                            <span class="badge badge-success">
+                                <i class="fa-solid fa-lock" style="font-size:9px;"></i> SSL
+                            </span>
+                        @else
+                            <span class="badge badge-muted">Sin SSL</span>
+                        @endif
+                    </td>
+                    <td>
+                        @php
+                            [$cls, $label] = $statusMap[$sub->status] ?? ['badge-muted', $sub->status];
+                        @endphp
+                        <span class="badge {{ $cls }}">{{ $label }}</span>
+                    </td>
+                    <td style="font-size:12px;color:var(--text-muted);">
+                        {{ $sub->created_at->diffForHumans() }}
+                    </td>
+                    <td style="text-align:right;">
+                        <div class="lp-row-actions">
+                            <a href="{{ route('ssl.index') }}" class="btn btn-ghost btn-sm" title="SSL">
+                                <i class="fa-solid fa-lock"></i>
+                            </a>
+                            @if($sub->status === 'active')
+                            <button wire:click="suspendDomain({{ $sub->id }})" wire:confirm="¿Suspender el subdominio {{ $sub->name }}?" class="btn btn-ghost btn-sm" title="Suspender" style="color:var(--warning)">
+                                <i class="fa-solid fa-pause"></i>
+                            </button>
+                            @elseif($sub->status === 'suspended')
+                            <button wire:click="unsuspendDomain({{ $sub->id }})" class="btn btn-ghost btn-sm" title="Reactivar" style="color:var(--success)">
+                                <i class="fa-solid fa-play"></i>
+                            </button>
+                            @endif
+                            <button wire:click="editDomain({{ $sub->id }})" class="btn btn-ghost btn-sm" title="Editar">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button wire:click="confirmDelete({{ $sub->id }})" class="btn btn-danger btn-sm" title="Eliminar">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
                 @endforeach
             </tbody>
+            @endforeach
         </table>
         @endif
         @if(!$domains->isEmpty())

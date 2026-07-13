@@ -105,8 +105,32 @@ class DomainIndex extends Component
 
     public function render(DomainService $service)
     {
+        $domains = $this->getDomains();
+        
+        $grouped = [];
+        $domainNames = $domains->pluck('name')->toArray();
+        
+        foreach ($domains as $domain) {
+            $isSubdomain = false;
+            foreach ($domainNames as $potentialRoot) {
+                if ($domain->name !== $potentialRoot && str_ends_with($domain->name, '.' . $potentialRoot)) {
+                    $grouped[$potentialRoot]['subdomains'][] = $domain;
+                    $isSubdomain = true;
+                    break;
+                }
+            }
+            if (!$isSubdomain) {
+                if (!isset($grouped[$domain->name])) {
+                    $grouped[$domain->name] = ['main' => $domain, 'subdomains' => []];
+                } else {
+                    $grouped[$domain->name]['main'] = $domain;
+                }
+            }
+        }
+
         return view('livewire.domains.domain-index', [
-            'domains' => $this->getDomains(),
+            'domains' => $domains,
+            'groupedDomains' => $grouped,
             'phpVersions' => $service->getAvailablePhpVersions(),
         ])->layout('layouts.app', [
             'title'      => 'Dominios',

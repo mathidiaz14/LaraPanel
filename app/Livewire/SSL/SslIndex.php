@@ -45,8 +45,35 @@ class SslIndex extends Component
 
     public function render()
     {
+        $certificates = $this->getCertificates();
+        
+        $grouped = [];
+        $domainNames = $certificates->map(fn($c) => $c->domain->name ?? '')->filter()->toArray();
+        
+        foreach ($certificates as $cert) {
+            $name = $cert->domain->name ?? '';
+            if (!$name) continue;
+            
+            $isSubdomain = false;
+            foreach ($domainNames as $potentialRoot) {
+                if ($name !== $potentialRoot && str_ends_with($name, '.' . $potentialRoot)) {
+                    $grouped[$potentialRoot]['subdomains'][] = $cert;
+                    $isSubdomain = true;
+                    break;
+                }
+            }
+            if (!$isSubdomain) {
+                if (!isset($grouped[$name])) {
+                    $grouped[$name] = ['main' => $cert, 'subdomains' => []];
+                } else {
+                    $grouped[$name]['main'] = $cert;
+                }
+            }
+        }
+
         return view('livewire.ssl.ssl-index', [
-            'certificates'     => $this->getCertificates(),
+            'certificates'     => $certificates,
+            'groupedCerts'     => $grouped,
             'domainsWithoutSsl'=> $this->getDomainsWithoutSsl(),
         ])->layout('layouts.app', [
             'title'      => 'SSL / TLS',

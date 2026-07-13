@@ -43,10 +43,19 @@ class FileManager extends Component
     public string $successMessage = '';
     public string $errorMessage = '';
 
+    // Delete Modal
+    public bool $showDeleteModal = false;
+    public string $deletingItemName = '';
+    public bool $isDeletingMultiple = false;
+
+    // Tree state
+    public array $expandedPaths = ['']; // root is always expanded
+
     public function mount(): void
     {
         $this->currentPath = '';
         $this->selectedItems = [];
+        $this->expandedPaths = [''];
     }
 
     public function navigate(string $path): void
@@ -112,6 +121,29 @@ class FileManager extends Component
         } catch (\Throwable $e) {
             $this->errorMessage = $e->getMessage();
         }
+    }
+
+    public function confirmDelete(string $name = ''): void
+    {
+        if (empty($name) && empty($this->selectedItems)) {
+            return;
+        }
+
+        $this->deletingItemName = $name;
+        $this->isDeletingMultiple = empty($name);
+        $this->showDeleteModal = true;
+    }
+
+    public function executeDelete(FileService $fileService): void
+    {
+        if ($this->isDeletingMultiple) {
+            $this->deleteSelected($fileService);
+        } else {
+            $this->deleteItem($this->deletingItemName, $fileService);
+        }
+        $this->showDeleteModal = false;
+        $this->deletingItemName = '';
+        $this->selectedItems = [];
     }
 
     /**
@@ -464,6 +496,47 @@ class FileManager extends Component
         }
     }
 
+    public function toggleNode(string $path): void
+    {
+        $index = array_search($path, $this->expandedPaths);
+        if ($index !== false) {
+            unset($this->expandedPaths[$index]);
+            $this->expandedPaths = array_values($this->expandedPaths);
+        } else {
+            $this->expandedPaths[] = $path;
+        }
+    }
+
+    protected function buildTreeLevel(string $path, FileService $fileService)
+    {
+        $tree = [];
+        try {
+            $items = $fileService->listDirectory($path);
+        } catch (\Throwable $e) {
+            return []; 
+        }
+
+        foreach ($items as $item) {
+            if ($item['is_dir']) {
+                $itemPath = $path === '' ? $item['name'] : $path . '/' . $item['name'];
+                $node = [
+                    'name' => $item['name'],
+                    'path' => $itemPath,
+                    'isExpanded' => in_array($itemPath, $this->expandedPaths),
+                    'children' => []
+                ];
+
+                if ($node['isExpanded']) {
+                    $node['children'] = $this->buildTreeLevel($itemPath, $fileService);
+                }
+
+                $tree[] = $node;
+            }
+        }
+        usort($tree, fn($a, $b) => strcasecmp($a['name'], $b['name']));
+        return $tree;
+    }
+
     public function render(FileService $fileService, MonitoringService $monitoringService)
     {
         try {
@@ -473,6 +546,8 @@ class FileManager extends Component
             $this->currentPath = '';
             $items = $fileService->listDirectory($this->currentPath);
         }
+
+        $tree = $this->buildTreeLevel('', $fileService);
 
         // Generate breadcrumb links
         $breadcrumbs = [];
@@ -493,6 +568,7 @@ class FileManager extends Component
             'items' => $items,
             'breadcrumbs' => $breadcrumbs,
             'diskInfo' => $diskInfo,
+            'tree' => $tree,
         ])->layout('layouts.app', [
             'title'      => 'Administrador de Archivos',
             'breadcrumb' => '<span>Hosting</span> / <strong>Administrador de Archivos</strong>',

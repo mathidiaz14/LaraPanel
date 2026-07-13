@@ -57,108 +57,179 @@
     @else
 
     {{-- Cert cards grid --}}
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;">
-        @foreach($certificates as $cert)
-        @php
-            $days = $cert->daysUntilExpiry();
-            $isExpiringSoon = $cert->isExpiringSoon(30);
-            $isExpired = $cert->isExpired();
-            $cardBorder = $isExpired ? 'rgba(239,68,68,0.3)' : ($isExpiringSoon ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.2)');
-        @endphp
-        <div class="glass" style="padding:20px;border-color:{{ $cardBorder }};position:relative;overflow:hidden;">
-            {{-- Provider badge --}}
-            <div style="position:absolute;top:16px;right:16px;">
-                @if($cert->provider === 'letsencrypt')
-                <span class="badge badge-success" style="font-size:10px;">
-                    <i class="fa-solid fa-shield-halved"></i> Let's Encrypt
-                </span>
-                @elseif($cert->provider === 'custom')
-                <span class="badge badge-accent" style="font-size:10px;">
-                    <i class="fa-solid fa-building"></i> Custom
-                </span>
-                @else
-                <span class="badge badge-muted" style="font-size:10px;">
-                    <i class="fa-solid fa-certificate"></i> Self-signed
-                </span>
-                @endif
-            </div>
-
-            {{-- Domain --}}
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-right:90px;">
-                <div style="width:38px;height:38px;border-radius:9px;background:{{ $isExpired ? 'rgba(239,68,68,0.12)' : ($isExpiringSoon ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)') }};display:flex;align-items:center;justify-content:center;">
-                    <i class="fa-solid fa-{{ $isExpired ? 'lock-open' : 'lock' }}" style="color:{{ $isExpired ? 'var(--danger)' : ($isExpiringSoon ? 'var(--warning)' : 'var(--success)') }};font-size:16px;"></i>
-                </div>
-                <div>
-                    <div style="font-weight:600;font-size:14px;">{{ $cert->domain?->name ?? 'Dominio eliminado' }}</div>
-                    <div style="font-size:11px;color:var(--text-muted);">HTTPS habilitado</div>
-                </div>
-            </div>
-
-            {{-- Details --}}
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-                <div style="padding:10px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;">
-                    <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">ESTADO</div>
-                    <div style="font-size:13px;font-weight:600;color:{{ $isExpired ? 'var(--danger)' : ($isExpiringSoon ? 'var(--warning)' : 'var(--success)') }};">
-                        {{ $cert->statusLabel() }}
-                    </div>
-                </div>
-                <div style="padding:10px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;">
-                    <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px;">EXPIRA</div>
-                    <div style="font-size:13px;font-weight:600;color:{{ $isExpired ? 'var(--danger)' : ($isExpiringSoon ? 'var(--warning)' : 'var(--text-primary)') }};">
-                        @if($days !== null)
-                            @if($isExpired)
-                                <i class="fa-solid fa-circle-exclamation"></i> Expirado
-                            @elseif($days === 0)
-                                Hoy
-                            @elseif($days <= 7)
-                                En {{ $days }}d
-                            @else
-                                {{ $cert->expires_at?->format('d/m/Y') }}
-                            @endif
-                        @else
-                            —
-                        @endif
-                    </div>
-                </div>
-            </div>
-
-            {{-- Expiry bar --}}
-            @if($cert->issued_at && $cert->expires_at)
-            @php
-                $total    = $cert->issued_at->diffInDays($cert->expires_at);
-                $elapsed  = $cert->issued_at->diffInDays(now());
-                $pct      = $total > 0 ? min(100, round($elapsed / $total * 100)) : 100;
-                $barClass = $isExpired ? 'danger' : ($isExpiringSoon ? 'warning' : 'success');
+    <div class="table-responsive">
+        <table class="lp-table">
+            <thead>
+                <tr>
+                    <th>Dominio</th>
+                    <th>Proveedor</th>
+                    <th>Estado</th>
+                    <th>Vencimiento</th>
+                    <th style="text-align:right">Acciones</th>
+                </tr>
+            </thead>
+            @foreach($groupedCerts as $groupName => $groupData)
+            @php 
+                $cert = $groupData['main'];
+                $subcerts = $groupData['subdomains'];
+                $hasSubs = count($subcerts) > 0;
             @endphp
-            <div class="progress-bar" style="margin-bottom:14px;">
-                <div class="progress-fill {{ $barClass }}" style="width:{{ $pct }}%"></div>
-            </div>
-            @endif
+            <tbody x-data="{ expanded: false }">
+                <tr wire:key="cert-{{ $cert->id }}">
+                    @php
+                        $days = $cert->daysUntilExpiry();
+                        $isExpiringSoon = $cert->isExpiringSoon(30);
+                        $isExpired = $cert->isExpired();
+                    @endphp
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            @if($hasSubs)
+                            <button @click="expanded = !expanded" class="btn btn-ghost btn-sm" style="padding:4px;border-radius:4px;width:24px;height:24px;margin-right:-4px;">
+                                <i class="fa-solid fa-chevron-right" style="font-size:11px;transition:transform 0.2s;" :style="expanded ? 'transform:rotate(90deg)' : ''"></i>
+                            </button>
+                            @endif
+                            <div style="width:34px;height:34px;border-radius:8px;background:{{ $isExpired ? 'rgba(239,68,68,0.12)' : ($isExpiringSoon ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)') }};border:1px solid {{ $isExpired ? 'rgba(239,68,68,0.2)' : ($isExpiringSoon ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)') }};display:flex;align-items:center;justify-content:center;{{ !$hasSubs ? 'margin-left:24px;' : '' }}">
+                                <i class="fa-solid fa-{{ $isExpired ? 'lock-open' : 'lock' }}" style="color:{{ $isExpired ? 'var(--danger)' : ($isExpiringSoon ? 'var(--warning)' : 'var(--success)') }};font-size:14px;"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight:600;font-size:14px;">{{ $cert->domain?->name ?? 'Dominio eliminado' }}</div>
+                                @if($cert->san_domains && count($cert->san_domains) > 1)
+                                <div style="font-size:11px;color:var(--text-muted);">{{ count($cert->san_domains) }} SANs</div>
+                                @else
+                                <div style="font-size:11px;color:var(--text-muted);">HTTPS habilitado</div>
+                                @endif
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        @if($cert->provider === 'letsencrypt')
+                            <span class="badge badge-success" style="font-size:10px;">
+                                <i class="fa-solid fa-shield-halved"></i> Let's Encrypt
+                            </span>
+                        @elseif($cert->provider === 'custom')
+                            <span class="badge badge-accent" style="font-size:10px;">
+                                <i class="fa-solid fa-building"></i> Custom
+                            </span>
+                        @else
+                            <span class="badge badge-muted" style="font-size:10px;">
+                                <i class="fa-solid fa-certificate"></i> Self-signed
+                            </span>
+                        @endif
+                    </td>
+                    <td>
+                        <span style="font-size:12px;font-weight:600;color:{{ $isExpired ? 'var(--danger)' : ($isExpiringSoon ? 'var(--warning)' : 'var(--success)') }};">
+                            {{ $cert->statusLabel() }}
+                        </span>
+                    </td>
+                    <td>
+                        <span style="font-size:12px;font-weight:600;color:{{ $isExpired ? 'var(--danger)' : ($isExpiringSoon ? 'var(--warning)' : 'var(--text-primary)') }};">
+                            @if($days !== null)
+                                @if($isExpired)
+                                    <i class="fa-solid fa-circle-exclamation"></i> Expirado
+                                @elseif($days === 0)
+                                    Hoy
+                                @elseif($days <= 7)
+                                    En {{ $days }}d
+                                @else
+                                    {{ $cert->expires_at?->format('d/m/Y') }}
+                                @endif
+                            @else
+                                —
+                            @endif
+                        </span>
+                    </td>
+                    <td style="text-align:right;">
+                        <div class="lp-row-actions">
+                            @if($cert->provider === 'letsencrypt' && !$isExpired)
+                            <a href="{{ route('ssl.issue') }}?domain={{ $cert->domain_id }}" class="btn btn-ghost btn-sm" title="Renovar">
+                                <i class="fa-solid fa-rotate"></i>
+                            </a>
+                            @endif
+                            <a href="{{ route('ssl.install') }}?domain={{ $cert->domain_id }}" class="btn btn-ghost btn-sm" title="Reemplazar">
+                                <i class="fa-solid fa-arrow-up-from-bracket"></i>
+                            </a>
+                            <button wire:click="confirmRevoke({{ $cert->id }})" class="btn btn-danger btn-sm" title="Revocar">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
 
-            {{-- SANs --}}
-            @if($cert->san_domains && count($cert->san_domains) > 1)
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px;">
-                <i class="fa-solid fa-list"></i> SANs: {{ implode(', ', $cert->san_domains) }}
-            </div>
-            @endif
-
-            {{-- Actions --}}
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                @if($cert->provider === 'letsencrypt' && !$isExpired)
-                <a href="{{ route('ssl.issue') }}?domain={{ $cert->domain_id }}" class="btn btn-ghost btn-sm">
-                    <i class="fa-solid fa-rotate"></i> Renovar
-                </a>
-                @endif
-                <a href="{{ route('ssl.install') }}?domain={{ $cert->domain_id }}" class="btn btn-ghost btn-sm">
-                    <i class="fa-solid fa-arrow-up-from-bracket"></i> Reemplazar
-                </a>
-                <button wire:click="confirmRevoke({{ $cert->id }})"
-                        class="btn btn-danger btn-sm" style="margin-left:auto;">
-                    <i class="fa-solid fa-trash"></i> Revocar
-                </button>
-            </div>
-        </div>
-        @endforeach
+                @foreach($subcerts as $subcert)
+                <tr wire:key="cert-{{ $subcert->id }}" x-show="expanded" style="background:rgba(255,255,255,0.015);display:none;" x-transition>
+                    @php
+                        $sDays = $subcert->daysUntilExpiry();
+                        $sIsExpiringSoon = $subcert->isExpiringSoon(30);
+                        $sIsExpired = $subcert->isExpired();
+                    @endphp
+                    <td>
+                        <div style="display:flex;align-items:center;gap:10px;padding-left:34px;">
+                            <div style="width:28px;height:28px;border-radius:8px;background:{{ $sIsExpired ? 'rgba(239,68,68,0.08)' : ($sIsExpiringSoon ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)') }};border:1px solid {{ $sIsExpired ? 'rgba(239,68,68,0.15)' : ($sIsExpiringSoon ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)') }};display:flex;align-items:center;justify-content:center;">
+                                <i class="fa-solid fa-{{ $sIsExpired ? 'lock-open' : 'lock' }}" style="color:{{ $sIsExpired ? 'var(--danger)' : ($sIsExpiringSoon ? 'var(--warning)' : 'var(--success)') }};font-size:12px;"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight:600;font-size:13px;color:var(--text-secondary);">{{ $subcert->domain?->name ?? 'Dominio eliminado' }}</div>
+                                <div style="font-size:11px;color:var(--text-muted);">HTTPS habilitado</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        @if($subcert->provider === 'letsencrypt')
+                            <span class="badge badge-success" style="font-size:10px;">
+                                <i class="fa-solid fa-shield-halved"></i> Let's Encrypt
+                            </span>
+                        @elseif($subcert->provider === 'custom')
+                            <span class="badge badge-accent" style="font-size:10px;">
+                                <i class="fa-solid fa-building"></i> Custom
+                            </span>
+                        @else
+                            <span class="badge badge-muted" style="font-size:10px;">
+                                <i class="fa-solid fa-certificate"></i> Self-signed
+                            </span>
+                        @endif
+                    </td>
+                    <td>
+                        <span style="font-size:12px;font-weight:600;color:{{ $sIsExpired ? 'var(--danger)' : ($sIsExpiringSoon ? 'var(--warning)' : 'var(--success)') }};">
+                            {{ $subcert->statusLabel() }}
+                        </span>
+                    </td>
+                    <td>
+                        <span style="font-size:12px;font-weight:600;color:{{ $sIsExpired ? 'var(--danger)' : ($sIsExpiringSoon ? 'var(--warning)' : 'var(--text-primary)') }};">
+                            @if($sDays !== null)
+                                @if($sIsExpired)
+                                    <i class="fa-solid fa-circle-exclamation"></i> Expirado
+                                @elseif($sDays === 0)
+                                    Hoy
+                                @elseif($sDays <= 7)
+                                    En {{ $sDays }}d
+                                @else
+                                    {{ $subcert->expires_at?->format('d/m/Y') }}
+                                @endif
+                            @else
+                                —
+                            @endif
+                        </span>
+                    </td>
+                    <td style="text-align:right;">
+                        <div class="lp-row-actions">
+                            @if($subcert->provider === 'letsencrypt' && !$sIsExpired)
+                            <a href="{{ route('ssl.issue') }}?domain={{ $subcert->domain_id }}" class="btn btn-ghost btn-sm" title="Renovar">
+                                <i class="fa-solid fa-rotate"></i>
+                            </a>
+                            @endif
+                            <a href="{{ route('ssl.install') }}?domain={{ $subcert->domain_id }}" class="btn btn-ghost btn-sm" title="Reemplazar">
+                                <i class="fa-solid fa-arrow-up-from-bracket"></i>
+                            </a>
+                            <button wire:click="confirmRevoke({{ $subcert->id }})" class="btn btn-danger btn-sm" title="Revocar">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+            @endforeach
+        </table>
     </div>
     @endif
 

@@ -4,7 +4,9 @@
      x-on:livewire-upload-error="isUploading = false"
      x-on:livewire-upload-progress="progress = $event.detail.progress">
     
-    {{-- Left Sidebar: Tree & Shortcuts --}}
+
+
+    {{-- Left Sidebar: Tree Navigation --}}
     <div class="glass fm-sidebar">
         <div style="padding:24px 20px;border-bottom:1px solid var(--glass-border);">
             <h3 style="font-size:16px;font-weight:700;margin:0;display:flex;align-items:center;gap:10px;">
@@ -13,45 +15,18 @@
             </h3>
         </div>
         
-        <div style="flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:20px;">
-            {{-- Ubicaciones Rápidas --}}
-            <div>
-                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;font-weight:800;margin:0 12px 10px;display:flex;align-items:center;justify-content:between;">
-                    <span>Accesos Rápidos</span>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:4px;">
-                    <button wire:click="navigate('')" class="btn btn-ghost" style="width:100%;text-align:left;justify-content:flex-start;padding:10px 14px;border-radius:8px;background:{{ $currentPath === '' ? 'rgba(99,102,241,0.15)' : 'transparent' }};color:{{ $currentPath === '' ? 'var(--accent-light)' : 'var(--text-secondary)' }};font-size:13px;font-weight:600;">
-                        <i class="fa-solid fa-folder-tree" style="width:20px;font-size:14px;color:{{ $currentPath === '' ? 'var(--accent-light)' : 'var(--text-muted)' }};"></i> Raíz del Servidor
-                    </button>
-                    
-                    <button wire:click="navigate('html')" class="btn btn-ghost" style="width:100%;text-align:left;justify-content:flex-start;padding:10px 14px;border-radius:8px;background:{{ $currentPath === 'html' ? 'rgba(99,102,241,0.15)' : 'transparent' }};color:{{ $currentPath === 'html' ? 'var(--accent-light)' : 'var(--text-secondary)' }};font-size:13px;font-weight:600;">
-                        <i class="fa-solid fa-code" style="width:20px;font-size:14px;color:{{ $currentPath === 'html' ? 'var(--accent-light)' : 'var(--text-muted)' }};"></i> HTML Público
-                    </button>
-                </div>
-            </div>
-
-            {{-- Sitios / Dominios --}}
-            <div>
-                <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;font-weight:800;margin:0 12px 10px;">Sitios Web</div>
-                <div style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;">
-                    @php $hasDomains = false; @endphp
-                    @foreach($items as $item)
-                        @if($item['is_dir'] && $currentPath === '')
-                            @php $hasDomains = true; @endphp
-                            <button wire:key="domain-{{ md5($item['name']) }}" wire:click="navigate('{{ $item['name'] }}')" class="btn btn-ghost" style="width:100%;text-align:left;justify-content:flex-start;padding:8px 12px;font-size:13px;color:var(--text-secondary);border-radius:8px;">
-                                <i class="fa-solid fa-globe" style="color:var(--accent-light);width:20px;font-size:14px;"></i> {{ $item['name'] }}
-                            </button>
-                        @endif
-                    @endforeach
-                    @if(!$hasDomains && $currentPath !== '')
-                        <div style="font-size:12px;color:var(--text-muted);padding:8px 12px;font-style:italic;">
-                            Navega a la raíz para ver sitios.
-                        </div>
-                    @endif
-                </div>
+        <div style="flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:10px;">
+            <button wire:click="navigate('')" class="btn btn-ghost" style="width:100%;text-align:left;justify-content:flex-start;padding:10px 14px;border-radius:8px;background:{{ $currentPath === '' ? 'rgba(99,102,241,0.15)' : 'transparent' }};color:{{ $currentPath === '' ? 'var(--accent-light)' : 'var(--text-secondary)' }};font-size:13px;font-weight:600;margin-bottom:10px;">
+                <i class="fa-solid fa-server" style="width:20px;font-size:14px;color:{{ $currentPath === '' ? 'var(--accent-light)' : 'var(--text-muted)' }};"></i> /var/www
+            </button>
+            
+            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;font-weight:800;margin:0 12px 10px;">Directorios</div>
+            
+            <div style="display:flex;flex-direction:column;gap:2px;">
+                @include('livewire.files.tree-node', ['nodes' => $tree, 'level' => 0])
             </div>
             
-            {{-- Quick Stats (Disk Usage / RAM) --}}
+            {{-- Quick Stats --}}
             <div style="margin-top:auto;background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);border-radius:12px;padding:16px;">
                 <div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
                     <span>Almacenamiento VPS</span>
@@ -73,16 +48,16 @@
         {{-- Top Toolbar --}}
         <div style="padding:16px 24px;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;gap:20px;background:rgba(255,255,255,0.01);">
             {{-- Breadcrumb path navigation --}}
-            <div style="display:flex;align-items:center;gap:6px;font-family:monospace;font-size:14px;overflow-x:auto;white-space:nowrap;flex:1;">
+            <div style="display:flex;align-items:center;gap:6px;font-size:14px;overflow-x:auto;white-space:nowrap;flex:1;">
                 <button wire:click="navigateUp" class="btn btn-ghost btn-sm" style="padding:6px 10px;border-radius:6px;background:rgba(255,255,255,0.03);" @if($currentPath === '') disabled style="opacity:0.3;cursor:not-allowed;" @endif>
                     <i class="fa-solid fa-level-up-alt" style="transform:rotate(-90deg);"></i>
                 </button>
                 <span style="color:var(--glass-border);">|</span>
                 <i class="fa-solid fa-folder-open" style="color:var(--accent-light);font-size:15px;margin-right:2px;"></i>
-                <span wire:click="navigate('')" style="color:var(--accent-light);cursor:pointer;font-weight:700;font-family:'Outfit';">var/www</span>
+                <span wire:click="navigate('')" style="color:var(--accent-light);cursor:pointer;font-weight:700;">var/www</span>
                 @foreach($breadcrumbs as $bc)
                     <span style="color:var(--text-muted);">/</span>
-                    <span wire:click="navigate('{{ ltrim($bc['path'], '/') }}')" style="color:var(--text-primary);cursor:pointer;font-family:'Outfit';hover:color:var(--accent-light);">{{ $bc['name'] }}</span>
+                    <span wire:click="navigate('{{ ltrim($bc['path'], '/') }}')" style="color:var(--text-primary);cursor:pointer;hover:color:var(--accent-light);">{{ $bc['name'] }}</span>
                 @endforeach
             </div>
 
@@ -251,7 +226,7 @@
                                 <button wire:click="openRenameModal('{{ $item['name'] }}')" class="btn btn-ghost btn-sm" title="Renombrar" style="padding:6px 10px;border-radius:6px;">
                                     <i class="fa-solid fa-pen-to-square" style="font-size:14px;"></i>
                                 </button>
-                                <button wire:click="deleteItem('{{ $item['name'] }}')" class="btn btn-ghost btn-sm" title="Eliminar" onclick="return confirm('¿Seguro que desea eliminar {{ $item['name'] }} de forma permanente?')" style="padding:6px 10px;border-radius:6px;color:var(--danger);">
+                                <button wire:click="confirmDelete('{{ addslashes($item['name']) }}')" class="btn btn-ghost btn-sm" title="Eliminar" style="padding:6px 10px;border-radius:6px;color:var(--danger);">
                                     <i class="fa-solid fa-trash-can" style="font-size:14px;"></i>
                                 </button>
                             </div>
@@ -282,7 +257,7 @@
                 <button wire:click="$set('showBulkCopyModal', true); @this.set('bulkDestDirectory', '')" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(16,185,129,0.1);color:#6ee7b7;border-radius:8px;padding:6px 12px;font-size:12px;">
                     <i class="fa-solid fa-clone"></i> Copiar
                 </button>
-                <button wire:click="deleteSelected" onclick="return confirm('¿Seguro que deseas eliminar los {{ count($selectedItems) }} elementos seleccionados?')" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(239,68,68,0.1);color:#f87171;border-radius:8px;padding:6px 12px;font-size:12px;">
+                <button wire:click="confirmDelete()" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(239,68,68,0.1);color:#f87171;border-radius:8px;padding:6px 12px;font-size:12px;">
                     <i class="fa-solid fa-trash-can"></i> Eliminar
                 </button>
             </div>
@@ -296,8 +271,34 @@
         @endif
     </div>
 
-    {{-- Modals (Create Folder, Create File, Chmod, Rename, Bulk Move, Bulk Copy) --}}
+    {{-- Modals (Create Folder, Create File, Chmod, Rename, Bulk Move, Bulk Copy, Delete) --}}
     
+    {{-- Delete Modal --}}
+    @if($showDeleteModal)
+    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;">
+        <div class="glass-elevated" style="width:100%;max-width:420px;padding:28px;border-radius:16px;border:1px solid var(--glass-border);background:rgba(15,23,42,0.95);text-align:center;">
+            <div style="width:52px;height:52px;border-radius:50%;background:rgba(239,68,68,0.15);border:2px solid rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                <i class="fa-solid fa-trash-can" style="color:var(--danger);font-size:20px;"></i>
+            </div>
+            <h3 style="font-size:18px;font-weight:700;margin:0 0 8px;">Confirmar Eliminación</h3>
+            <p style="color:var(--text-secondary);font-size:13px;margin-bottom:24px;">
+                @if($isDeletingMultiple)
+                    ¿Estás seguro de que deseas eliminar <strong>{{ count($selectedItems) }}</strong> elementos de forma permanente?
+                @else
+                    ¿Estás seguro de que deseas eliminar <strong>{{ $deletingItemName }}</strong> de forma permanente?
+                @endif
+                Esta acción no se puede deshacer.
+            </p>
+            <div style="display:flex;gap:12px;justify-content:center;">
+                <button wire:click="$set('showDeleteModal', false)" class="btn btn-ghost" style="flex:1;justify-content:center;">Cancelar</button>
+                <button wire:click="executeDelete" class="btn btn-danger" style="flex:1;justify-content:center;">
+                    <i class="fa-solid fa-trash"></i> Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
+
     {{-- Create Folder Modal --}}
     @if($showCreateFolderModal)
     <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;">
