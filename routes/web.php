@@ -134,6 +134,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/servers', ServersIndex::class)->name('servers.index');
         Route::get('/logs', LogIndex::class)->name('logs.index');
         Route::get('/uptime', \App\Livewire\Uptime\UptimeIndex::class)->name('uptime.index');
+        Route::get('/performance', \App\Livewire\Performance\PerformanceIndex::class)->name('performance.index');
         
         // Root phpMyAdmin Sign-on
         Route::get('/admin/db', function () {

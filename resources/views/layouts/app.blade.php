@@ -157,6 +157,11 @@
                             <span class="nav-icon"><i class="fa-solid fa-heart-pulse"></i></span>
                             Monitor Uptime
                         </a>
+                        <a href="{{ route('performance.index') }}"
+                            class="nav-item {{ request()->routeIs('performance.*') ? 'active' : '' }}">
+                            <span class="nav-icon"><i class="fa-solid fa-shield-halved"></i></span>
+                            Performance & WAF
+                        </a>
                     @endif
 
                     <a href="{{ route('fail2ban.index') }}"

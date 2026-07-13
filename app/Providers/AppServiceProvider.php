@@ -39,6 +39,9 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\GitService::class);
         $this->app->singleton(\App\Services\WordPressService::class);
         $this->app->singleton(\App\Services\ServerService::class);
+        // Phase 10
+        $this->app->singleton(\App\Services\GoAccessService::class);
+        $this->app->singleton(\App\Services\GeoWafService::class);
     }
 
     public function boot(): void

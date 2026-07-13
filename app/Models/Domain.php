@@ -36,6 +36,19 @@ class Domain extends Model
         return $this->hasOne(SslCertificate::class);
     }
 
+    public function performanceSetting(): HasOne
+    {
+        return $this->hasOne(DomainPerformanceSetting::class);
+    }
+
+    /**
+     * Get (or create) the performance settings record.
+     */
+    public function getPerformance(): DomainPerformanceSetting
+    {
+        return $this->performanceSetting ?? $this->performanceSetting()->create(['domain_id' => $this->id]);
+    }
+
     public function isMain(): bool
     {
         return $this->type === 'main';

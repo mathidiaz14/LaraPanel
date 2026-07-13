@@ -100,6 +100,10 @@ return [
             'openssl',
             'git',
             'ps',
+            'goaccess',
+            'mmdbinspect',
+            'wget',
+            'which',
         ],
     ],
 
@@ -224,6 +228,25 @@ return [
             '/var/larapanel',
             '/uploads',
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Phase 10 — Performance, WAF & CDN
+    |--------------------------------------------------------------------------
+    */
+
+    'performance' => [
+        'microcache_base_path' => env('MICROCACHE_BASE_PATH', '/var/cache/nginx'),
+    ],
+
+    'geowaf' => [
+        'mmdb_path'   => env('MAXMIND_MMDB_PATH', '/var/lib/GeoIP/GeoLite2-Country.mmdb'),
+        'license_key' => env('MAXMIND_LICENSE_KEY', ''),
+    ],
+
+    'goaccess' => [
+        'reports_path' => env('GOACCESS_REPORTS_PATH', '/var/larapanel/goaccess'),
     ],
 
 ];

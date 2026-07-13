@@ -190,47 +190,21 @@ class DomainService
         $phpSocket = $this->phpFpmSocket($domain->php_version);
         $root      = $domain->document_root;
         $name      = $domain->name;
-        $isProxy   = $domain->isProxy();
-        $proxyPort = $domain->getProxyPort();
 
-        $locationBlock = '';
-        if ($isProxy && $proxyPort) {
-            $locationBlock = <<<LOC
-            location / {
-                proxy_pass http://127.0.0.1:{$proxyPort};
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade \$http_upgrade;
-                proxy_set_header Connection 'upgrade';
-                proxy_set_header Host \$host;
-                proxy_cache_bypass \$http_upgrade;
-                proxy_set_header X-Real-IP \$remote_addr;
-                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto \$scheme;
-            }
-            LOC;
-        } else {
-            $locationBlock = <<<LOC
-            location / {
-                try_files \$uri \$uri/ /index.php?\$query_string;
-            }
-        
-            location ~ \.php$ {
-                fastcgi_pass unix:{$phpSocket};
-                fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
-                include fastcgi_params;
-                fastcgi_hide_header X-Powered-By;
-            }
-        
-            location ~ /\.(?!well-known).* {
-                deny all;
-            }
-            LOC;
-        }
+        // ── Phase 10 performance settings ────────────────────────────
+        $perf = $domain->performanceSetting;
+
+        $locationBlock  = $this->buildLocationBlock($domain, $phpSocket, $perf);
+        $phase10Headers = $this->buildPhase10Headers($name, $perf);
+        $attackBlock    = $this->buildAttackBlock($name, $perf);
+        $geoWafBlock    = $this->buildGeoWafBlock($name, $perf);
+        $redirectBlocks = $this->buildRedirectBlocks($perf);
+        $microcacheZone = $this->buildMicrocacheZoneDirective($name, $perf);
 
         return <<<NGINX
         # LaraPanel — generated for {$name}
         # DO NOT EDIT MANUALLY — changes will be overwritten
-        
+        {$microcacheZone}
         server {
             listen 80;
             listen [::]:80;
@@ -241,17 +215,18 @@ class DomainService
         
             access_log /var/log/nginx/{$name}.access.log;
             error_log  /var/log/nginx/{$name}.error.log;
-        
+        {$attackBlock}
+        {$geoWafBlock}
             # Security headers
             add_header X-Frame-Options "SAMEORIGIN" always;
             add_header X-Content-Type-Options "nosniff" always;
             add_header X-XSS-Protection "1; mode=block" always;
             add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-        
+        {$phase10Headers}
             # Gzip
             gzip on;
             gzip_types text/plain text/css application/json application/javascript text/xml;
-        
+        {$redirectBlocks}
         {$locationBlock}
         
             # Let's Encrypt challenge
@@ -270,45 +245,20 @@ class DomainService
         $phpSocket = $this->phpFpmSocket($domain->php_version);
         $root      = $domain->document_root;
         $name      = $domain->name;
-        $isProxy   = $domain->isProxy();
-        $proxyPort = $domain->getProxyPort();
 
-        $locationBlock = '';
-        if ($isProxy && $proxyPort) {
-            $locationBlock = <<<LOC
-            location / {
-                proxy_pass http://127.0.0.1:{$proxyPort};
-                proxy_http_version 1.1;
-                proxy_set_header Upgrade \$http_upgrade;
-                proxy_set_header Connection 'upgrade';
-                proxy_set_header Host \$host;
-                proxy_cache_bypass \$http_upgrade;
-                proxy_set_header X-Real-IP \$remote_addr;
-                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-                proxy_set_header X-Forwarded-Proto \$scheme;
-            }
-            LOC;
-        } else {
-            $locationBlock = <<<LOC
-            location / {
-                try_files \$uri \$uri/ /index.php?\$query_string;
-            }
-        
-            location ~ \.php$ {
-                fastcgi_pass unix:{$phpSocket};
-                fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
-                include fastcgi_params;
-            }
-        
-            location ~ /\.(?!well-known).* {
-                deny all;
-            }
-            LOC;
-        }
+        $perf = $domain->performanceSetting;
+
+        $locationBlock  = $this->buildLocationBlock($domain, $phpSocket, $perf);
+        $phase10Headers = $this->buildPhase10Headers($name, $perf);
+        $attackBlock    = $this->buildAttackBlock($name, $perf);
+        $geoWafBlock    = $this->buildGeoWafBlock($name, $perf);
+        $redirectBlocks = $this->buildRedirectBlocks($perf);
+        $microcacheZone = $this->buildMicrocacheZoneDirective($name, $perf);
+        $hstsHeader     = $this->buildHstsHeader($perf);
 
         return <<<NGINX
         # LaraPanel SSL — generated for {$name}
-        
+        {$microcacheZone}
         server {
             listen 80;
             listen [::]:80;
@@ -333,16 +283,362 @@ class DomainService
             ssl_session_timeout 1d;
             ssl_stapling        on;
             ssl_stapling_verify on;
-        
-            add_header Strict-Transport-Security "max-age=63072000" always;
+        {$attackBlock}
+        {$geoWafBlock}
+            add_header Strict-Transport-Security "{$hstsHeader}" always;
             add_header X-Frame-Options "SAMEORIGIN" always;
             add_header X-Content-Type-Options "nosniff" always;
-        
+        {$phase10Headers}
+        {$redirectBlocks}
         {$locationBlock}
         
             client_max_body_size 100M;
         }
         NGINX;
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // Phase 10 — Nginx Block Builders
+    // ────────────────────────────────────────────────────────────────
+
+    /**
+     * Build the location block supporting both PHP-FPM, legacy proxy port,
+     * and Phase 10 Orange Cloud full-URL proxy.
+     */
+    protected function buildLocationBlock(
+        Domain $domain,
+        string $phpSocket,
+        ?\App\Models\DomainPerformanceSetting $perf
+    ): string {
+        // Phase 10.4 Orange Cloud proxy (full URL target takes precedence)
+        if ($perf && $perf->orange_cloud && $perf->proxy_target) {
+            $target  = rtrim($perf->proxy_target, '/');
+            $timeout = $perf->proxy_timeout ?? 60;
+            $ws      = $perf->proxy_websocket ? <<<WS
+                proxy_set_header Upgrade \$http_upgrade;
+                proxy_set_header Connection 'upgrade';
+            WS : '';
+            return <<<LOC
+            location / {
+                proxy_pass {$target};
+                proxy_http_version 1.1;
+                proxy_set_header Host \$host;
+                proxy_cache_bypass \$http_upgrade;
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto \$scheme;
+                proxy_connect_timeout {$timeout}s;
+                proxy_send_timeout    {$timeout}s;
+                proxy_read_timeout    {$timeout}s;
+            {$ws}
+            }
+            LOC;
+        }
+
+        // Legacy proxy via config['proxy_port']
+        $isProxy   = $domain->isProxy();
+        $proxyPort = $domain->getProxyPort();
+
+        if ($isProxy && $proxyPort) {
+            return <<<LOC
+            location / {
+                proxy_pass http://127.0.0.1:{$proxyPort};
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade \$http_upgrade;
+                proxy_set_header Connection 'upgrade';
+                proxy_set_header Host \$host;
+                proxy_cache_bypass \$http_upgrade;
+                proxy_set_header X-Real-IP \$remote_addr;
+                proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto \$scheme;
+            }
+            LOC;
+        }
+
+        // PHP-FPM with optional microcache
+        $cacheDirectives = '';
+        if ($perf && $perf->microcache_enabled) {
+            $name = $domain->name;
+            $cacheDirectives = <<<CACHE
+                fastcgi_cache cache_{$name};
+                fastcgi_cache_valid 200 301 302 {$perf->microcache_ttl}s;
+                fastcgi_cache_use_stale error timeout updating;
+                fastcgi_cache_bypass \$http_pragma;
+                add_header X-Cache-Status \$upstream_cache_status;
+            CACHE;
+        }
+
+        return <<<LOC
+        location / {
+            try_files \$uri \$uri/ /index.php?\$query_string;
+        }
+    
+        location ~ \.php$ {
+            fastcgi_pass unix:{$phpSocket};
+            fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
+            include fastcgi_params;
+            fastcgi_hide_header X-Powered-By;
+        {$cacheDirectives}
+        }
+    
+        location ~ /\.(?!well-known).* {
+            deny all;
+        }
+        LOC;
+    }
+
+    /**
+     * Build the fastcgi_cache_path directive (placed above the server block).
+     */
+    protected function buildMicrocacheZoneDirective(
+        string $domainName,
+        ?\App\Models\DomainPerformanceSetting $perf
+    ): string {
+        if (!$perf || !$perf->microcache_enabled) {
+            return '';
+        }
+        $basePath = config('larapanel.performance.microcache_base_path', '/var/cache/nginx');
+        $path     = "{$basePath}/{$domainName}";
+
+        return <<<NGINX
+        fastcgi_cache_path {$path} levels=1:2 keys_zone=cache_{$domainName}:10m max_size=1g inactive=60m use_temp_path=off;
+        NGINX;
+    }
+
+    /**
+     * Build Under Attack Mode rate-limiting directives inside the server block.
+     */
+    protected function buildAttackBlock(
+        string $domainName,
+        ?\App\Models\DomainPerformanceSetting $perf
+    ): string {
+        if (!$perf || !$perf->under_attack_mode) {
+            return '';
+        }
+        $rate  = $perf->attack_rate ?? 10;
+        $burst = $perf->attack_burst ?? 20;
+        $conn  = $perf->attack_conn ?? 10;
+
+        return <<<NGINX
+        
+            # LaraPanel — Under Attack Mode (10.1)
+            limit_req_zone \$binary_remote_addr zone=attack_{$domainName}:10m rate={$rate}r/s;
+            limit_conn_zone \$binary_remote_addr zone=conn_attack_{$domainName}:10m;
+            limit_req zone=attack_{$domainName} burst={$burst} nodelay;
+            limit_conn conn_attack_{$domainName} {$conn};
+        NGINX;
+    }
+
+    /**
+     * Build Geo-WAF map + if block inside the server block.
+     */
+    protected function buildGeoWafBlock(
+        string $domainName,
+        ?\App\Models\DomainPerformanceSetting $perf
+    ): string {
+        if (!$perf || !$perf->geo_waf_enabled || empty($perf->geo_waf_countries)) {
+            return '';
+        }
+
+        $countries = collect($perf->geo_waf_countries)
+            ->map(fn($code) => "    {$code} 1;")
+            ->implode("\n");
+
+        $mode = $perf->geo_waf_mode === 'allow' ? 'allow' : 'block';
+        $mmdb = config('larapanel.geowaf.mmdb_path');
+
+        if ($mode === 'block') {
+            return <<<NGINX
+            
+            # LaraPanel — Geo-WAF Block Mode (10.3)
+            geoip2 {$mmdb} { \$geoip2_data_country_iso_code default \"\" source=\$remote_addr country iso_code; }
+            map \$geoip2_data_country_iso_code \$blocked_country_{$domainName} {
+                default 0;
+            {$countries}
+            }
+            if (\$blocked_country_{$domainName}) {
+                return 403 "Access Denied by Geo-WAF";
+            }
+            NGINX;
+        }
+
+        // Allow mode: block everyone EXCEPT listed countries
+        return <<<NGINX
+        
+        # LaraPanel — Geo-WAF Allow Mode (10.3)
+        geoip2 {$mmdb} { \$geoip2_data_country_iso_code default \"\" source=\$remote_addr country iso_code; }
+        map \$geoip2_data_country_iso_code \$allowed_country_{$domainName} {
+            default 1;
+        {$countries}
+        }
+        if (\$allowed_country_{$domainName}) {
+            return 403 "Access Denied by Geo-WAF";
+        }
+        NGINX;
+    }
+
+    /**
+     * Build extra security / custom headers for Phase 10.6.
+     */
+    protected function buildPhase10Headers(
+        string $domainName,
+        ?\App\Models\DomainPerformanceSetting $perf
+    ): string {
+        if (!$perf) return '';
+
+        $lines = [];
+
+        // Custom headers
+        foreach (($perf->custom_headers ?? []) as $header) {
+            $hName  = addslashes($header['name'] ?? '');
+            $hValue = addslashes($header['value'] ?? '');
+            if ($hName) {
+                $lines[] = "    add_header {$hName} \"{$hValue}\" always;";
+            }
+        }
+
+        return $lines ? "\n" . implode("\n", $lines) . "\n" : '';
+    }
+
+    /**
+     * Build the HSTS header value string.
+     */
+    protected function buildHstsHeader(?\App\Models\DomainPerformanceSetting $perf): string
+    {
+        if (!$perf || !$perf->hsts_enabled) {
+            return 'max-age=63072000'; // default 2 years
+        }
+        return $perf->hstsHeaderValue();
+    }
+
+    /**
+     * Build location blocks for custom 301/302 redirects (Page Rules 10.6).
+     */
+    protected function buildRedirectBlocks(?\App\Models\DomainPerformanceSetting $perf): string
+    {
+        if (!$perf || empty($perf->redirects)) {
+            return '';
+        }
+
+        $blocks = [];
+        foreach ($perf->redirects as $rule) {
+            $from = $rule['from'] ?? '';
+            $to   = $rule['to']   ?? '';
+            $code = in_array((int)($rule['code'] ?? 301), [301, 302]) ? (int)$rule['code'] : 301;
+            if ($from && $to) {
+                $blocks[] = <<<LOC
+            location {$from} {
+                return {$code} {$to};
+            }
+            LOC;
+            }
+        }
+
+        return $blocks ? "\n" . implode("\n", $blocks) . "\n" : '';
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // Phase 10 — Performance Setting Management
+    // ────────────────────────────────────────────────────────────────
+
+    /**
+     * Toggle Under Attack Mode for a domain and redeploy its vhost.
+     */
+    public function toggleUnderAttackMode(Domain $domain, bool $enable, array $options = []): void
+    {
+        $domain->getPerformance()->update(array_merge([
+            'under_attack_mode' => $enable,
+        ], array_intersect_key($options, array_flip(['attack_rate', 'attack_burst', 'attack_conn']))));
+
+        $domain->refresh();
+        $this->deployConfigs($domain);
+
+        AuditLog::record(
+            $enable ? 'domain.under_attack.enabled' : 'domain.under_attack.disabled',
+            $domain->name
+        );
+    }
+
+    /**
+     * Enable / update FastCGI microcaching for a domain.
+     */
+    public function enableMicrocache(Domain $domain, int $ttl = 60): void
+    {
+        $domain->getPerformance()->update(['microcache_enabled' => true, 'microcache_ttl' => $ttl]);
+        $domain->refresh();
+        $this->deployConfigs($domain);
+        AuditLog::record('domain.microcache.enabled', $domain->name, ['ttl' => $ttl]);
+    }
+
+    /**
+     * Disable FastCGI microcaching for a domain.
+     */
+    public function disableMicrocache(Domain $domain): void
+    {
+        $domain->getPerformance()->update(['microcache_enabled' => false]);
+        $domain->refresh();
+        $this->deployConfigs($domain);
+        AuditLog::record('domain.microcache.disabled', $domain->name);
+    }
+
+    /**
+     * Purge the on-disk microcache for a domain.
+     */
+    public function purgeMicrocache(Domain $domain): void
+    {
+        $basePath = config('larapanel.performance.microcache_base_path', '/var/cache/nginx');
+        $cachePath = "{$basePath}/{$domain->name}";
+
+        if (app()->isProduction()) {
+            $this->sudo->run(['rm', '-rf', $cachePath], checkExit: false);
+            $this->sudo->run(['mkdir', '-p', $cachePath]);
+        }
+
+        $domain->getPerformance()->update(['microcache_purged_at' => now()]);
+        AuditLog::record('domain.microcache.purged', $domain->name);
+    }
+
+    /**
+     * Save Page Rules (HSTS + custom headers + redirects) for a domain.
+     */
+    public function savePageRules(Domain $domain, array $data): void
+    {
+        $domain->getPerformance()->update(array_intersect_key($data, array_flip([
+            'hsts_enabled', 'hsts_max_age', 'hsts_include_subdomains', 'hsts_preload',
+            'custom_headers', 'redirects', 'brotli_enabled',
+        ])));
+
+        $domain->refresh();
+        $this->deployConfigs($domain);
+        AuditLog::record('domain.page_rules.saved', $domain->name);
+    }
+
+    /**
+     * Save Orange Cloud (reverse proxy) settings for a domain.
+     */
+    public function saveProxyConfig(Domain $domain, array $data): void
+    {
+        $domain->getPerformance()->update(array_intersect_key($data, array_flip([
+            'orange_cloud', 'proxy_target', 'proxy_ssl_verify', 'proxy_timeout', 'proxy_websocket',
+        ])));
+
+        $domain->refresh();
+        $this->deployConfigs($domain);
+        AuditLog::record('domain.proxy.configured', $domain->name, ['target' => $data['proxy_target'] ?? null]);
+    }
+
+    /**
+     * Save Geo-WAF settings for a domain.
+     */
+    public function saveGeoWaf(Domain $domain, array $data): void
+    {
+        $domain->getPerformance()->update(array_intersect_key($data, array_flip([
+            'geo_waf_enabled', 'geo_waf_mode', 'geo_waf_countries',
+        ])));
+
+        $domain->refresh();
+        $this->deployConfigs($domain);
+        AuditLog::record('domain.geowaf.saved', $domain->name, ['countries' => $data['geo_waf_countries'] ?? []]);
     }
 
     // ────────────────────────────────────────────────────────────────
