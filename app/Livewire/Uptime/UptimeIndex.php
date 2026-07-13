@@ -36,7 +36,7 @@ class UptimeIndex extends Component
         try {
             UptimeMonitor::create([
                 'user_id' => auth()->id(),
-                'server_id' => ServerContext::serverId(),
+                'server_id' => ServerContext::server()?->id,
                 'name' => $this->name,
                 'type' => $this->type,
                 'target' => $this->target,
@@ -82,7 +82,7 @@ class UptimeIndex extends Component
     public function render()
     {
         $monitors = UptimeMonitor::where('user_id', auth()->id())
-            ->where('server_id', ServerContext::serverId())
+            ->where('server_id', ServerContext::server()?->id)
             ->orderByDesc('created_at')
             ->get();
 

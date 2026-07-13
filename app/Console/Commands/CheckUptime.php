@@ -18,9 +18,7 @@ class CheckUptime extends Command
 
     public function handle(SudoExecutor $sudo)
     {
-        $monitors = UptimeMonitor::where('status', '!=', 'paused')
-            ->where('server_id', ServerContext::serverId())
-            ->get();
+        $monitors = UptimeMonitor::where('status', '!=', 'paused')->get();
 
         foreach ($monitors as $monitor) {
             // Check if it's time to run based on interval
