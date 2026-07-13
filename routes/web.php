@@ -133,6 +133,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/terminal', TerminalIndex::class)->name('terminal.index');
         Route::get('/servers', ServersIndex::class)->name('servers.index');
         Route::get('/logs', LogIndex::class)->name('logs.index');
+        Route::get('/uptime', \App\Livewire\Uptime\UptimeIndex::class)->name('uptime.index');
         
         // Root phpMyAdmin Sign-on
         Route::get('/admin/db', function () {

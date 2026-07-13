@@ -28,12 +28,12 @@ Schedule::command('panel:collect-metrics')
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/panel-metrics.log'));
 
-// Check uptime for active domains
-Schedule::command('panel:check-uptime')
-    ->everyFiveMinutes()
+// Check uptime for user configured monitors
+Schedule::command('larapanel:uptime')
+    ->everyMinute()
     ->withoutOverlapping()
     ->runInBackground()
-    ->appendOutputTo(storage_path('logs/panel-uptime.log'));
+    ->appendOutputTo(storage_path('logs/larapanel-uptime.log'));
 
 // Backups Scheduler
 Schedule::command('backups:run-scheduled')
