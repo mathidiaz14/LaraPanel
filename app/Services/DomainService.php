@@ -81,6 +81,20 @@ class DomainService
             } catch (\Throwable $e) {
                 \Log::error("Failed to automatically create DNS zone for domain {$domain->name}: " . $e->getMessage());
             }
+
+            // Auto-crear el subdominio de webmail para que aparezca en el panel y se le pueda asignar SSL
+            try {
+                $this->create($user, [
+                    'name'          => 'webmail.' . $domainName,
+                    'type'          => 'subdomain',
+                    'parent_domain' => $domain->id,
+                    'document_root' => '/usr/share/roundcube',
+                    'php_version'   => $phpVersion,
+                    'webserver'     => $webserver,
+                ]);
+            } catch (\Throwable $e) {
+                \Log::error("Failed to auto-create webmail subdomain for {$domain->name}: " . $e->getMessage());
+            }
         }
 
         AuditLog::record('domain.created', $domainName, ['domain_id' => $domain->id]);
@@ -680,6 +694,11 @@ class DomainService
 
     protected function createDocumentRoot(string $path, User $user): void
     {
+        // Nunca tocar ni alterar el directorio core de Roundcube
+        if ($path === '/usr/share/roundcube') {
+            return;
+        }
+
         // In production: use sudo mkdir + chown
         // In development: just create the directory via PHP
         if (!app()->isProduction()) {
@@ -706,6 +725,11 @@ class DomainService
 
     protected function removeDocumentRoot(string $path): void
     {
+        // Nunca borrar el directorio core de Roundcube
+        if ($path === '/usr/share/roundcube') {
+            return;
+        }
+
         // Safety check: never delete / or /var/www directly
         if (strlen($path) < 10 || $path === '/var/www') {
             throw new \RuntimeException("Refusing to delete unsafe path: {$path}");

@@ -74,12 +74,12 @@ class MonitoringService
                 'dovecot'      => true,
                 'pdns'         => true,
                 'cron'         => true,
-                'sshd'         => true,
+                'ssh'          => true,
                 'clamav-daemon'=> true,
             ];
         }
 
-        $services = ['nginx', 'mysql', 'mariadb', 'php8.3-fpm', 'redis-server', 'memcached', 'docker', 'fail2ban', 'postfix', 'dovecot', 'pdns', 'cron', 'sshd', 'clamav-daemon'];
+        $services = ['nginx', 'mysql', 'mariadb', 'php8.3-fpm', 'redis-server', 'memcached', 'docker', 'fail2ban', 'postfix', 'dovecot', 'pdns', 'cron', 'ssh', 'clamav-daemon'];
         $statuses = [];
         foreach ($services as $svc) {
             $statuses[$svc] = trim(shell_exec("systemctl is-active {$svc} 2>/dev/null") ?? '') === 'active';
@@ -452,7 +452,7 @@ class MonitoringService
      */
     protected function getRemoteServicesStatus(\App\Shell\RemoteShellExecutor $executor): array
     {
-        $services = ['nginx', 'mysql', 'mariadb', 'php8.3-fpm', 'redis-server', 'memcached', 'docker', 'fail2ban', 'postfix', 'dovecot', 'pdns', 'cron', 'sshd', 'clamav-daemon'];
+        $services = ['nginx', 'mysql', 'mariadb', 'php8.3-fpm', 'redis-server', 'memcached', 'docker', 'fail2ban', 'postfix', 'dovecot', 'pdns', 'cron', 'ssh', 'clamav-daemon'];
         $statuses = [];
 
         foreach ($services as $svc) {
