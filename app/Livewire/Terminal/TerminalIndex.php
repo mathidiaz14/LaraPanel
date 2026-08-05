@@ -38,9 +38,9 @@ class TerminalIndex extends Component
         // Dispatch to frontend (Xterm.js)
         $this->dispatch('terminal-output', [
             'command' => $cmd,
-            'output'  => $result->output(),
+            'output'  => $result['output'],
             'cwd'     => $this->cwd,
-            'code'    => $result->exitCode
+            'code'    => $result['code']
         ]);
 
         $this->command = '';
