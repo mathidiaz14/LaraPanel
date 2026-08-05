@@ -22,8 +22,11 @@ class TerminalService
         }
 
         // Special handling for 'cd' command to update state
-        if (preg_match('/^cd\s+(.+)$/', trim($command), $matches)) {
-            $path = $matches[1];
+        if (preg_match('/^cd\s*(.*)$/', trim($command), $matches)) {
+            $path = trim($matches[1]);
+            if (empty($path)) {
+                $path = '/var/www';
+            }
             // Resolve path safely (relative to cwd or absolute)
             $resolveCmd = "cd {$cwd} && cd {$path} 2>/dev/null && pwd";
             $result = Process::run($resolveCmd);
@@ -44,12 +47,29 @@ class TerminalService
         }
 
         try {
-            // Run normal command in the specified directory
-            // We use standard Process here instead of SudoExecutor for safety, 
-            // but we can prepend sudo if needed based on rules.
+            $cmd = trim($command);
+            
+            // Auto-append -y for non-interactive apt/apt-get installs if missing
+            if (preg_match('/^apt(-get)?\s+install\b/', $cmd) && !str_contains($cmd, '-y')) {
+                $cmd = preg_replace('/^apt(-get)?\s+install\b/', '$0 -y', $cmd);
+            }
+
+            // Administrative commands pattern for automatic sudo elevation
+            $adminCommandsPattern = '/^(apt|apt-get|systemctl|service|ufw|certbot|useradd|userdel|docker|nginx|goaccess|clamscan|freshclam)\b/';
+            
+            if (str_starts_with($cmd, 'sudo ')) {
+                // Ensure non-interactive sudo flag (-n)
+                if (!str_starts_with($cmd, 'sudo -n ')) {
+                    $cmd = 'sudo -n ' . substr($cmd, 5);
+                }
+            } elseif (preg_match($adminCommandsPattern, $cmd)) {
+                // Automatically try running elevated admin commands with sudo -n
+                $cmd = 'sudo -n ' . $cmd;
+            }
+
             $result = Process::path($cwd)
-                ->timeout(60) // 1 min max to prevent hanging
-                ->run($command);
+                ->timeout(120) // 2 min max to prevent hanging
+                ->run($cmd);
 
             return [
                 'output' => $result->output() . $result->errorOutput(),
@@ -69,9 +89,11 @@ class TerminalService
     {
         $cmd = trim($command);
         
-        if (preg_match('/^cd\s+(.+)$/', $cmd, $matches)) {
-            $path = $matches[1];
-            if ($path === '..') {
+        if (preg_match('/^cd\s*(.*)$/', $cmd, $matches)) {
+            $path = trim($matches[1]);
+            if (empty($path)) {
+                $cwd = '/var/www';
+            } elseif ($path === '..') {
                 $cwd = dirname($cwd);
             } elseif (str_starts_with($path, '/')) {
                 $cwd = $path;
@@ -81,13 +103,34 @@ class TerminalService
             return ['output' => '', 'cwd' => $cwd, 'code' => 0];
         }
 
-        if ($cmd === 'ls' || $cmd === 'ls -la') {
-            $out = "total 24\n";
-            $out .= "drwxr-xr-x 2 root root 4096 " . date('M d H:i') . " .\n";
+        if ($cmd === 'ls' || $cmd === 'ls -la' || $cmd === 'ls -l') {
+            $out = "total 32\n";
+            $out .= "drwxr-xr-x 5 root root 4096 " . date('M d H:i') . " .\n";
             $out .= "drwxr-xr-x 3 root root 4096 " . date('M d H:i') . " ..\n";
             $out .= "-rw-r--r-- 1 root root  220 " . date('M d H:i') . " .bash_logout\n";
             $out .= "-rw-r--r-- 1 root root 3771 " . date('M d H:i') . " .bashrc\n";
             $out .= "-rw-r--r-- 1 root root  807 " . date('M d H:i') . " .profile\n";
+            $out .= "drwxr-xr-x 2 root root 4096 " . date('M d H:i') . " html\n";
+            return ['output' => $out, 'cwd' => $cwd, 'code' => 0];
+        }
+
+        if (preg_match('/^(sudo\s+)?apt(-get)?\s+install(\s+-y)?\s+(.+)$/', $cmd, $m)) {
+            $pkg = $m[4];
+            $out = "Reading package lists... Done\n";
+            $out .= "Building dependency tree... Done\n";
+            $out .= "Reading state information... Done\n";
+            $out .= "The following NEW packages will be installed:\n  {$pkg}\n";
+            $out .= "0 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.\n";
+            $out .= "Unpacking {$pkg} (simulated)...\n";
+            $out .= "Setting up {$pkg} (simulated)...\n";
+            $out .= "Processing triggers for man-db... Done\n";
+            return ['output' => $out, 'cwd' => $cwd, 'code' => 0];
+        }
+
+        if (preg_match('/^(sudo\s+)?(apt|apt-get)\s+update/', $cmd)) {
+            $out = "Hit:1 http://archive.ubuntu.com/ubuntu noble InRelease\n";
+            $out .= "Get:2 http://archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]\n";
+            $out .= "Reading package lists... Done\n";
             return ['output' => $out, 'cwd' => $cwd, 'code' => 0];
         }
 
@@ -95,18 +138,29 @@ class TerminalService
             return ['output' => $cwd . "\n", 'cwd' => $cwd, 'code' => 0];
         }
 
-        if ($cmd === 'whoami') {
+        if ($cmd === 'whoami' || $cmd === 'sudo whoami') {
             return ['output' => "root\n", 'cwd' => $cwd, 'code' => 0];
         }
-        
+
+        if (preg_match('/^(sudo\s+)?systemctl\s+(status|restart|reload|start|stop)\s+(.+)$/', $cmd, $m)) {
+            $action = $m[2];
+            $svc = $m[3];
+            if ($action === 'status') {
+                $out = "● {$svc}.service - {$svc} Service\n   Loaded: loaded\n   Active: active (running) since " . date('Y-m-d H:i:s') . "\n";
+            } else {
+                $out = "Service {$svc} {$action}ed successfully (simulated).\n";
+            }
+            return ['output' => $out, 'cwd' => $cwd, 'code' => 0];
+        }
+
         if (preg_match('/^(htop|nano|vim|top)$/', $cmd)) {
             return ['output' => "Error: Comando interactivo '{$cmd}' no soportado en la terminal web básica.\n", 'cwd' => $cwd, 'code' => 1];
         }
 
         return [
-            'output' => "bash: {$cmd}: command not found (simulated)\n",
+            'output' => "bash: {$cmd}: command executed (simulated)\n",
             'cwd'    => $cwd,
-            'code'   => 127
+            'code'   => 0
         ];
     }
 }
