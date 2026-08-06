@@ -498,6 +498,12 @@ cat > /etc/sudoers.d/larapanel <<SUDOERS_EOF
 # LaraPanel — Permisos de sistema para www-data (PHP-FPM worker)
 Defaults:www-data !requiretty
 
+# Package Manager
+www-data ALL=(ALL) NOPASSWD: /usr/bin/apt
+www-data ALL=(ALL) NOPASSWD: /usr/bin/apt-get
+www-data ALL=(ALL) NOPASSWD: /usr/bin/dpkg
+www-data ALL=(ALL) NOPASSWD: /usr/bin/goaccess
+
 # Nginx
 www-data ALL=(ALL) NOPASSWD: /usr/sbin/nginx
 www-data ALL=(ALL) NOPASSWD: /bin/systemctl restart nginx
