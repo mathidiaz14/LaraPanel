@@ -157,8 +157,14 @@
                     body: JSON.stringify(body),
                 });
 
-                const payload = await response.json();
-                if (!response.ok) throw new Error(payload.message || 'No se pudo crear la sesión.');
+                const responseText = await response.text();
+                let payload = {};
+                try {
+                    payload = JSON.parse(responseText);
+                } catch (error) {
+                    throw new Error(`El servidor respondió HTTP ${response.status}. Revisa storage/logs/laravel.log.`);
+                }
+                if (!response.ok) throw new Error(payload.message || `No se pudo crear la sesión (HTTP ${response.status}).`);
                 return payload.data;
             };
 
@@ -186,6 +192,11 @@
                     });
 
                     channel = pusher.subscribe(session.channel);
+                    channel.bind('pusher:subscription_error', (error) => {
+                        const code = error?.status || error?.data?.code || 'desconocido';
+                        writeNotice(`Falló la autenticación del canal WebSocket (código ${code}).`);
+                        setStatus('ERROR AUTH', 'danger');
+                    });
                     channel.bind('pusher:subscription_succeeded', () => {
                         connected = true;
                         setStatus('CONECTADA', 'success');
@@ -214,7 +225,18 @@
                         connectButton.hidden = false;
                         serverSelect.disabled = false;
                     });
-                    pusher.connection.bind('error', () => setStatus('ERROR WS', 'danger'));
+                    pusher.connection.bind('state_change', (states) => {
+                        if (states.current === 'connected') setStatus('CONECTADA', 'success');
+                        if (states.current === 'unavailable' || states.current === 'failed') {
+                            writeNotice(`Reverb no está disponible (${states.current}).`);
+                            setStatus('ERROR WS', 'danger');
+                        }
+                    });
+                    pusher.connection.bind('error', (error) => {
+                        const message = error?.error?.data?.message || error?.message || 'Error de conexión WebSocket.';
+                        writeNotice(message);
+                        setStatus('ERROR WS', 'danger');
+                    });
                 } catch (error) {
                     await destroySession(false);
                     writeNotice(error.message || 'No se pudo conectar.');

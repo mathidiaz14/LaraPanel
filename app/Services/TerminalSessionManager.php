@@ -195,7 +195,7 @@ class TerminalSessionManager
                     : 'bash';
             }
 
-            $command = 'script -qefc '.escapeshellarg($shell).' /dev/null';
+            $command = $this->buildShellCommand($shell, $session->type);
 
             $descriptors = [
                 0 => ['pipe', 'r'],
@@ -204,6 +204,9 @@ class TerminalSessionManager
             ];
 
             $cwd = $session->cwd ?: config('larapanel.security.terminal.default_cwd', '/var/www');
+            if (! is_dir($cwd) && PHP_OS_FAMILY === 'Windows') {
+                $cwd = base_path();
+            }
             $proc = proc_open($command, $descriptors, $pipes, $cwd, $environment);
         } catch (Throwable) {
             if (is_string($runtime['temp_key'] ?? null) && is_file($runtime['temp_key'])) {
@@ -228,6 +231,16 @@ class TerminalSessionManager
         $this->discoverPty($runtime);
 
         return true;
+    }
+
+    protected function buildShellCommand(string $shell, string $type): string
+    {
+        if (PHP_OS_FAMILY === 'Windows' && $type === 'local') {
+            // Development fallback only; Linux uses the real `script` PTY.
+            return 'bash.exe -i';
+        }
+
+        return 'script -qefc '.escapeshellarg($shell).' /dev/null';
     }
 
     protected function buildSshCommand(Server $server, array &$runtime, array &$environment): string
