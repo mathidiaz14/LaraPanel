@@ -14,6 +14,9 @@ class TerminalService
     /**
      * Executes a command and returns the output and exit code.
      * Keeps track of working directory changes (cd).
+     *
+     * Security: only whitelisted base commands are allowed and shell
+     * separators (;, |, &&, ||, `, $(), newline) are rejected.
      */
     public function execute(string $command, string $cwd = '/var/www'): array
     {
@@ -27,10 +30,11 @@ class TerminalService
             if (empty($path)) {
                 $path = '/var/www';
             }
-            // Resolve path safely (relative to cwd or absolute)
-            $resolveCmd = "cd {$cwd} && cd {$path} 2>/dev/null && pwd";
+            // Resolve path safely (relative to cwd or absolute); paths are shell-escaped
+            $resolveCmd = 'cd ' . escapeshellarg($cwd)
+                . ' && cd ' . escapeshellarg($path) . ' 2>/dev/null && pwd';
             $result = Process::run($resolveCmd);
-            
+
             if ($result->successful()) {
                 return [
                     'output' => '',
@@ -46,9 +50,28 @@ class TerminalService
             }
         }
 
+        $cmd = trim($command);
+
+        // Reject shell separators / command substitution to prevent chaining
+        if (preg_match('/(;|\||&&|\|\||`|\$\(|\n)/', $cmd)) {
+return [
+                'output' => 'Comando bloqueado: no se permiten separadores de shell (; | && || ` $() ) ni saltos de linea.' . "\n",
+                'cwd'    => $cwd,
+                'code'   => 1
+            ];
+        }
+
+        // Enforce base-command whitelist
+        $base = $this->baseCommandOf($cmd);
+        if ($base === null || !$this->isAllowedCommand($base)) {
+            return [
+                'output' => "Comando bloqueado: '{$base}' no está en la lista de comandos permitidos.\n",
+                'cwd'    => $cwd,
+                'code'   => 1
+            ];
+        }
+
         try {
-            $cmd = trim($command);
-            
             // Auto-append -y for non-interactive apt/apt-get installs if missing
             if (preg_match('/^apt(-get)?\s+install\b/', $cmd) && !str_contains($cmd, '-y')) {
                 $cmd = preg_replace('/^apt(-get)?\s+install\b/', '$0 -y', $cmd);
@@ -56,7 +79,7 @@ class TerminalService
 
             // Administrative commands pattern for automatic sudo elevation
             $adminCommandsPattern = '/^(apt|apt-get|systemctl|service|ufw|certbot|useradd|userdel|docker|nginx|goaccess|clamscan|freshclam)\b/';
-            
+
             if (str_starts_with($cmd, 'sudo ')) {
                 // Ensure non-interactive sudo flag (-n)
                 if (!str_starts_with($cmd, 'sudo -n ')) {
@@ -83,6 +106,44 @@ class TerminalService
                 'code'   => 127
             ];
         }
+    }
+
+    /**
+     * Extract the base binary from a command line (handles an optional
+     * leading `sudo`, its flags and env assignments).
+     */
+    protected function baseCommandOf(string $cmd): ?string
+    {
+        $tokens = preg_split('/\s+/', trim($cmd)) ?: [];
+        $i = 0;
+
+        if (isset($tokens[$i]) && $tokens[$i] === 'sudo') {
+            $i++;
+        }
+
+        while (isset($tokens[$i])) {
+            $token = $tokens[$i];
+            if ($token === '-u' && isset($tokens[$i + 1])) {
+                $i += 2;
+                continue;
+            }
+            if (str_starts_with($token, '-') || str_contains($token, '=')) {
+                $i++;
+                continue;
+            }
+            break;
+        }
+
+        return $tokens[$i] ?? null;
+    }
+
+    /**
+     * Check whether the base command is in the terminal whitelist.
+     */
+    protected function isAllowedCommand(string $base): bool
+    {
+        $allowed = config('larapanel.security.allowed_terminal_commands', []);
+        return in_array($base, $allowed, true);
     }
 
     protected function getSimulatedOutput(string $command, string $cwd): array

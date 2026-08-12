@@ -8,7 +8,7 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::prefix('v1/accounts')->middleware('auth:sanctum')->group(function() {
+Route::prefix('v1/accounts')->middleware(['auth:sanctum', 'role:admin', 'throttle:60,1'])->group(function() {
     Route::post('/create', [AccountController::class, 'create']);
     Route::post('/{id}/suspend', [AccountController::class, 'suspend']);
     Route::post('/{id}/unsuspend', [AccountController::class, 'unsuspend']);

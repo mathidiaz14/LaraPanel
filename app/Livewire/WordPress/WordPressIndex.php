@@ -54,10 +54,10 @@ class WordPressIndex extends Component
     {
         $this->validate([
             'selectedDomain' => 'required',
-            'siteTitle'      => 'required|string|max:100',
+            'siteTitle'      => 'required|string|max:100|regex:/^[^[:cntrl:]]+$/u',
             'adminUser'      => 'required|alpha_dash|max:50',
-            'adminEmail'     => 'required|email',
-            'adminPass'      => 'required|min:8',
+            'adminEmail'     => 'required|email|max:254',
+            'adminPass'      => 'required|min:8|max:72',
         ]);
 
         $domain = collect($this->domains)->firstWhere('name', $this->selectedDomain);

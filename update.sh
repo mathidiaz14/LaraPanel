@@ -44,6 +44,10 @@ fi
 log_info "Iniciando actualización en: $PANEL_DIR"
 cd "$PANEL_DIR"
 
+# Dependencias del terminal PTY y de las sesiones SSH remotas.
+apt-get update -qq
+apt-get install -y -qq openssh-client util-linux sshpass
+
 # 1. Configurar git safe.directory para evitar bloqueos
 log_info "Configurando excepciones de seguridad en Git..."
 git config --global --add safe.directory "$PANEL_DIR" || true
@@ -100,6 +104,13 @@ chown -R larapanel:www-data "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"
 # 9. Reiniciar servicios en ejecución
 log_info "Reiniciando el worker de colas (Queue Worker)..."
 sudo -u larapanel php artisan queue:restart || true
+
+# Reverb es un proceso persistente y debe cargar el código actualizado.
+if command -v supervisorctl >/dev/null 2>&1; then
+    supervisorctl reread || true
+    supervisorctl update || true
+    supervisorctl restart larapanel-reverb || true
+fi
 
 # Buscar versión activa de PHP-FPM y reiniciar para vaciar OPcache
 PHP_FPM_SERVICE=$(systemctl list-units --type=service --all | grep -oE "php[0-9]+\.[0-9]+-fpm" | head -n 1)

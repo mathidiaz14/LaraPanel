@@ -105,6 +105,35 @@ return [
             'wget',
             'which',
         ],
+        'allowed_terminal_commands' => [
+            // Navegacion y lectura
+            'cd', 'pwd', 'ls', 'cat', 'head', 'tail', 'echo', 'df', 'du',
+            'free', 'uptime', 'whoami', 'id', 'date', 'time', 'uname',
+            'hostname', 'nproc', 'which', 'wc', 'stat', 'env',
+            // Diagnostico
+            'ps', 'grep', 'find', 'ss', 'netstat', 'ip',
+            // Gestion de archivos
+            'mkdir', 'rmdir', 'touch', 'chmod', 'chown', 'cp', 'mv', 'rm', 'ln',
+            'tar', 'gzip', 'gunzip', 'zip', 'unzip',
+            // Red
+            'curl', 'wget',
+            // Desarrollo / Docker / Servicios
+            'php', 'composer', 'node', 'npm', 'yarn', 'git',
+            'docker', 'docker-compose', 'systemctl', 'service', 'ufw', 'certbot',
+            'nginx', 'mysql', 'crontab', 'apt', 'apt-get',
+            'openssl', 'goaccess', 'fail2ban-client', 'clamscan', 'freshclam',
+        ],
+        'terminal' => [
+            // Interactive WebSocket (PTY) terminal.
+            'enabled'                => env('LARAPANEL_TERMINAL_ENABLED', true),
+            'max_concurrent_sessions'=> env('LARAPANEL_TERMINAL_MAX_SESSIONS', 3),
+            'idle_timeout_minutes'   => env('LARAPANEL_TERMINAL_IDLE_TIMEOUT', 30),
+            'default_cwd'            => '/var/www',
+            // Real root shell (bash via sudo) — opt-in at your own risk.
+            'allow_sudo_root'        => env('LARAPANEL_TERMINAL_SUDO_ROOT', false),
+            // Remote sessions with password auth require `sshpass` on the server.
+            'sshpass_enabled'        => env('LARAPANEL_TERMINAL_SSHPASS', false),
+        ],
     ],
 
     /*

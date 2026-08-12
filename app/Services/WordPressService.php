@@ -36,14 +36,24 @@ class WordPressService
             $dl = Process::path($path)->timeout(120)->run('wp core download --allow-root');
             if (!$dl->successful()) throw new \Exception("Error al descargar WordPress: " . $dl->errorOutput());
 
-            // 2. Create wp-config.php
+            // 2. Create wp-config.php (values escaped to prevent shell injection)
             $outputBuffer[] = "Configurando base de datos...";
-            $cfg = Process::path($path)->run("wp config create --dbname={$dbName} --dbuser={$dbUser} --dbpass={$dbPass} --allow-root");
+            $cfgCmd = 'wp config create --dbname=' . escapeshellarg($dbName)
+                . ' --dbuser=' . escapeshellarg($dbUser)
+                . ' --dbpass=' . escapeshellarg($dbPass)
+                . ' --allow-root';
+            $cfg = Process::path($path)->run($cfgCmd);
             if (!$cfg->successful()) throw new \Exception("Error configurando wp-config: " . $cfg->errorOutput());
 
-            // 3. Install
+            // 3. Install (values escaped to prevent shell injection)
             $outputBuffer[] = "Instalando base de datos y creando administrador...";
-            $inst = Process::path($path)->timeout(120)->run("wp core install --url=\"{$url}\" --title=\"{$title}\" --admin_user=\"{$adminUser}\" --admin_password=\"{$adminPass}\" --admin_email=\"{$adminEmail}\" --allow-root");
+            $installCmd = 'wp core install --url=' . escapeshellarg($url)
+                . ' --title=' . escapeshellarg($title)
+                . ' --admin_user=' . escapeshellarg($adminUser)
+                . ' --admin_password=' . escapeshellarg($adminPass)
+                . ' --admin_email=' . escapeshellarg($adminEmail)
+                . ' --allow-root';
+            $inst = Process::path($path)->timeout(120)->run($installCmd);
             if (!$inst->successful()) throw new \Exception("Error durante la instalación: " . $inst->errorOutput());
 
             // 4. Update Permalinks

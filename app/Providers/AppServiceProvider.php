@@ -5,7 +5,13 @@ namespace App\Providers;
 use App\Services\MonitoringService;
 use App\Shell\ShellExecutor;
 use App\Shell\SudoExecutor;
+use App\Services\TerminalSessionManager;
+use App\Listeners\HandleTerminalMessage;
+use App\Listeners\KillTerminalOnDisconnect;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Reverb\Events\ChannelRemoved;
+use Laravel\Reverb\Events\MessageReceived;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -36,6 +42,7 @@ class AppServiceProvider extends ServiceProvider
         
         // Phase 5
         $this->app->singleton(\App\Services\TerminalService::class);
+        $this->app->singleton(TerminalSessionManager::class);
         $this->app->singleton(\App\Services\GitService::class);
         $this->app->singleton(\App\Services\WordPressService::class);
         $this->app->singleton(\App\Services\ServerService::class);
@@ -63,5 +70,9 @@ class AppServiceProvider extends ServiceProvider
         } catch (\Exception $e) {
             // Ignorar si la base de datos no está lista (ej. durante php artisan migrate)
         }
+
+        // Interactive terminal sockets (Reverb long-lived process)
+        Event::listen(MessageReceived::class, HandleTerminalMessage::class);
+        Event::listen(ChannelRemoved::class, KillTerminalOnDisconnect::class);
     }
 }

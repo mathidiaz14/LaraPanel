@@ -33,6 +33,7 @@ use App\Livewire\Admin\PlanIndex;
 use App\Livewire\Admin\UserIndex;
 use App\Livewire\Admin\ApiTokens;
 use App\Http\Controllers\GitWebhookController;
+use App\Http\Controllers\TerminalSessionController;
 use App\Http\Controllers\WebmailAutoLoginController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -108,9 +109,6 @@ Route::middleware(['auth'])->group(function () {
 
 
 
-    // WordPress
-    Route::get('/wordpress', WordPressIndex::class)->name('wordpress.index');
-
     // Profile
     Route::get('/profile', \App\Livewire\Profile::class)->name('profile');
 
@@ -131,10 +129,19 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/antivirus', AntivirusIndex::class)->name('antivirus.index');
         Route::get('/docker', DockerIndex::class)->name('docker.index');
         Route::get('/terminal', TerminalIndex::class)->name('terminal.index');
+
+        // Interactive terminal sessions (PTY over WebSocket)
+        Route::post('/terminal/session', [TerminalSessionController::class, 'store'])
+            ->name('terminal.session.store')
+            ->middleware('throttle:30,1');
+        Route::delete('/terminal/session/{session}', [TerminalSessionController::class, 'destroy'])
+            ->name('terminal.session.destroy')
+            ->middleware('throttle:30,1');
         Route::get('/servers', ServersIndex::class)->name('servers.index');
         Route::get('/logs', LogIndex::class)->name('logs.index');
         Route::get('/uptime', \App\Livewire\Uptime\UptimeIndex::class)->name('uptime.index');
         Route::get('/performance', \App\Livewire\Performance\PerformanceIndex::class)->name('performance.index');
+        Route::get('/wordpress', WordPressIndex::class)->name('wordpress.index');
         
         // Root phpMyAdmin Sign-on
         Route::get('/admin/db', function () {

@@ -5,353 +5,260 @@
                 <i class="fa-solid fa-terminal" style="color:var(--accent-light);margin-right:10px;"></i>
                 Terminal Web
             </h1>
-            <p class="page-subtitle">Acceso CLI interactivo al servidor con elevación de permisos (TTY Virtual).</p>
+            <p class="page-subtitle">Sesión PTY en tiempo real sobre el servidor local o un VPS remoto.</p>
         </div>
         <div style="display:flex;gap:8px;align-items:center;">
-            <span class="badge badge-success" style="font-size:11px;">
-                <i class="fa-solid fa-shield-halved" style="margin-right:4px;"></i> ELEVACIÓN SUDO
-            </span>
-            <span class="badge badge-info" style="font-size:11px;">MODO TTY COMPLETO</span>
+            <span id="terminal-status" class="badge badge-secondary" style="font-size:11px;">DESCONECTADA</span>
+            <button id="terminal-disconnect" type="button" class="btn btn-danger btn-sm" hidden>
+                <i class="fa-solid fa-stop"></i> Cerrar sesión
+            </button>
         </div>
     </div>
 
     <div class="glass lp-panel" style="padding:0;overflow:hidden;display:flex;flex-direction:column;height:68vh;border-color:rgba(99,102,241,0.3);">
-        {{-- Terminal Header bar --}}
-        <div style="background:rgba(0,0,0,0.5);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--glass-border);">
-            <div style="display:flex;gap:6px;align-items:center;">
+        <div style="background:rgba(0,0,0,0.5);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--glass-border);gap:16px;flex-wrap:wrap;">
+            <div style="display:flex;gap:6px;align-items:center;min-width:0;">
                 <div style="width:12px;height:12px;border-radius:50%;background:#ff5f56;"></div>
                 <div style="width:12px;height:12px;border-radius:50%;background:#ffbd2e;"></div>
                 <div style="width:12px;height:12px;border-radius:50%;background:#27c93f;"></div>
-                <span style="margin-left:10px;font-family:monospace;font-size:11px;color:var(--text-muted);">
-                    root@larapanel: <span id="prompt-cwd-display">{{ $cwd }}</span>
+                <span style="margin-left:10px;font-family:monospace;font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    <span id="terminal-target">Sin sesión</span>
                 </span>
             </div>
-            <div style="display:flex;gap:12px;font-size:11px;color:var(--text-muted);">
-                <span><kbd style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;">↑ / ↓</kbd> Historial</span>
-                <span><kbd style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;">Ctrl+V</kbd> Pegar</span>
-                <span><kbd style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;">Ctrl+L</kbd> Limpiar</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <label for="terminal-server" style="font-size:11px;color:var(--text-muted);">Destino</label>
+                <select id="terminal-server" class="form-control form-control-sm" style="min-width:190px;max-width:260px;">
+                    <option value="local">Este servidor (local)</option>
+                    @foreach ($remoteServers as $server)
+                        <option value="ssh:{{ $server->id }}">{{ $server->name }} ({{ $server->hostname }})</option>
+                    @endforeach
+                </select>
+                <button id="terminal-connect" type="button" class="btn btn-primary btn-sm">
+                    <i class="fa-solid fa-plug"></i> Conectar
+                </button>
             </div>
         </div>
 
-        {{-- Xterm Container --}}
-        <div id="terminal-container" wire:ignore style="flex:1;padding:12px;background:#000;"></div>
-
-        {{-- Hidden Livewire Form --}}
-        <form wire:submit="runCommand" style="display:none;">
-            <input type="text" wire:model="command" id="hidden-cmd-input">
-            <button type="submit">Run</button>
-        </form>
+        <div id="terminal-container" wire:ignore style="flex:1;padding:12px;background:#090b10;"></div>
     </div>
 
-    {{-- CDN for Xterm.js --}}
     @assets
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <script src="https://cdn.jsdelivr.net/npm/pusher-js@8.4.0/dist/web/pusher.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <style>
-        #terminal-container {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            position: relative;
-        }
-        .xterm .xterm-viewport {
-            overflow-y: auto !important;
+        #terminal-container { width:100%; height:100%; overflow:hidden; position:relative; }
+        #terminal-container .xterm { height:100%; }
+        .xterm .xterm-viewport { overflow-y:auto !important; }
+        @media (max-width: 700px) {
+            #terminal-server { min-width:150px !important; max-width:180px !important; }
         }
     </style>
     @endassets
 
     @script
     <script>
-        function initTerminal() {
-            if (typeof window.Terminal === 'undefined' || typeof window.FitAddon === 'undefined') {
-                setTimeout(initTerminal, 50);
+        (() => {
+            const container = document.getElementById('terminal-container');
+            const connectButton = document.getElementById('terminal-connect');
+            const disconnectButton = document.getElementById('terminal-disconnect');
+            const serverSelect = document.getElementById('terminal-server');
+            const status = document.getElementById('terminal-status');
+            const target = document.getElementById('terminal-target');
+            const reverb = @json($reverb);
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+            if (!container || !connectButton || !window.Pusher || !window.Terminal || !window.FitAddon) {
                 return;
             }
 
-            const container = document.getElementById('terminal-container');
-            if (!container) return;
-            container.innerHTML = '';
+            let terminal;
+            let fitAddon;
+            let pusher = null;
+            let channel = null;
+            let sessionId = null;
+            let sessionToken = null;
+            let connected = false;
 
-            const term = new Terminal({
-                cursorBlink: true,
-                cursorStyle: 'block',
-                theme: {
-                    background: '#090b10',
-                    foreground: '#cdd6f4',
-                    cursor: '#6366f1',
-                    selectionBackground: 'rgba(99, 102, 241, 0.3)',
-                    black: '#1e1e2e',
-                    red: '#f38ba8',
-                    green: '#a6e3a1',
-                    yellow: '#f9e2af',
-                    blue: '#89b4fa',
-                    magenta: '#cba6f7',
-                    cyan: '#94e2d5',
-                    white: '#bac2de'
-                },
-                fontFamily: 'Fira Code, Menlo, Monaco, "Courier New", monospace',
-                fontSize: 13,
-                scrollback: 2000
-            });
+            const setStatus = (label, tone = 'secondary') => {
+                status.textContent = label;
+                status.className = `badge badge-${tone}`;
+            };
 
-            const fitAddon = new FitAddon.FitAddon();
-            term.loadAddon(fitAddon);
-            term.open(container);
-            
-            setTimeout(() => {
-                try { fitAddon.fit(); } catch(e) {}
-            }, 80);
+            const decodeBase64 = (value) => {
+                const binary = atob(value);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                return bytes;
+            };
 
-            window.addEventListener('resize', () => {
-                if (container.offsetParent !== null) {
-                    try { fitAddon.fit(); } catch(e) {}
-                }
-            });
+            const encodeBase64 = (value) => {
+                const bytes = new TextEncoder().encode(value);
+                let binary = '';
+                for (const byte of bytes) binary += String.fromCharCode(byte);
+                return btoa(binary);
+            };
 
-            let currentLine = '';
-            let cursorPos = 0;
-            let history = [];
-            let historyIndex = -1;
-            let tempDraft = '';
-            let livewireCwd = '{{ $cwd }}';
+            const writeNotice = (message) => {
+                terminal.writeln(`\r\n\x1b[1;33m${message}\x1b[0m`);
+            };
 
-            function promptPrefix() {
-                return '\x1b[1;32mroot@larapanel\x1b[0m:\x1b[1;34m' + livewireCwd + '\x1b[0m# ';
-            }
+            const sendResize = () => {
+                if (!channel || !connected || !terminal) return;
+                fitAddon.fit();
+                channel.trigger('client-terminal-resize', {
+                    cols: terminal.cols,
+                    rows: terminal.rows,
+                });
+            };
 
-            function writePrompt(addNewline = true) {
-                if (addNewline) {
-                    term.write('\r\n' + promptPrefix());
-                } else {
-                    term.write(promptPrefix());
-                }
-                const cwdEl = document.getElementById('prompt-cwd-display');
-                if (cwdEl) cwdEl.textContent = livewireCwd;
-            }
+            const destroySession = async (notify = true) => {
+                connected = false;
+                if (channel) channel.unbind_all();
+                if (pusher) pusher.disconnect();
+                channel = null;
+                pusher = null;
 
-            function setLine(newLine) {
-                term.write('\r\x1b[K');
-                term.write(promptPrefix());
-                term.write(newLine);
-                currentLine = newLine;
-                cursorPos = currentLine.length;
-            }
-
-            term.writeln('\x1b[1;36m=============================================================\x1b[0m');
-            term.writeln('\x1b[1;32m  LaraPanel Web Terminal v2.0 (Pseudo-TTY Terminal)  \x1b[0m');
-            term.writeln('\x1b[1;36m=============================================================\x1b[0m');
-            term.writeln('Comandos administrativos (apt, systemctl, ufw, docker) cuentan con auto-sudo.\r\n');
-            writePrompt(false);
-
-            // Handle Paste Events on container
-            container.addEventListener('paste', (e) => {
-                e.preventDefault();
-                const pastedText = (e.clipboardData || window.clipboardData).getData('text');
-                if (pastedText) {
-                    handleInputText(pastedText);
-                }
-            });
-
-            function handleInputText(text) {
-                const clean = text.replace(/[\r\n]+/g, ' ').replace(/[\x00-\x08\x0b-\x1f\x7f]/g, '');
-                if (clean.length === 0) return;
-
-                if (cursorPos === currentLine.length) {
-                    currentLine += clean;
-                    cursorPos += clean.length;
-                    term.write(clean);
-                } else {
-                    currentLine = currentLine.slice(0, cursorPos) + clean + currentLine.slice(cursorPos);
-                    const tail = currentLine.slice(cursorPos);
-                    term.write(tail);
-                    cursorPos += clean.length;
-                    const moveBack = currentLine.length - cursorPos;
-                    if (moveBack > 0) {
-                        term.write(`\x1b[${moveBack}D`);
+                if (sessionId) {
+                    try {
+                        await fetch(`/terminal/session/${sessionId}`, {
+                            method: 'DELETE',
+                            headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+                        });
+                    } catch (error) {
+                        // The server-side ChannelRemoved listener still cleans up the PTY.
                     }
                 }
-            }
 
-            term.onData(data => {
-                // Enter Key
-                if (data === '\r' || data === '\n') {
-                    const cmd = currentLine.trim();
-                    term.write('\r\n');
+                sessionId = null;
+                sessionToken = null;
+                disconnectButton.hidden = true;
+                connectButton.hidden = false;
+                serverSelect.disabled = false;
+                target.textContent = 'Sin sesión';
+                setStatus('DESCONECTADA');
+                if (notify && terminal) writeNotice('Sesión cerrada.');
+            };
 
-                    if (cmd === 'clear') {
-                        term.clear();
-                        currentLine = '';
-                        cursorPos = 0;
-                        historyIndex = -1;
-                        writePrompt(false);
-                        return;
-                    }
+            const createSession = async () => {
+                const selected = serverSelect.value;
+                const [type, serverId] = selected.split(':');
+                const body = { type };
+                if (type === 'ssh') body.server_id = Number(serverId);
 
-                    if (cmd !== '') {
-                        if (history.length === 0 || history[0] !== cmd) {
-                            history.unshift(cmd);
-                            if (history.length > 100) history.pop();
-                        }
-                        historyIndex = -1;
-                        tempDraft = '';
+                const response = await fetch('{{ route('terminal.session.store') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrf,
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify(body),
+                });
 
-                        $wire.set('command', cmd);
-                        $wire.call('runCommand');
-                    } else {
-                        currentLine = '';
-                        cursorPos = 0;
-                        writePrompt(false);
-                    }
-                    currentLine = '';
-                    cursorPos = 0;
-                    return;
+                const payload = await response.json();
+                if (!response.ok) throw new Error(payload.message || 'No se pudo crear la sesión.');
+                return payload.data;
+            };
+
+            const connect = async () => {
+                if (connected) return;
+
+                connectButton.disabled = true;
+                serverSelect.disabled = true;
+                setStatus('CONECTANDO', 'warning');
+
+                try {
+                    const session = await createSession();
+                    sessionId = session.session_id;
+                    sessionToken = session.token;
+                    target.textContent = session.type === 'ssh' ? session.server.name : 'www-data@servidor-local';
+
+                    pusher = new Pusher(reverb.key, {
+                        wsHost: reverb.host,
+                        wsPort: reverb.port,
+                        wssPort: reverb.port,
+                        forceTLS: reverb.scheme === 'https',
+                        enabledTransports: ['ws', 'wss'],
+                        authEndpoint: '{{ url('/broadcasting/auth') }}',
+                        auth: { headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' } },
+                    });
+
+                    channel = pusher.subscribe(session.channel);
+                    channel.bind('pusher:subscription_succeeded', () => {
+                        connected = true;
+                        setStatus('CONECTADA', 'success');
+                        connectButton.hidden = true;
+                        disconnectButton.hidden = false;
+                        terminal.focus();
+                        fitAddon.fit();
+                        channel.trigger('client-terminal-attach', { token: sessionToken });
+                        sendResize();
+                    });
+                    channel.bind('terminal-attached', () => {
+                        setStatus('CONECTADA', 'success');
+                    });
+                    channel.bind('terminal-output', (data) => {
+                        if (data?.b64) terminal.write(decodeBase64(data.b64));
+                    });
+                    channel.bind('terminal-error', (data) => {
+                        writeNotice(data?.message || 'Error de terminal.');
+                        setStatus('ERROR', 'danger');
+                    });
+                    channel.bind('terminal-exit', (data) => {
+                        connected = false;
+                        writeNotice(`El proceso terminó (código ${data?.code ?? 0}).`);
+                        setStatus('CERRADA', 'secondary');
+                        disconnectButton.hidden = true;
+                        connectButton.hidden = false;
+                        serverSelect.disabled = false;
+                    });
+                    pusher.connection.bind('error', () => setStatus('ERROR WS', 'danger'));
+                } catch (error) {
+                    await destroySession(false);
+                    writeNotice(error.message || 'No se pudo conectar.');
+                    setStatus('ERROR', 'danger');
+                } finally {
+                    connectButton.disabled = false;
                 }
+            };
 
-                // Backspace Key
-                if (data === '\x7f' || data === '\x08') {
-                    if (cursorPos > 0) {
-                        if (cursorPos === currentLine.length) {
-                            currentLine = currentLine.slice(0, -1);
-                            cursorPos--;
-                            term.write('\b \b');
-                        } else {
-                            currentLine = currentLine.slice(0, cursorPos - 1) + currentLine.slice(cursorPos);
-                            cursorPos--;
-                            term.write('\b');
-                            term.write(currentLine.slice(cursorPos) + ' ');
-                            const moveBack = currentLine.length - cursorPos + 1;
-                            term.write(`\x1b[${moveBack}D`);
-                        }
-                    }
-                    return;
-                }
+            const init = () => {
+                terminal = new Terminal({
+                    cursorBlink: true,
+                    cursorStyle: 'block',
+                    convertEol: false,
+                    scrollback: 5000,
+                    fontFamily: 'Fira Code, Menlo, Monaco, monospace',
+                    fontSize: 13,
+                    theme: {
+                        background: '#090b10', foreground: '#cdd6f4', cursor: '#6366f1',
+                        selectionBackground: 'rgba(99,102,241,.35)', black: '#1e1e2e',
+                        red: '#f38ba8', green: '#a6e3a1', yellow: '#f9e2af', blue: '#89b4fa',
+                        magenta: '#cba6f7', cyan: '#94e2d5', white: '#bac2de',
+                    },
+                });
+                fitAddon = new FitAddon.FitAddon();
+                terminal.loadAddon(fitAddon);
+                terminal.open(container);
+                fitAddon.fit();
+                terminal.writeln('\x1b[1;36mLaraPanel Web Terminal\x1b[0m');
+                terminal.writeln('Selecciona un destino y pulsa Conectar. La sesión usa un PTY real.\r\n');
+                terminal.onData((data) => {
+                    if (!channel || !connected) return;
+                    channel.trigger('client-terminal-data', { b64: encodeBase64(data) });
+                });
+                window.addEventListener('resize', sendResize);
+                connectButton.addEventListener('click', connect);
+                disconnectButton.addEventListener('click', () => destroySession());
+                window.addEventListener('beforeunload', () => {
+                    if (sessionId) navigator.sendBeacon(`/terminal/session/${sessionId}`, new Blob([], { type: 'application/json' }));
+                });
+            };
 
-                // Escape Sequences (Arrows, Home, End, Delete)
-                if (data.startsWith('\x1b')) {
-                    // Up Arrow
-                    if (data === '\x1b[A' || data === '\x1bOA') {
-                        if (history.length > 0) {
-                            if (historyIndex === -1) {
-                                tempDraft = currentLine;
-                            }
-                            if (historyIndex < history.length - 1) {
-                                historyIndex++;
-                                setLine(history[historyIndex]);
-                            }
-                        }
-                        return;
-                    }
-
-                    // Down Arrow
-                    if (data === '\x1b[B' || data === '\x1bOB') {
-                        if (historyIndex > -1) {
-                            historyIndex--;
-                            if (historyIndex === -1) {
-                                setLine(tempDraft);
-                            } else {
-                                setLine(history[historyIndex]);
-                            }
-                        }
-                        return;
-                    }
-
-                    // Left Arrow
-                    if (data === '\x1b[D' || data === '\x1bOD') {
-                        if (cursorPos > 0) {
-                            cursorPos--;
-                            term.write('\x1b[D');
-                        }
-                        return;
-                    }
-
-                    // Right Arrow
-                    if (data === '\x1b[C' || data === '\x1bOC') {
-                        if (cursorPos < currentLine.length) {
-                            cursorPos++;
-                            term.write('\x1b[C');
-                        }
-                        return;
-                    }
-
-                    // Home Key
-                    if (data === '\x1b[H' || data === '\x1b[1~') {
-                        if (cursorPos > 0) {
-                            term.write(`\x1b[${cursorPos}D`);
-                            cursorPos = 0;
-                        }
-                        return;
-                    }
-
-                    // End Key
-                    if (data === '\x1b[F' || data === '\x1b[4~') {
-                        if (cursorPos < currentLine.length) {
-                            term.write(`\x1b[${currentLine.length - cursorPos}C`);
-                            cursorPos = currentLine.length;
-                        }
-                        return;
-                    }
-
-                    // Delete Key
-                    if (data === '\x1b[3~') {
-                        if (cursorPos < currentLine.length) {
-                            currentLine = currentLine.slice(0, cursorPos) + currentLine.slice(cursorPos + 1);
-                            term.write(currentLine.slice(cursorPos) + ' ');
-                            term.write(`\x1b[${currentLine.length - cursorPos + 1}D`);
-                        }
-                        return;
-                    }
-
-                    return;
-                }
-
-                // Ctrl+C
-                if (data === '\x03') {
-                    term.write('^C');
-                    currentLine = '';
-                    cursorPos = 0;
-                    historyIndex = -1;
-                    writePrompt(true);
-                    return;
-                }
-
-                // Ctrl+L
-                if (data === '\x0c') {
-                    term.clear();
-                    term.write(promptPrefix());
-                    term.write(currentLine);
-                    if (currentLine.length - cursorPos > 0) {
-                        term.write(`\x1b[${currentLine.length - cursorPos}D`);
-                    }
-                    return;
-                }
-
-                // Normal printable characters or multi-character paste input
-                handleInputText(data);
-            });
-
-            $wire.on('terminal-output', (events) => {
-                const data = events[0];
-                livewireCwd = data.cwd;
-                
-                if (data.output) {
-                    const lines = data.output.split('\n');
-                    for (let i = 0; i < lines.length; i++) {
-                        if (i === lines.length - 1 && lines[i] === '') continue;
-                        term.writeln(lines[i].replace(/\r/g, ''));
-                    }
-                }
-                
-                writePrompt(false);
-            });
-
-            $wire.on('terminal-clear', () => {
-                term.clear();
-                writePrompt(false);
-            });
-        }
-
-        initTerminal();
+            init();
+        })();
     </script>
     @endscript
 </div>

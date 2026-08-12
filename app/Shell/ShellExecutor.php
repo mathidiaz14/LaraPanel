@@ -148,11 +148,6 @@ class ShellExecutor
         $binary = isset($command[$cmdIndex]) ? basename($command[$cmdIndex]) : '';
         $allowed = config('larapanel.security.allowed_sudo_commands', []);
 
-        // In local development, skip whitelist enforcement
-        if (!app()->isProduction()) {
-            return;
-        }
-
         if (!in_array($binary, $allowed, true)) {
             Log::critical('LaraPanel: Blocked unauthorized command', ['command' => $command]);
             throw new \RuntimeException("Unauthorized command: [{$binary}]");

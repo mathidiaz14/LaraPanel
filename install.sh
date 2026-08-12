@@ -112,7 +112,7 @@ apt-get upgrade -y -qq
 apt-get install -y -qq \
     curl git unzip wget zip software-properties-common \
     gnupg2 ca-certificates lsb-release apt-transport-https \
-    supervisor cron fail2ban ufw
+    supervisor cron fail2ban ufw openssh-client util-linux sshpass
 
 success "Sistema actualizado."
 
@@ -424,7 +424,17 @@ CACHE_STORE=database
 QUEUE_CONNECTION=database
 FILESYSTEM_DISK=local
 
-BROADCAST_CONNECTION=log
+BROADCAST_CONNECTION=reverb
+
+# Reverb WebSocket server
+REVERB_APP_ID=larapanel
+REVERB_APP_KEY=$(openssl rand -hex 16)
+REVERB_APP_SECRET=$(openssl rand -hex 32)
+REVERB_HOST=${PANEL_DOMAIN}
+REVERB_PORT=443
+REVERB_SCHEME=https
+REVERB_SERVER_HOST=127.0.0.1
+REVERB_SERVER_PORT=8080
 
 # DNS (PowerDNS)
 PDNS_ENABLED=true
@@ -697,6 +707,19 @@ autorestart=true
 user=${PANEL_USER}
 redirect_stderr=true
 stdout_logfile=${INSTALL_DIR}/storage/logs/scheduler.log
+
+[program:larapanel-reverb]
+process_name=%(program_name)s
+command=php ${INSTALL_DIR}/artisan reverb:start --no-interaction
+directory=${INSTALL_DIR}
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=${INSTALL_DIR}/storage/logs/reverb.log
+stopwaitsecs=10
 SUP_EOF
 
 systemctl enable supervisor
@@ -704,6 +727,7 @@ systemctl start supervisor
 supervisorctl reread
 supervisorctl update
 supervisorctl start larapanel-worker:* 2>/dev/null || true
+supervisorctl start larapanel-reverb 2>/dev/null || true
 success "Supervisor configurado. 2 workers de cola activos."
 
 # ══════════════════════════════════════════════════════════════════════════════

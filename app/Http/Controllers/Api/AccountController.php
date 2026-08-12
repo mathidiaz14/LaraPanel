@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Plan;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -14,13 +15,15 @@ class AccountController extends Controller
     /**
      * Create a new hosting account (User + Base Domain limits)
      * POST /api/v1/accounts/create
+     *
+     * @throws \Illuminate\Validation\ValidationException
      */
     public function create(Request $request)
     {
         $validated = $request->validate([
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
-            'password' => 'required|min:8',
+            'password' => 'required|min:8|max:72',
             'plan_id'  => 'required|exists:plans,id',
             'domain'   => 'nullable|string', // Primary domain
         ]);
@@ -34,16 +37,18 @@ class AccountController extends Controller
             'is_active' => true,
         ]);
 
-        // If domain is provided, we would normally trigger DomainService to create the Nginx vhost.
-        // For this API stub, we will just record the success.
-        
+        AuditLog::record('api.account.created', $user->email, [
+            'user_id' => $user->id,
+            'by_user' => $request->user()->id,
+        ]);
+
         return response()->json([
             'status'  => 'success',
             'message' => 'Account created successfully',
             'data'    => [
                 'user_id' => $user->id,
                 'email'   => $user->email,
-                'plan'    => $user->plan->name,
+                'plan'    => $user->plan?->name,
             ]
         ], 201);
     }
@@ -54,14 +59,20 @@ class AccountController extends Controller
      */
     public function suspend(Request $request, int $id)
     {
-        $user = User::findOrFail($id);
-        
+        $user = $this->manageableAccount($request, $id);
+
         $reason = $request->input('reason', 'Suspended via API');
-        
+
         $user->is_active = false;
         $user->suspended_at = now();
         $user->suspension_reason = $reason;
         $user->save();
+
+        AuditLog::record('api.account.suspended', $user->email, [
+            'user_id' => $user->id,
+            'by_user' => $request->user()->id,
+            'reason'  => $reason,
+        ]);
 
         // TODO: Dispatch job to disable Nginx vhosts
 
@@ -77,12 +88,17 @@ class AccountController extends Controller
      */
     public function unsuspend(Request $request, int $id)
     {
-        $user = User::findOrFail($id);
-        
+        $user = $this->manageableAccount($request, $id);
+
         $user->is_active = true;
         $user->suspended_at = null;
         $user->suspension_reason = null;
         $user->save();
+
+        AuditLog::record('api.account.unsuspended', $user->email, [
+            'user_id' => $user->id,
+            'by_user' => $request->user()->id,
+        ]);
 
         // TODO: Dispatch job to re-enable Nginx vhosts
 
@@ -96,17 +112,36 @@ class AccountController extends Controller
      * Terminate (delete) a hosting account and all its data
      * DELETE /api/v1/accounts/{id}
      */
-    public function terminate(int $id)
+    public function terminate(Request $request, int $id)
     {
-        $user = User::findOrFail($id);
-        
+        $user = $this->manageableAccount($request, $id);
+
+        AuditLog::record('api.account.terminated', $user->email, [
+            'user_id' => $user->id,
+            'by_user' => $request->user()->id,
+        ]);
+
         // TODO: Dispatch job to physically remove domains, databases, emails from the server.
-        
+
         $user->delete();
 
         return response()->json([
             'status'  => 'success',
             'message' => 'Account terminated successfully',
         ]);
+    }
+
+    /**
+     * Load the target account and enforce that the caller cannot manage
+     * self-declared admins or its own account via the API.
+     */
+    private function manageableAccount(Request $request, int $id): User
+    {
+        $user = User::findOrFail($id);
+
+        abort_if($user->id === $request->user()->id, 422, 'No puedes gestionar tu propia cuenta desde la API.');
+        abort_if($user->isAdmin(), 422, 'No puedes gestionar cuentas de administradores desde la API.');
+
+        return $user;
     }
 }

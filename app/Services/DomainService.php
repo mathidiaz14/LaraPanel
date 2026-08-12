@@ -208,17 +208,20 @@ class DomainService
         // ── Phase 10 performance settings ────────────────────────────
         $perf = $domain->performanceSetting;
 
-        $locationBlock  = $this->buildLocationBlock($domain, $phpSocket, $perf);
-        $phase10Headers = $this->buildPhase10Headers($name, $perf);
-        $attackBlock    = $this->buildAttackBlock($name, $perf);
-        $geoWafBlock    = $this->buildGeoWafBlock($name, $perf);
-        $redirectBlocks = $this->buildRedirectBlocks($perf);
-        $microcacheZone = $this->buildMicrocacheZoneDirective($name, $perf);
+        $locationBlock    = $this->buildLocationBlock($domain, $phpSocket, $perf);
+        $phase10Headers   = $this->buildPhase10Headers($name, $perf);
+        $attackBlock      = $this->buildAttackBlock($name, $perf);
+        $geoWafBlock      = $this->buildGeoWafBlock($name, $perf);
+        $redirectBlocks   = $this->buildRedirectBlocks($perf);
+        $microcacheZone   = $this->buildMicrocacheZoneDirective($name, $perf);
+        $performanceZones = $this->buildPerformanceZones($name, $perf);
+        $brotliDirective  = $this->buildBrotliDirective($perf);
 
         return <<<NGINX
         # LaraPanel — generated for {$name}
         # DO NOT EDIT MANUALLY — changes will be overwritten
         {$microcacheZone}
+        {$performanceZones}
         server {
             listen 80;
             listen [::]:80;
@@ -240,6 +243,7 @@ class DomainService
             # Gzip
             gzip on;
             gzip_types text/plain text/css application/json application/javascript text/xml;
+        {$brotliDirective}
         {$redirectBlocks}
         {$locationBlock}
         
@@ -267,12 +271,18 @@ class DomainService
         $attackBlock    = $this->buildAttackBlock($name, $perf);
         $geoWafBlock    = $this->buildGeoWafBlock($name, $perf);
         $redirectBlocks = $this->buildRedirectBlocks($perf);
-        $microcacheZone = $this->buildMicrocacheZoneDirective($name, $perf);
-        $hstsHeader     = $this->buildHstsHeader($perf);
+        $microcacheZone   = $this->buildMicrocacheZoneDirective($name, $perf);
+        $performanceZones = $this->buildPerformanceZones($name, $perf);
+        $hstsHeader       = $this->buildHstsHeader($perf);
+        $hstsLine         = $hstsHeader
+            ? "    add_header Strict-Transport-Security \"{$hstsHeader}\" always;"
+            : '';
+        $brotliDirective  = $this->buildBrotliDirective($perf);
 
         return <<<NGINX
         # LaraPanel SSL — generated for {$name}
         {$microcacheZone}
+        {$performanceZones}
         server {
             listen 80;
             listen [::]:80;
@@ -299,7 +309,8 @@ class DomainService
             ssl_stapling_verify on;
         {$attackBlock}
         {$geoWafBlock}
-            add_header Strict-Transport-Security "{$hstsHeader}" always;
+        {$hstsLine}
+        {$brotliDirective}
             add_header X-Frame-Options "SAMEORIGIN" always;
             add_header X-Content-Type-Options "nosniff" always;
         {$phase10Headers}
@@ -372,9 +383,9 @@ class DomainService
         // PHP-FPM with optional microcache
         $cacheDirectives = '';
         if ($perf && $perf->microcache_enabled) {
-            $name = $domain->name;
+            $token = $this->zoneToken($domain->name);
             $cacheDirectives = <<<CACHE
-                fastcgi_cache cache_{$name};
+                fastcgi_cache cache_{$token};
                 fastcgi_cache_valid 200 301 302 {$perf->microcache_ttl}s;
                 fastcgi_cache_use_stale error timeout updating;
                 fastcgi_cache_bypass \$http_pragma;
@@ -413,14 +424,67 @@ class DomainService
         }
         $basePath = config('larapanel.performance.microcache_base_path', '/var/cache/nginx');
         $path     = "{$basePath}/{$domainName}";
+        $token    = $this->zoneToken($domainName);
 
         return <<<NGINX
-        fastcgi_cache_path {$path} levels=1:2 keys_zone=cache_{$domainName}:10m max_size=1g inactive=60m use_temp_path=off;
+        fastcgi_cache_path {$path} levels=1:2 keys_zone=cache_{$token}:10m max_size=1g inactive=60m use_temp_path=off;
         NGINX;
     }
 
     /**
-     * Build Under Attack Mode rate-limiting directives inside the server block.
+     * Build http-context directives for Phase 10 (rate zones, geoip2 DB, maps).
+     * MUST be placed above any server block (valid only in http {} context).
+     */
+    protected function buildPerformanceZones(
+        string $domainName,
+        ?\App\Models\DomainPerformanceSetting $perf
+    ): string {
+        if (!$perf) {
+            return '';
+        }
+
+        $token = $this->zoneToken($domainName);
+        $lines = [];
+
+        // 10.1 Under Attack Mode: shared zones (http context)
+        if ($perf->under_attack_mode) {
+            $rate = $perf->attack_rate ?? 10;
+            $lines[] = '';
+            $lines[] = '# LaraPanel — Under Attack Mode zones (10.1)';
+            $lines[] = "limit_req_zone \$binary_remote_addr zone=attack_{$token}:10m rate={$rate}r/s;";
+            $lines[] = "limit_conn_zone \$binary_remote_addr zone=conn_attack_{$token}:10m;";
+        }
+
+        // 10.3 Geo-WAF: geoip2 database + country map (http context)
+        if ($perf->geo_waf_enabled && !empty($perf->geo_waf_countries)) {
+            $mmdb = config('larapanel.geowaf.mmdb_path');
+            $mode = $perf->geo_waf_mode === 'allow' ? 'allow' : 'block';
+
+            // Value 1 marks a country as BLOCKED.
+            // - block mode: listed countries are blocked (1), default 0
+            // - allow mode: unlisted countries are blocked (1), default 1, listed 0
+            $blockedValue = $mode === 'block' ? '1' : '0';
+            $defaultValue = $mode === 'block' ? '0' : '1';
+
+            $lines[] = '';
+            $lines[] = "# LaraPanel — Geo-WAF ({$mode} mode) (10.3)";
+            $lines[] = "geoip2 {$mmdb} { \$geoip2_data_country_iso_code default \"\" source=\$remote_addr country iso_code; }";
+            $lines[] = "map \$geoip2_data_country_iso_code \$blocked_country_{$token} {";
+            $lines[] = "    default {$defaultValue};";
+            foreach ($perf->geo_waf_countries as $code) {
+                $code = strtoupper(preg_replace('/[^A-Za-z]/', '', (string) $code) ?? '');
+                if (strlen($code) === 2) {
+                    $lines[] = "    {$code} {$blockedValue};";
+                }
+            }
+            $lines[] = "}";
+        }
+
+        return $lines ? "\n" . implode("\n", $lines) . "\n" : '';
+    }
+
+    /**
+     * Build Under Attack Mode enforcement directives (valid inside a server block).
      */
     protected function buildAttackBlock(
         string $domainName,
@@ -429,22 +493,21 @@ class DomainService
         if (!$perf || !$perf->under_attack_mode) {
             return '';
         }
-        $rate  = $perf->attack_rate ?? 10;
         $burst = $perf->attack_burst ?? 20;
         $conn  = $perf->attack_conn ?? 10;
+        $token = $this->zoneToken($domainName);
 
         return <<<NGINX
-        
+
             # LaraPanel — Under Attack Mode (10.1)
-            limit_req_zone \$binary_remote_addr zone=attack_{$domainName}:10m rate={$rate}r/s;
-            limit_conn_zone \$binary_remote_addr zone=conn_attack_{$domainName}:10m;
-            limit_req zone=attack_{$domainName} burst={$burst} nodelay;
-            limit_conn conn_attack_{$domainName} {$conn};
+            limit_req zone=attack_{$token} burst={$burst} nodelay;
+            limit_conn conn_attack_{$token} {$conn};
         NGINX;
     }
 
     /**
-     * Build Geo-WAF map + if block inside the server block.
+     * Build Geo-WAF enforcement block (valid inside a server block).
+     * The geoip2 DB + map live in http context via buildPerformanceZones().
      */
     protected function buildGeoWafBlock(
         string $domainName,
@@ -453,41 +516,14 @@ class DomainService
         if (!$perf || !$perf->geo_waf_enabled || empty($perf->geo_waf_countries)) {
             return '';
         }
+        $token = $this->zoneToken($domainName);
 
-        $countries = collect($perf->geo_waf_countries)
-            ->map(fn($code) => "    {$code} 1;")
-            ->implode("\n");
+        return <<<NGINX
 
-        $mode = $perf->geo_waf_mode === 'allow' ? 'allow' : 'block';
-        $mmdb = config('larapanel.geowaf.mmdb_path');
-
-        if ($mode === 'block') {
-            return <<<NGINX
-            
-            # LaraPanel — Geo-WAF Block Mode (10.3)
-            geoip2 {$mmdb} { \$geoip2_data_country_iso_code default \"\" source=\$remote_addr country iso_code; }
-            map \$geoip2_data_country_iso_code \$blocked_country_{$domainName} {
-                default 0;
-            {$countries}
-            }
-            if (\$blocked_country_{$domainName}) {
+            # LaraPanel — Geo-WAF (10.3)
+            if (\$blocked_country_{$token}) {
                 return 403 "Access Denied by Geo-WAF";
             }
-            NGINX;
-        }
-
-        // Allow mode: block everyone EXCEPT listed countries
-        return <<<NGINX
-        
-        # LaraPanel — Geo-WAF Allow Mode (10.3)
-        geoip2 {$mmdb} { \$geoip2_data_country_iso_code default \"\" source=\$remote_addr country iso_code; }
-        map \$geoip2_data_country_iso_code \$allowed_country_{$domainName} {
-            default 1;
-        {$countries}
-        }
-        if (\$allowed_country_{$domainName}) {
-            return 403 "Access Denied by Geo-WAF";
-        }
         NGINX;
     }
 
@@ -502,11 +538,11 @@ class DomainService
 
         $lines = [];
 
-        // Custom headers
+        // Custom headers (sanitized: block newlines and control chars)
         foreach (($perf->custom_headers ?? []) as $header) {
-            $hName  = addslashes($header['name'] ?? '');
-            $hValue = addslashes($header['value'] ?? '');
-            if ($hName) {
+            $hName  = preg_replace('/[^A-Za-z0-9\-]/', '', (string) ($header['name'] ?? ''));
+            $hValue = str_replace(["\r", "\n"], '', (string) ($header['value'] ?? ''));
+            if ($hName !== '' && $hValue !== '') {
                 $lines[] = "    add_header {$hName} \"{$hValue}\" always;";
             }
         }
@@ -515,14 +551,41 @@ class DomainService
     }
 
     /**
-     * Build the HSTS header value string.
+     * Build the HSTS header value string. Empty when the toggle is off.
      */
     protected function buildHstsHeader(?\App\Models\DomainPerformanceSetting $perf): string
     {
         if (!$perf || !$perf->hsts_enabled) {
-            return 'max-age=63072000'; // default 2 years
+            return '';
         }
         return $perf->hstsHeaderValue();
+    }
+
+    /**
+     * Build brotli compression directives (server context, 10.6).
+     * Requires the ngx_http_brotli module on the server.
+     */
+    protected function buildBrotliDirective(?\App\Models\DomainPerformanceSetting $perf): string
+    {
+        if (!$perf || !$perf->brotli_enabled) {
+            return '';
+        }
+
+        return <<<NGINX
+
+            # LaraPanel — Brotli (10.6)
+            brotli on;
+            brotli_comp_level 6;
+            brotli_types text/plain text/css application/json application/javascript text/xml application/xml image/svg+xml;
+        NGINX;
+    }
+
+    /**
+     * Sanitize a domain name into an nginx-safe identifier (zones, map variables).
+     */
+    protected function zoneToken(string $domainName): string
+    {
+        return preg_replace('/[^A-Za-z0-9_]/', '_', $domainName) ?: 'domain';
     }
 
     /**
