@@ -78,7 +78,14 @@ class CronService
         ];
 
         foreach ($activeJobs as $job) {
-            // Sanitize command string to prevent control injections
+            if (preg_match('/[\r\n\x00]/', $job->schedule) || ! preg_match('/\A[0-9*?,\/-]+(?:\s+[0-9*?,\/-]+){4}\z/', trim($job->schedule))) {
+                throw new \InvalidArgumentException("La expresión cron de '{$job->label}' no es válida.");
+            }
+
+            if (preg_match('/[\r\n\x00]/', $job->command)) {
+                throw new \InvalidArgumentException("El comando de '{$job->label}' contiene saltos de línea no permitidos.");
+            }
+
             $cmd = escapeshellcmd($job->command);
             // Append log output redirect or just standard job formatting
             $crontabLines[] = "{$job->schedule} {$cmd} # LaraPanel_Job_ID_{$job->id}";

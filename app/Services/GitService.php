@@ -25,6 +25,10 @@ class GitService
         }
 
         $domainPath = $deployment->deploy_path ?: '/var/www/' . $deployment->domain_name . '/public_html';
+        $branch = trim($deployment->branch ?: 'main');
+        if (! preg_match('/^[A-Za-z0-9._\/-]{1,200}$/', $branch) || str_starts_with($branch, '-')) {
+            throw new \InvalidArgumentException('La rama Git no es válida.');
+        }
         $outputBuffer = ">>> Starting deployment for {$deployment->domain_name}\n";
         $outputBuffer .= ">>> Repository: {$deployment->repository_url} | Branch: {$deployment->branch}\n\n";
 
@@ -37,23 +41,36 @@ class GitService
         $executor->run(['chown', '-R', config('larapanel.server.sudo_user', 'www-data') . ':' . config('larapanel.server.sudo_user', 'www-data'), $domainPath], false);
 
         // Check if directory is a git repository
-        $isRepo = Process::path($domainPath)->run('git rev-parse --is-inside-work-tree');
+        $isRepo = Process::path($domainPath)->run(['git', 'rev-parse', '--is-inside-work-tree']);
 
         try {
             if ($isRepo->successful()) {
                 // Already a repo, fetch and pull
                 $outputBuffer .= ">>> Repository found. Pulling latest changes...\n";
-                $result = Process::path($domainPath)
+                $fetch = Process::path($domainPath)
                     ->timeout(120)
-                    ->run("git fetch origin {$deployment->branch} && git reset --hard origin/{$deployment->branch}");
+                    ->run(['git', 'fetch', 'origin', $branch]);
+                $result = $fetch->successful()
+                    ? Process::path($domainPath)->timeout(120)->run(['git', 'reset', '--hard', '--', "origin/{$branch}"])
+                    : $fetch;
                 $outputBuffer .= $result->output() . $result->errorOutput() . "\n";
                 if (!$result->successful()) throw new \Exception('Git pull failed.');
             } else {
                 // Not a repo, clone it
                 $outputBuffer .= ">>> Directory is not a repository. Cloning...\n";
-                $tmpDir = '/tmp/git_clone_' . md5(uniqid());
-                $result = Process::timeout(120)
-                    ->run("git clone -b {$deployment->branch} {$deployment->repository_url} {$tmpDir} && mv {$tmpDir}/.git {$domainPath}/.git && rm -rf {$tmpDir} && cd {$domainPath} && git reset --hard");
+                $tmpDir = '/tmp/git_clone_' . bin2hex(random_bytes(12));
+                $result = Process::timeout(120)->run([
+                    'git', 'clone', '--branch', $branch, '--', $deployment->repository_url, $tmpDir,
+                ]);
+                if ($result->successful()) {
+                    $result = Process::path($domainPath)->run(['mv', $tmpDir.'/.git', $domainPath.'/.git']);
+                }
+                if ($result->successful()) {
+                    $result = Process::path($domainPath)->run(['git', 'reset', '--hard']);
+                }
+                if (is_dir($tmpDir)) {
+                    Process::run(['rm', '-rf', $tmpDir]);
+                }
                 $outputBuffer .= $result->output() . $result->errorOutput() . "\n";
                 if (!$result->successful()) throw new \Exception('Git clone failed.');
             }
@@ -68,7 +85,7 @@ class GitService
                 
                 $result = Process::path($domainPath)
                     ->timeout(300)
-                    ->run('./.deploy_script.sh');
+                    ->run(['/bin/bash', $scriptPath]);
                     
                 $outputBuffer .= $result->output() . $result->errorOutput() . "\n";
                 unlink($scriptPath);
@@ -80,7 +97,7 @@ class GitService
             $status = 'success';
 
             // Get last commit info
-            $commitInfo = Process::path($domainPath)->run('git log -1 --pretty=format:"%H|%s"');
+            $commitInfo = Process::path($domainPath)->run(['git', 'log', '-1', '--pretty=format:%H|%s']);
             if ($commitInfo->successful()) {
                 $parts = explode('|', $commitInfo->output(), 2);
                 $log->commit_hash = $parts[0] ?? $commitHash;

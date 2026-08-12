@@ -4,6 +4,7 @@ namespace App\Livewire\Email;
 
 use App\Models\EmailAccount;
 use App\Models\Domain;
+use App\Shell\ShellExecutor;
 use Livewire\Component;
 
 class EmailStats extends Component
@@ -21,7 +22,7 @@ class EmailStats extends Component
     /**
      * Refresh mailbox usage from disk (production only).
      */
-    public function refreshUsage(): void
+    public function refreshUsage(ShellExecutor $shell): void
     {
         if (!$this->selectedDomainId) return;
 
@@ -43,10 +44,9 @@ class EmailStats extends Component
         foreach ($accounts as $account) {
             $mailboxPath = $mailboxRoot . '/' . $account->domain->name . '/' . $account->username;
             if (is_dir($mailboxPath)) {
-                $output = [];
-                exec('du -sb ' . escapeshellarg($mailboxPath) . ' 2>/dev/null', $output);
-                if (!empty($output[0])) {
-                    $bytes = (int)explode("\t", $output[0])[0];
+                $result = $shell->run(['du', '-sb', $mailboxPath], false);
+                if ($result->successful() && $result->stdout !== '') {
+                    $bytes = (int) explode("\t", trim($result->stdout))[0];
                     $account->update(['used_bytes' => $bytes]);
                 }
             }

@@ -68,8 +68,8 @@ class CollectServerMetricsCommand extends Command
         $this->info("Metrics collected: CPU {$cpuUsage}% | RAM {$ramUsage}%");
 
         // Threshold checks
-        $thresholdCpu = config('larapanel.alerts.cpu_threshold', 90);
-        $thresholdRam = config('larapanel.alerts.ram_threshold', 95);
+        $thresholdCpu = config('larapanel.monitoring.alerts.cpu_threshold', 90);
+        $thresholdRam = config('larapanel.monitoring.alerts.ram_threshold', 90);
 
         if ($cpuUsage > $thresholdCpu) {
             $this->notifyAdmins('CPU', $cpuUsage, "El uso de CPU alcanzó el {$cpuUsage}% (Umbral: {$thresholdCpu}%).");

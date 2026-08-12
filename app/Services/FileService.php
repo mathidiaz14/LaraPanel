@@ -33,18 +33,19 @@ class FileService
      */
     public function resolvePath(string $relativePath): string
     {
-        $root = realpath($this->getRootPath());
-        if (!$root) {
-            // fallback in case realpath fails
-            $root = $this->getRootPath();
-        }
+        $rawRoot = $this->getRootPath();
+        $root = realpath($rawRoot) ?: $rawRoot;
 
-        $path = $root . '/' . ltrim($relativePath, '/');
+        $normalizedRoot = $this->normalizePath($root);
+        $path = $normalizedRoot . '/' . ltrim(str_replace('\\', '/', $relativePath), '/');
 
         // Resolve absolute path parts to catch navigation like "/../"
         $resolved = $this->normalizePath($path);
 
-        if (!str_starts_with($resolved, $root)) {
+        $rootPrefix = rtrim($normalizedRoot, '/') . '/';
+        $resolvedWithSlash = rtrim($resolved, '/') . '/';
+
+        if (!str_starts_with($resolvedWithSlash, $rootPrefix)) {
             throw new \InvalidArgumentException("Acceso no autorizado: Intento de escape del directorio raíz.");
         }
 
@@ -56,17 +57,28 @@ class FileService
      */
     protected function normalizePath(string $path): string
     {
-        $parts = array_filter(explode('/', str_replace('\\', '/', $path)), 'strlen');
+        $normalized = str_replace('\\', '/', $path);
+        $isAbsolute = str_starts_with($normalized, '/');
+        $drivePrefix = '';
+
+        if (preg_match('/^[a-zA-Z]:/', $normalized, $matches)) {
+            $drivePrefix = $matches[0];
+            $normalized = substr($normalized, strlen($drivePrefix));
+            $isAbsolute = true;
+        }
+
+        $parts = array_filter(explode('/', $normalized), 'strlen');
         $absolutes = [];
         foreach ($parts as $part) {
-            if ('.' == $part) continue;
-            if ('..' == $part) {
+            if ('.' === $part) continue;
+            if ('..' === $part) {
                 array_pop($absolutes);
             } else {
                 $absolutes[] = $part;
             }
         }
-        return (str_starts_with($path, '/') ? '/' : '') . implode('/', $absolutes);
+
+        return $drivePrefix . ($isAbsolute ? '/' : '') . implode('/', $absolutes);
     }
 
     /**

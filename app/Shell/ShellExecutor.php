@@ -21,6 +21,7 @@ class ShellExecutor
     protected int $timeout = 60;
     protected ?string $workingDirectory = null;
     protected array $envVars = [];
+    protected mixed $input = null;
 
     /**
      * Execute a command safely (no shell, no injection risk).
@@ -37,6 +38,7 @@ class ShellExecutor
             command: $command,
             cwd: $this->workingDirectory,
             env: $this->envVars ?: null,
+            input: $this->input,
             timeout: $this->timeout,
         );
 
@@ -102,6 +104,13 @@ class ShellExecutor
     {
         $clone = clone $this;
         $clone->envVars = array_merge($this->envVars, $env);
+        return $clone;
+    }
+
+    public function withInput(string $input): static
+    {
+        $clone = clone $this;
+        $clone->input = $input;
         return $clone;
     }
 

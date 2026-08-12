@@ -35,6 +35,13 @@ Schedule::command('larapanel:uptime')
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/larapanel-uptime.log'));
 
+// Check uptime for active domains and alert if down
+Schedule::command('panel:check-uptime')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/domains-uptime.log'));
+
 // Backups Scheduler
 Schedule::command('backups:run-scheduled')
     ->hourly()

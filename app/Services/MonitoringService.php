@@ -3,9 +3,16 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
+use App\Shell\ShellExecutor;
+use App\Shell\SudoExecutor;
 
 class MonitoringService
 {
+    public function __construct(
+        protected ShellExecutor $shell,
+        protected SudoExecutor $sudo,
+    ) {}
+
     /**
      * Get a full snapshot of current system metrics.
      */
@@ -82,7 +89,8 @@ class MonitoringService
         $services = ['nginx', 'mysql', 'mariadb', 'php8.3-fpm', 'redis-server', 'memcached', 'docker', 'fail2ban', 'postfix', 'dovecot', 'pdns', 'cron', 'ssh', 'clamav-daemon'];
         $statuses = [];
         foreach ($services as $svc) {
-            $statuses[$svc] = trim(shell_exec("systemctl is-active {$svc} 2>/dev/null") ?? '') === 'active';
+            $result = $this->sudo->run(['systemctl', 'is-active', $svc], false);
+            $statuses[$svc] = trim($result->stdout) === 'active';
         }
         return $statuses;
     }
@@ -110,14 +118,14 @@ class MonitoringService
             'user'    => $total > 0 ? round(($delta['user'] / $total) * 100, 1) : 0,
             'system'  => $total > 0 ? round(($delta['system'] / $total) * 100, 1) : 0,
             'iowait'  => $total > 0 ? round((($delta['iowait'] ?? 0) / $total) * 100, 1) : 0,
-            'cores'   => (int)(shell_exec('nproc') ?? 1),
-            'model'   => trim(shell_exec("grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2") ?? 'Unknown CPU'),
+            'cores'   => max(1, preg_match_all('/^processor\s*:/m', (string) @file_get_contents('/proc/cpuinfo'))),
+            'model'   => $this->cpuModel(),
         ];
     }
 
     protected function readCpuStat(): array
     {
-        $line = explode(' ', trim(shell_exec("head -1 /proc/stat") ?? ''));
+        $line = preg_split('/\s+/', trim(explode("\n", (string) @file_get_contents('/proc/stat'), 2)[0] ?? '')) ?: [];
         return [
             'user'    => (int)($line[1] ?? 0),
             'nice'    => (int)($line[2] ?? 0),
@@ -133,7 +141,7 @@ class MonitoringService
 
     public function getRamMetrics(): array
     {
-        $raw = shell_exec('cat /proc/meminfo') ?? '';
+        $raw = (string) @file_get_contents('/proc/meminfo');
         $mem = [];
         foreach (explode("\n", $raw) as $line) {
             if (preg_match('/^(\w+):\s+(\d+)/', $line, $m)) {
@@ -169,12 +177,12 @@ class MonitoringService
 
     public function getDiskMetrics(): array
     {
-        $raw = shell_exec("df -B1 --output=source,size,used,avail,pcent,target 2>/dev/null | grep -v tmpfs | grep -v udev | grep -v overlay | grep -v shm") ?? '';
+        $raw = $this->shell->run(['df', '-B1', '--output=source,size,used,avail,pcent,target'], false)->stdout;
         $partitions = [];
 
         foreach (array_slice(explode("\n", trim($raw)), 1) as $line) {
             $parts = preg_split('/\s+/', trim($line));
-            if (count($parts) < 6) continue;
+            if (count($parts) < 6 || preg_match('/^(tmpfs|udev|overlay|shm)$/', $parts[0])) continue;
             [$dev, $size, $used, $avail, $pct, $mount] = $parts;
             if ((int)$size === 0) continue; // skip zero-size partitions
             $partitions[] = [
@@ -206,8 +214,8 @@ class MonitoringService
             ];
         }
 
-        $kernel   = trim(shell_exec('uname -r') ?? 'Unknown');
-        $hostname = trim(shell_exec('hostname') ?? 'Unknown');
+        $kernel   = php_uname('r') ?: 'Unknown';
+        $hostname = gethostname() ?: 'Unknown';
         $uptime   = $this->getUptime();
 
         // Read /etc/os-release for distro name
@@ -231,7 +239,7 @@ class MonitoringService
 
     public function getNetMetrics(): array
     {
-        $raw = shell_exec("cat /proc/net/dev") ?? '';
+        $raw = (string) @file_get_contents('/proc/net/dev');
         $ifaces = [];
 
         foreach (array_slice(explode("\n", $raw), 2) as $line) {
@@ -276,7 +284,7 @@ class MonitoringService
 
     public function getLoadAverage(): array
     {
-        $raw = shell_exec('cat /proc/loadavg') ?? '';
+        $raw = (string) @file_get_contents('/proc/loadavg');
         $parts = explode(' ', $raw);
         return [
             '1m'  => (float)($parts[0] ?? 0),
@@ -287,7 +295,7 @@ class MonitoringService
 
     public function getUptime(): string
     {
-        $raw = (float)(shell_exec('cat /proc/uptime') ?? 0);
+        $raw = (float) ((string) @file_get_contents('/proc/uptime'));
         $seconds = (int)$raw;
         $days    = intdiv($seconds, 86400);
         $hours   = intdiv($seconds % 86400, 3600);
@@ -302,7 +310,7 @@ class MonitoringService
 
     public function getTopProcesses(int $limit = 8): array
     {
-        $raw = shell_exec("ps aux --sort=-%cpu | head -" . ($limit + 1)) ?? '';
+        $raw = $this->shell->run(['ps', 'aux', '--sort=-%cpu'], false)->stdout;
         $lines = array_slice(explode("\n", trim($raw)), 1);
         $procs = [];
 
@@ -320,6 +328,15 @@ class MonitoringService
         }
 
         return $procs;
+    }
+
+    protected function cpuModel(): string
+    {
+        $cpuInfo = (string) @file_get_contents('/proc/cpuinfo');
+
+        return preg_match('/^model name\s*:\s*(.+)$/m', $cpuInfo, $matches)
+            ? trim($matches[1])
+            : 'Unknown CPU';
     }
 
     // ─── Dev Simulation ──────────────────────────────────────────────────────

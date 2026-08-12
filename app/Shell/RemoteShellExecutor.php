@@ -17,6 +17,7 @@ class RemoteShellExecutor
 {
     protected int     $timeout          = 60;
     protected ?string $workingDirectory = null;
+    protected array   $envVars          = [];
     protected ?SSH2   $connection       = null;
 
     public function __construct(
@@ -39,6 +40,13 @@ class RemoteShellExecutor
         return $clone;
     }
 
+    public function withEnv(array $env): static
+    {
+        $clone          = clone $this;
+        $clone->envVars = array_merge($this->envVars, $env);
+        return $clone;
+    }
+
     // ── Core execution ────────────────────────────────────────────────────────
 
     /**
@@ -49,15 +57,21 @@ class RemoteShellExecutor
      */
     public function run(array $command, bool $checkExit = true): ShellResult
     {
-        if (empty($command)) {
-            throw new \InvalidArgumentException('Command cannot be empty.');
-        }
+        $this->validateCommand($command);
 
         $ssh = $this->getConnection();
 
         // Build safe command string (no shell interpolation from array)
         $cmdParts = array_map('escapeshellarg', $command);
         $cmdString = implode(' ', $cmdParts);
+
+        if (!empty($this->envVars)) {
+            $envPrefix = '';
+            foreach ($this->envVars as $key => $val) {
+                $envPrefix .= $key . '=' . escapeshellarg((string) $val) . ' ';
+            }
+            $cmdString = $envPrefix . $cmdString;
+        }
 
         if ($this->workingDirectory) {
             $cmdString = 'cd ' . escapeshellarg($this->workingDirectory) . ' && ' . $cmdString;
@@ -72,29 +86,73 @@ class RemoteShellExecutor
         $ssh->setTimeout($this->timeout);
 
         $output   = $ssh->exec($cmdString);
+        $stderr   = $ssh->getStdError();
         $exitCode = $ssh->getExitStatus();
 
-        // phpseclib returns false on connection error
+        // phpseclib returns false on connection error or execution failure
         if ($output === false) {
             throw new \RuntimeException(
                 "SSH exec failed on [{$this->server->hostname}]: " . $ssh->getLastError()
             );
         }
 
+        $codeInt = is_int($exitCode) ? $exitCode : 1;
+
         $result = new ShellResult(
-            exitCode: (int) $exitCode,
+            exitCode: $codeInt,
             stdout:   $output,
-            stderr:   '',   // phpseclib3 merges stderr into stdout via PTY; use exec without PTY for separation
+            stderr:   is_string($stderr) ? $stderr : '',
             command:  implode(' ', $command) . ' [remote: ' . $this->server->hostname . ']',
         );
 
         if ($checkExit && !$result->successful()) {
             throw new \RuntimeException(
-                "Remote command failed [{$this->server->hostname}]: " . $result->stdout
+                "Remote command failed [{$this->server->hostname}]: " . ($result->stderr ?: $result->stdout)
             );
         }
 
         return $result;
+    }
+
+    /**
+     * Validate that the base command is in the whitelist.
+     */
+    protected function validateCommand(array $command): void
+    {
+        if (empty($command)) {
+            throw new \InvalidArgumentException('Command cannot be empty.');
+        }
+
+        $cmdIndex = 0;
+        if ($command[0] === 'sudo') {
+            $cmdIndex = 1;
+            while (isset($command[$cmdIndex])) {
+                if (str_starts_with($command[$cmdIndex], '-')) {
+                    if ($command[$cmdIndex] === '-u' && isset($command[$cmdIndex + 1])) {
+                        $cmdIndex += 2;
+                    } else {
+                        $cmdIndex++;
+                    }
+                    continue;
+                }
+                if (str_contains($command[$cmdIndex], '=')) {
+                    $cmdIndex++;
+                    continue;
+                }
+                break;
+            }
+        }
+
+        $binary = isset($command[$cmdIndex]) ? basename($command[$cmdIndex]) : '';
+        $allowed = config('larapanel.security.allowed_sudo_commands', []);
+
+        if (!in_array($binary, $allowed, true)) {
+            Log::critical('LaraPanel: Blocked unauthorized remote command', [
+                'command' => $command,
+                'server'  => $this->server->hostname,
+            ]);
+            throw new \RuntimeException("Unauthorized command: [{$binary}]");
+        }
     }
 
     // ── SSH Connection ────────────────────────────────────────────────────────

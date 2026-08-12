@@ -7,9 +7,14 @@ use App\Models\Domain;
 use App\Models\User;
 use App\Models\AuditLog;
 use Illuminate\Support\Facades\Hash;
+use App\Shell\ShellExecutor;
 
 class EmailService
 {
+    public function __construct(
+        protected ShellExecutor $shell,
+    ) {}
+
     /**
      * Create virtual email mailbox.
      */
@@ -242,10 +247,9 @@ class EmailService
                 }
             } elseif (is_dir($maildir)) {
                 // Fallback a du -sb
-                $output = [];
-                exec('du -sb ' . escapeshellarg($maildir) . ' 2>/dev/null', $output);
-                if (!empty($output[0])) {
-                    $bytes = (int)explode("\t", $output[0])[0];
+                $result = $this->shell->run(['du', '-sb', $maildir], false);
+                if ($result->successful() && $result->stdout !== '') {
+                    $bytes = (int) explode("\t", trim($result->stdout))[0];
                 }
             }
 

@@ -6,6 +6,7 @@ use App\Models\Domain;
 use App\Models\SslCertificate;
 use App\Models\AuditLog;
 use App\Shell\SudoExecutor;
+use App\Shell\ShellExecutor;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 
@@ -25,6 +26,7 @@ class SslService
 
     public function __construct(
         protected SudoExecutor    $sudo,
+        protected ShellExecutor   $shell,
         protected DomainService   $domains,
     ) {}
 
@@ -542,7 +544,7 @@ class SslService
 
     public function isCertbotInstalled(): bool
     {
-        return (bool) shell_exec('which certbot 2>/dev/null');
+        return $this->shell->run(['which', 'certbot'], false)->successful();
     }
 
     public function getDomainsWithoutSsl(): \Illuminate\Database\Eloquent\Collection

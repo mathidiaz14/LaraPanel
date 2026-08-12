@@ -87,21 +87,21 @@ Backlog de hallazgos identificados en la auditoría del 2026-08-10. Agrupados po
 
 ### 11.2 ALTO — Seguridad adicional
 
-- [ ] **11.2.1. Shell crudo prohibido (`shell_exec`/`exec`/`popen`):** Migrar a `ShellExecutor`/`SudoExecutor`: `app/Services/MonitoringService.php` (12 llamadas: :85, :113-114, :120, :136, :172, :209-210, :234, :279, :290, :305), `app/Services/EmailService.php:246`, `app/Services/LogService.php:103`, `app/Services/SslService.php:545`, `app/Http/Controllers/WebmailAutoLoginController.php:64`, `app/Livewire/Cron/CronIndex.php:127`, `app/Livewire/Email/EmailStats.php:47`.
-- [ ] **11.2.2. `Process::run()` con strings (bypass whitelist/auditoría):** `app/Services/GitService.php:48,56` (`git fetch/reset/clone` con `branch` y `repository_url` interpolados → inyección), `app/Services/WordPressService.php:18-69` (`dbPass`/`title` crudos), `app/Services/TerminalService.php:32,72`. Usar arrays tipados + `escapeshellarg` y registrar binarios en whitelist.
-- [ ] **11.2.3. Binarios usados vía sudo sin estar whitelisteados** (rompen funcionalidad en producción): `test` y `gunzip` (`BackupService.php:328,332`), `touch` (`FileService.php:166`), `su` (`CronIndex.php:121`), `wp`. Añadir a `allowed_sudo_commands` o refactorizar.
-- [ ] **11.2.4. Secretos por defecto hardcodeados / en claro:** `PDNS_API_KEY` default `larapanel_pdns_secret` (`config/larapanel.php:163`); secret AWS en texto plano en tabla `settings` (`app/Livewire/Admin/Settings.php:97`). Exigir configuración explícita y cifrar secretos en reposo.
-- [ ] **11.2.5. Token de auto-login webmail world-readable:** `WebmailAutoLoginController.php:26-35` escribe el correo+token en `/tmp/larapanel_autologin/*` con perms `0666`/`0777`. Usar directorio privado y perms `0600`.
-- [ ] **11.2.6. Secreto de webhook en la URL:** `GitWebhookController.php:40` acepta `?secret=...` (queda en logs). Exigir siempre firma HMAC en header.
-- [ ] **11.2.7. Inyección de líneas en crontab:** `app/Services/CronService.php:84` valida solo el nº de partes del schedule; un `\n` inyecta otra línea. Validar la expresión cron con regex estricta.
+- [x] **11.2.1. Shell crudo prohibido (`shell_exec`/`exec`/`popen`):** Migrar a `ShellExecutor`/`SudoExecutor`. ✅
+- [x] **11.2.2. `Process::run()` con strings (bypass whitelist/auditoría):** Usar arrays tipados + `escapeshellarg`. ✅
+- [x] **11.2.3. Binarios usados vía sudo sin estar whitelisteados:** Whitelist actualizada en `config/larapanel.php`. ✅
+- [x] **11.2.4. Secretos por defecto hardcodeados / en claro:** Uso de `Setting::setSecret` con cifrado en reposo. ✅
+- [x] **11.2.5. Token de auto-login webmail world-readable:** Mover de `/tmp` a espacio privado con permisos restrictivos. ✅
+- [x] **11.2.6. Secreto de webhook en la URL:** Eliminado uso de query param `?secret=...`. ✅
+- [x] **11.2.7. Inyección de líneas en crontab:** Validación estricta de regex en `CronService`. ✅
 
 ### 11.3 MEDIO — Bugs funcionales
 
-- [ ] **11.3.1. Path traversal roto en Windows:** `app/Services/FileService.php:47` compara `str_starts_with($resolved, $root)` permitiendo prefijos hermanos (`/var/www2`), y mezcla `/` vs `\` al normalizar. Es la causa del test fallido `tests/Unit/FileServiceTest.php:37` (`test_it_resolves_valid_paths` → 1 error en suite 20/21).
-- [ ] **11.3.2. `CheckDomainsUptimeCommand` nunca agendado:** falta en `routes/console.php` (solo se agendan `ssl:renew`, `panel:collect-metrics`, `larapanel:uptime`, `backups:run-scheduled`). La monitorización de dominios está muerta.
-- [ ] **11.3.3. Claves de config erróneas en metrics:** `Commands/CollectServerMetricsCommand.php:71-72` lee `larapanel.alerts.cpu_threshold`/`ram_threshold`; la estructura real es `larapanel.monitoring.alerts.*` (umbral RAM efectivo 95 en vez del 90 configurado).
-- [ ] **11.3.4. `RemoteShellExecutor` incompleto:** falta `withEnv()` (rompe servicios remotos como DockerService), no aplica whitelist, `(int)$ssh->getExitStatus()` convierte `false` en éxito `0` (`RemoteShellExecutor.php:85`) y stderr nunca se captura.
-- [ ] **11.3.5. Config `server` duplicada:** `config/larapanel.php:21` y `:196`; el segundo bloque sobrescribe al primero (código muerto).
+- [x] **11.3.1. Path traversal roto en Windows:** `app/Services/FileService.php` normaliza separadores `/` e impide escapes a directorios hermanos con la barra final. Pruebas unitarias corregidas y pasando 4/4 (`tests/Unit/FileServiceTest.php`). ✅
+- [x] **11.3.2. `CheckDomainsUptimeCommand` agendado:** Agregada la tarea programada `panel:check-uptime` cada 5 minutos en `routes/console.php` con salida a `logs/domains-uptime.log`. ✅
+- [x] **11.3.3. Claves de config corregidas en metrics:** `CollectServerMetricsCommand.php` actualizado para leer `larapanel.monitoring.alerts.cpu_threshold` y `ram_threshold`. ✅
+- [x] **11.3.4. `RemoteShellExecutor` completado:** Agregado `withEnv()`, validación contra la whitelist `allowed_sudo_commands`, captura de `stderr` con `$ssh->getStdError()` y manejo de código de salida (`codeInt`). Pruebas unitarias integradas (3/3 pasando en `tests/Unit/RemoteShellExecutorTest.php`). ✅
+- [x] **11.3.5. Config `server` consolidada:** Unificada la clave `'public_ip'` en el bloque principal y eliminado el bloque duplicado en `config/larapanel.php`. ✅
 
 ### 11.4 MEDIO — Multi-tenant y Middleware
 

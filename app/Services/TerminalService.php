@@ -30,15 +30,13 @@ class TerminalService
             if (empty($path)) {
                 $path = '/var/www';
             }
-            // Resolve path safely (relative to cwd or absolute); paths are shell-escaped
-            $resolveCmd = 'cd ' . escapeshellarg($cwd)
-                . ' && cd ' . escapeshellarg($path) . ' 2>/dev/null && pwd';
-            $result = Process::run($resolveCmd);
+            $candidate = str_starts_with($path, '/') ? $path : rtrim($cwd, '/') . '/' . $path;
+            $resolved = realpath($candidate);
 
-            if ($result->successful()) {
+            if ($resolved !== false && is_dir($resolved)) {
                 return [
                     'output' => '',
-                    'cwd'    => trim($result->output()),
+                    'cwd'    => $resolved,
                     'code'   => 0
                 ];
             } else {
@@ -90,9 +88,11 @@ return [
                 $cmd = 'sudo -n ' . $cmd;
             }
 
+            // The command is intentionally interpreted by bash for the legacy
+            // single-command terminal; its base binary and syntax are checked above.
             $result = Process::path($cwd)
                 ->timeout(120) // 2 min max to prevent hanging
-                ->run($cmd);
+                ->run(['bash', '-lc', $cmd]);
 
             return [
                 'output' => $result->output() . $result->errorOutput(),

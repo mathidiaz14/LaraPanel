@@ -331,7 +331,11 @@ class BackupService
                         // mysqldump --databases includes CREATE DATABASE and USE statements by default!
                         $this->sudo->run(['gunzip', $sqlGzPath]);
                         $sqlPath = $tmpDir . '/database_dump.sql';
-                        $this->sudo->run(['mysql', '<', $sqlPath]);
+                        $sql = file_get_contents($sqlPath);
+                        if ($sql === false) {
+                            throw new \RuntimeException('No se pudo leer el dump SQL restaurado.');
+                        }
+                        $this->sudo->withInput($sql)->run(['mysql']);
                     }
                     
                     $this->sudo->run(['rm', '-rf', $tmpDir]);

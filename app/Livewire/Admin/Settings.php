@@ -93,8 +93,8 @@ class Settings extends Component
             \App\Models\Setting::set('backup_retention', (string) $this->backupRetention);
             \App\Models\Setting::set('timezone', $this->timezone);
             
-            \App\Models\Setting::set('aws_access_key_id', $this->awsAccessKeyId);
-            \App\Models\Setting::set('aws_secret_access_key', $this->awsSecretAccessKey);
+            \App\Models\Setting::setSecret('aws_access_key_id', $this->awsAccessKeyId);
+            \App\Models\Setting::setSecret('aws_secret_access_key', $this->awsSecretAccessKey);
             \App\Models\Setting::set('aws_default_region', $this->awsDefaultRegion);
             \App\Models\Setting::set('aws_bucket', $this->awsBucket);
             \App\Models\Setting::set('aws_endpoint', $this->awsEndpoint);

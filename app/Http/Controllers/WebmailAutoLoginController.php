@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\EmailAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Symfony\Component\Process\Process;
 
 class WebmailAutoLoginController extends Controller
 {
@@ -23,16 +24,16 @@ class WebmailAutoLoginController extends Controller
             abort(410, 'Este enlace de acceso automático ya fue utilizado o expiró.');
         }
 
-        // We write the token to a secure shared location that Roundcube can read.
-        $tokenDir = '/tmp/larapanel_autologin';
+        // Mover a storage para mayor seguridad fuera de /tmp
+        $tokenDir = storage_path('app/webmail-autologin');
         if (!is_dir($tokenDir)) {
-            @mkdir($tokenDir, 0777, true);
-            @chmod($tokenDir, 0777);
+            @mkdir($tokenDir, 0700, true);
         }
+        @chmod($tokenDir, 0700);
         
         $roundcubeToken = \Illuminate\Support\Str::random(40);
         file_put_contents("$tokenDir/$roundcubeToken", $email);
-        @chmod("$tokenDir/$roundcubeToken", 0666);
+        @chmod("$tokenDir/$roundcubeToken", 0600);
 
         $webmailHost = 'webmail.' . explode('@', $email)[1];
         $webmailUrl  = 'https://' . $webmailHost;
@@ -60,16 +61,15 @@ class WebmailAutoLoginController extends Controller
         $filename = "backup_{$username}_{$domain}_" . date('Ymd_His') . '.tar.gz';
 
         return response()->stream(function () use ($maildir) {
-            $cmd    = "tar -czf - -C " . escapeshellarg(dirname($maildir)) . " " . escapeshellarg(basename($maildir));
-            $handle = popen($cmd, 'r');
-            if ($handle) {
-                while (!feof($handle)) {
-                    echo fread($handle, 8192);
+            $process = new Process(['tar', '-czf', '-', '-C', dirname($maildir), basename($maildir)]);
+            $process->setTimeout(300);
+            $process->run(function (string $type, string $buffer): void {
+                if ($type === Process::OUT) {
+                    echo $buffer;
                     ob_flush();
                     flush();
                 }
-                pclose($handle);
-            }
+            });
         }, 200, [
             'Content-Type'        => 'application/gzip',
             'Content-Disposition' => "attachment; filename=\"$filename\"",

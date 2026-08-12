@@ -24,10 +24,10 @@ class larapanel_autologin extends rcube_plugin
             $token = $_GET['_autologin_token'];
             
             // Validate token format
-            if (preg_match('/^[a-zA-Z0-9]+$/', $token)) {
-                $token_file = '/tmp/larapanel_autologin/' . $token;
-                
-                if (file_exists($token_file)) {
+                        if (preg_match('/^[a-zA-Z0-9]+$/', $token)) {
+                            $token_file = '/var/www/panel/storage/app/webmail-autologin/' . $token;
+                            
+                            if (file_exists($token_file)) {
                     $email = trim(file_get_contents($token_file));
                     
                     if (filter_var($email, FILTER_VALIDATE_EMAIL)) {

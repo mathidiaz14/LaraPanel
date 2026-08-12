@@ -24,6 +24,7 @@ return [
         'php_versions' => ['8.1', '8.2', '8.3', '8.4'],
         'default_php' => env('LARAPANEL_DEFAULT_PHP', '8.4'),
         'sudo_user' => env('LARAPANEL_SUDO_USER', 'www-data'),
+        'public_ip'  => env('SERVER_PUBLIC_IP', '127.0.0.1'),
     ],
 
     /*
@@ -86,6 +87,9 @@ return [
             'mv',
             'update.sh',
             'find',
+            'df',
+            'du',
+            'nproc',
             'mkdir',
             'cp',
             'ln',
@@ -99,11 +103,11 @@ return [
             'ss',
             'openssl',
             'git',
-            'ps',
+            'ps', 'sh',
             'goaccess',
             'mmdbinspect',
             'wget',
-            'which',
+            'which', 'test', 'gunzip', 'touch', 'su', 'wp',
         ],
         'allowed_terminal_commands' => [
             // Navegacion y lectura
@@ -189,7 +193,7 @@ return [
     'powerdns' => [
         'enabled'  => env('PDNS_ENABLED', true),
         'api_url'  => env('PDNS_API_URL', 'http://127.0.0.1:8053/api/v1'),
-        'api_key'  => env('PDNS_API_KEY', 'larapanel_pdns_secret'),
+        'api_key'  => env('PDNS_API_KEY'),
         'server'   => env('PDNS_SERVER', 'localhost'),
     ],
 
@@ -222,14 +226,6 @@ return [
         'dkim_keys_path'      => env('DKIM_KEYS_PATH', '/etc/rspamd/dkim'),
     ],
 
-    'server' => [
-        'os'         => 'ubuntu',
-        'webserver'  => env('LARAPANEL_WEBSERVER', 'nginx'),
-        'php_versions' => ['8.1', '8.2', '8.3', '8.4'],
-        'default_php'  => env('LARAPANEL_DEFAULT_PHP', '8.4'),
-        'sudo_user'    => env('LARAPANEL_SUDO_USER', 'www-data'),
-        'public_ip'    => env('SERVER_PUBLIC_IP', '127.0.0.1'),
-    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -279,4 +275,3 @@ return [
     ],
 
 ];
-

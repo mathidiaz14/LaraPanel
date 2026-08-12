@@ -6,6 +6,7 @@ use App\Models\CronJob;
 use App\Models\CronRunLog;
 use App\Services\CronService;
 use App\Shell\SudoExecutor;
+use App\Shell\ShellExecutor;
 use Livewire\Component;
 
 class CronIndex extends Component
@@ -106,7 +107,7 @@ class CronIndex extends Component
         }
     }
 
-    public function runJobNow(int $id, SudoExecutor $sudo): void
+    public function runJobNow(int $id, SudoExecutor $sudo, ShellExecutor $shell): void
     {
         $cron = CronJob::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
         
@@ -122,10 +123,9 @@ class CronIndex extends Component
                 $exitCode = $result->exitCode;
                 $output = $result->stdout . "\n" . $result->stderr;
             } else {
-                $output = [];
-                $exitCode = 0;
-                exec($cmd . ' 2>&1', $output, $exitCode);
-                $output = implode("\n", $output) ?: '(sin salida)';
+                $result = $shell->run(['sh', '-c', $cron->command], false);
+                $exitCode = $result->exitCode;
+                $output = trim($result->stdout . "\n" . $result->stderr) ?: '(sin salida)';
             }
 
             $durationMs = (int)(microtime(true) * 1000) - $startMs;

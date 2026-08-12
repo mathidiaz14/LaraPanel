@@ -36,11 +36,13 @@ class FileServiceTest extends TestCase
 
     public function test_it_resolves_valid_paths()
     {
+        $normalizedRoot = str_replace('\\', '/', realpath($this->testRoot) ?: $this->testRoot);
+
         $path = $this->fileService->resolvePath('index.html');
-        $this->assertEquals($this->testRoot . '/index.html', $path);
+        $this->assertEquals($normalizedRoot . '/index.html', $path);
         
         $path = $this->fileService->resolvePath('/domain.com/public_html');
-        $this->assertEquals($this->testRoot . '/domain.com/public_html', $path);
+        $this->assertEquals($normalizedRoot . '/domain.com/public_html', $path);
     }
 
     public function test_it_blocks_path_traversal_attempts()
@@ -58,5 +60,13 @@ class FileServiceTest extends TestCase
         
         // Even if it tries to trick by going inside then outside
         $this->fileService->resolvePath('domain.com/../../../../etc/shadow');
+    }
+
+    public function test_it_blocks_sibling_directory_escape()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        
+        // Prevents escaping to sibling directory with matching prefix (e.g. webroot2)
+        $this->fileService->resolvePath('../' . basename($this->testRoot) . '2/secret.txt');
     }
 }

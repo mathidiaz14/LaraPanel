@@ -95,14 +95,9 @@ class LogService
 
         // System logs usually require sudo to read (like auth.log)
         try {
-            $output = $this->sudo->run(['tail', '-n', (string)$lines, $path]);
-            return implode("\n", $output);
+            $output = $this->sudo->run(['tail', '-n', (string) $lines, $path]);
+            return $output->stdout ?: 'Log vacío.';
         } catch (\Throwable $e) {
-            // Fallback for non-sudo or local environment
-            if (is_readable($path)) {
-                $content = shell_exec("tail -n {$lines} " . escapeshellarg($path));
-                return $content ?: 'Log vacío.';
-            }
             return "No se pudo leer el archivo: " . $e->getMessage();
         }
     }

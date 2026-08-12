@@ -34,12 +34,6 @@ class GitWebhookController extends Controller
             } elseif ($gitlabToken) {
                 // GitLab
                 $valid = hash_equals($deployment->webhook_secret, $gitlabToken);
-            } else {
-                // No signature provided but secret is required
-                // Allow simple testing by passing ?secret=...
-                if ($request->query('secret') === $deployment->webhook_secret) {
-                    $valid = true;
-                }
             }
 
             if (!$valid) {
