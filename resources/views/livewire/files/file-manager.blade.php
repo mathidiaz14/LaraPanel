@@ -214,10 +214,10 @@
                                 @endif
 
                                 @if($item['is_dir'])
-                                    <button wire:click="$set('newFolderName', '{{ $item['name'] }}.zip'); @this.set('selectedItems', ['{{ $item['name'] }}']); zipSelected();" class="btn btn-ghost btn-sm" title="Comprimir Zip" style="padding:6px 10px;border-radius:6px;">
+                                    <button wire:click="prepareZip('{{ addslashes($item['name']) }}')" class="btn btn-ghost btn-sm" title="Comprimir Zip" style="padding:6px 10px;border-radius:6px;">
                                         <i class="fa-solid fa-file-zipper" style="color:var(--warning);font-size:14px;"></i>
                                     </button>
-                                @elseif(in_array(strtolower(pathinfo($item['name'], PATHINFO_EXTENSION)), ['zip', 'tar', 'gz']))
+                                @elseif(strtolower(pathinfo($item['name'], PATHINFO_EXTENSION)) === 'zip')
                                     <button wire:click="startUnzip('{{ $item['name'] }}')" class="btn btn-ghost btn-sm" title="Extraer Aquí" style="padding:6px 10px;border-radius:6px;">
                                         <i class="fa-solid fa-box-open" style="color:var(--success);font-size:14px;"></i>
                                     </button>
@@ -248,13 +248,13 @@
             <div style="width:1px;height:24px;background:var(--glass-border);"></div>
             
             <div style="display:flex;gap:8px;">
-                <button wire:click="$set('showCreateFolderModal', true); @this.set('newFolderName', 'archivo_comprimido.zip')" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(251,191,36,0.1);color:var(--warning);border-radius:8px;padding:6px 12px;font-size:12px;">
+                <button wire:click="prepareZip" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(251,191,36,0.1);color:var(--warning);border-radius:8px;padding:6px 12px;font-size:12px;">
                     <i class="fa-solid fa-file-zipper"></i> Comprimir
                 </button>
-                <button wire:click="$set('showBulkMoveModal', true); @this.set('bulkDestDirectory', '')" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(99,102,241,0.1);color:#a5b4fc;border-radius:8px;padding:6px 12px;font-size:12px;">
+                <button wire:click="prepareBulkMove" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(99,102,241,0.1);color:#a5b4fc;border-radius:8px;padding:6px 12px;font-size:12px;">
                     <i class="fa-solid fa-arrows-up-down-left-right"></i> Mover
                 </button>
-                <button wire:click="$set('showBulkCopyModal', true); @this.set('bulkDestDirectory', '')" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(16,185,129,0.1);color:#6ee7b7;border-radius:8px;padding:6px 12px;font-size:12px;">
+                <button wire:click="prepareBulkCopy" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(16,185,129,0.1);color:#6ee7b7;border-radius:8px;padding:6px 12px;font-size:12px;">
                     <i class="fa-solid fa-clone"></i> Copiar
                 </button>
                 <button wire:click="confirmDelete()" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(239,68,68,0.1);color:#f87171;border-radius:8px;padding:6px 12px;font-size:12px;">
@@ -312,7 +312,7 @@
                 <input type="text" wire:model="newFolderName" class="form-input" placeholder="ej. backup.zip" autofocus style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:white;">
                 @error('newFolderName') <div style="font-size:11px;color:#f87171;margin-top:6px;">{{ $message }}</div> @enderror
                 <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:24px;">
-                    <button wire:click="$set('showCreateFolderModal', false); @this.set('newFolderName', '')" class="btn btn-ghost btn-sm" style="border-radius:8px;padding:8px 16px;">Cancelar</button>
+                    <button wire:click="closeCreateFolderModal" class="btn btn-ghost btn-sm" style="border-radius:8px;padding:8px 16px;">Cancelar</button>
                     <button wire:click="zipSelected" class="btn btn-primary btn-sm" style="border-radius:8px;padding:8px 18px;background:var(--accent-light);color:black;border:none;font-weight:700;">Comprimir</button>
                 </div>
             @else
@@ -323,7 +323,7 @@
                 <input type="text" wire:model="newFolderName" class="form-input" placeholder="Escribe el nombre de la carpeta..." autofocus style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:white;">
                 @error('newFolderName') <div style="font-size:11px;color:#f87171;margin-top:6px;">{{ $message }}</div> @enderror
                 <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:24px;">
-                    <button wire:click="$set('showCreateFolderModal', false)" class="btn btn-ghost btn-sm" style="border-radius:8px;padding:8px 16px;">Cancelar</button>
+                    <button wire:click="closeCreateFolderModal" class="btn btn-ghost btn-sm" style="border-radius:8px;padding:8px 16px;">Cancelar</button>
                     <button wire:click="createFolder" class="btn btn-primary btn-sm" style="border-radius:8px;padding:8px 18px;background:var(--accent-light);color:black;border:none;font-weight:700;">Crear Carpeta</button>
                 </div>
             @endif

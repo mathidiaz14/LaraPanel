@@ -69,4 +69,30 @@ class FileServiceTest extends TestCase
         // Prevents escaping to sibling directory with matching prefix (e.g. webroot2)
         $this->fileService->resolvePath('../' . basename($this->testRoot) . '2/secret.txt');
     }
+
+    public function test_it_blocks_symlink_escape(): void
+    {
+        $outside = sys_get_temp_dir() . '/larapanel_outside_' . uniqid();
+        @mkdir($outside, 0777, true);
+        $link = $this->testRoot . '/outside-link';
+
+        if (! @symlink($outside, $link)) {
+            @rmdir($outside);
+            $this->markTestSkipped('El sistema no permite crear enlaces simbólicos.');
+        }
+
+        try {
+            $this->expectException(\InvalidArgumentException::class);
+            $this->fileService->resolvePath('outside-link/secret.txt');
+        } finally {
+            @unlink($link);
+            @rmdir($outside);
+        }
+    }
+
+    public function test_it_does_not_allow_deleting_the_root(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->fileService->delete('');
+    }
 }

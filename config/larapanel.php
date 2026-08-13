@@ -107,7 +107,7 @@ return [
             'goaccess',
             'mmdbinspect',
             'wget',
-            'which', 'test', 'gunzip', 'touch', 'su', 'wp',
+            'which', 'test', 'gunzip', 'unzip', 'touch', 'su', 'wp',
         ],
         'allowed_terminal_commands' => [
             // Navegacion y lectura

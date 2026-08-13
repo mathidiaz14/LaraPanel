@@ -19,7 +19,7 @@ class FileService
     public function getRootPath(): string
     {
         $customRoot = config('larapanel.paths.webroots', '/var/www');
-        if (file_exists($customRoot)) {
+        if (is_dir($customRoot)) {
             return $customRoot;
         }
 
@@ -36,8 +36,10 @@ class FileService
      */
     public function resolvePath(string $relativePath): string
     {
-        $rawRoot = $this->getRootPath();
-        $root = realpath($rawRoot) ?: $rawRoot;
+        $root = realpath($this->getRootPath());
+        if ($root === false || ! is_dir($root)) {
+            throw new \RuntimeException('La raíz de archivos no está disponible.');
+        }
 
         $normalizedRoot = $this->normalizePath($root);
         $path = $normalizedRoot . '/' . ltrim(str_replace('\\', '/', $relativePath), '/');
@@ -45,14 +47,82 @@ class FileService
         // Resolve absolute path parts to catch navigation like "/../"
         $resolved = $this->normalizePath($path);
 
-        $rootPrefix = rtrim($normalizedRoot, '/') . '/';
-        $resolvedWithSlash = rtrim($resolved, '/') . '/';
-
-        if (!str_starts_with($resolvedWithSlash, $rootPrefix)) {
-            throw new \InvalidArgumentException("Acceso no autorizado: Intento de escape del directorio raíz.");
+        if ($resolved === $normalizedRoot) {
+            return $resolved;
         }
 
+        // Resolve existing targets and the nearest existing parent so a
+        // symlink cannot point an operation outside the configured webroot.
+        $existing = realpath($resolved);
+        if ($existing !== false) {
+            $this->assertInsideRoot($normalizedRoot, $existing);
+            // Keep the lexical path so deleting a symlink removes the link,
+            // not the target it points to.
+            return $resolved;
+        }
+
+        $missing = [];
+        $parent = $resolved;
+        while ($parent !== dirname($parent) && ! file_exists($parent)) {
+            array_unshift($missing, basename($parent));
+            $parent = dirname($parent);
+        }
+
+        $realParent = realpath($parent);
+        if ($realParent === false) {
+            throw new \InvalidArgumentException('La ruta padre no existe.');
+        }
+        $this->assertInsideRoot($normalizedRoot, $realParent);
+
+        $candidate = $this->normalizePath($realParent . '/' . implode('/', $missing));
+        $this->assertInsideRoot($normalizedRoot, $candidate);
+
         return $resolved;
+    }
+
+    protected function assertInsideRoot(string $root, string $path): void
+    {
+        $root = rtrim($this->normalizePath($root), '/') . '/';
+        $path = rtrim($this->normalizePath($path), '/') . '/';
+
+        if (! str_starts_with($path, $root) && rtrim($path, '/') !== rtrim($root, '/')) {
+            throw new \InvalidArgumentException("Acceso no autorizado: Intento de escape del directorio raíz.");
+        }
+    }
+
+    protected function assertNotRoot(string $relativePath): void
+    {
+        if (trim(str_replace(['/', '\\', '.'], '', $relativePath)) === '') {
+            throw new \InvalidArgumentException('La raíz del explorador no se puede modificar.');
+        }
+    }
+
+    protected function assertSafeArchiveName(string $name): void
+    {
+        $name = str_replace('\\', '/', $name);
+        if ($name === '' || str_starts_with($name, '/') || preg_match('/^[a-zA-Z]:\//', $name)) {
+            throw new \InvalidArgumentException('El nombre del archivo no es válido.');
+        }
+        foreach (explode('/', $name) as $part) {
+            if ($part === '..') {
+                throw new \InvalidArgumentException('La ruta del archivo no es segura.');
+            }
+        }
+    }
+
+    protected function assertSafeZipEntries(\ZipArchive $zip): void
+    {
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = str_replace('\\', '/', (string) $zip->getNameIndex($i));
+            if ($name === '' || str_starts_with($name, '/') || preg_match('/^[a-zA-Z]:\//', $name)) {
+                throw new \RuntimeException('El ZIP contiene una ruta absoluta no segura.');
+            }
+            foreach (explode('/', $name) as $part) {
+                if ($part === '..') {
+                    throw new \RuntimeException('El ZIP contiene una ruta que escapa del destino.');
+                }
+            }
+        }
     }
 
     /**
@@ -163,7 +233,7 @@ class FileService
             return true;
         } catch (\Throwable $e) {
             Log::error("FileManager: Failed to create folder {$targetPath}: " . $e->getMessage());
-            return false;
+            throw $e;
         }
     }
 
@@ -190,7 +260,7 @@ class FileService
             return true;
         } catch (\Throwable $e) {
             Log::error("FileManager: Failed to create file {$targetPath}: " . $e->getMessage());
-            return false;
+            throw $e;
         }
     }
 
@@ -199,6 +269,7 @@ class FileService
      */
     public function delete(string $relativePath): bool
     {
+        $this->assertNotRoot($relativePath);
         $targetPath = $this->resolvePath($relativePath);
         if (!file_exists($targetPath)) {
             throw new \RuntimeException("El recurso no existe.");
@@ -215,7 +286,7 @@ class FileService
             return true;
         } catch (\Throwable $e) {
             Log::error("FileManager: Failed to delete {$targetPath}: " . $e->getMessage());
-            return false;
+            throw $e;
         }
     }
 
@@ -236,6 +307,8 @@ class FileService
      */
     public function rename(string $relativePath, string $newName): bool
     {
+        $this->assertNotRoot($relativePath);
+        $this->assertSafeArchiveName($newName);
         $oldPath = $this->resolvePath($relativePath);
         $parent = dirname($relativePath);
         $newPath = $this->resolvePath($parent . '/' . $newName);
@@ -258,7 +331,7 @@ class FileService
             return true;
         } catch (\Throwable $e) {
             Log::error("FileManager: Failed to rename {$oldPath} to {$newPath}: " . $e->getMessage());
-            return false;
+            throw $e;
         }
     }
 
@@ -305,7 +378,7 @@ class FileService
             return true;
         } catch (\Throwable $e) {
             Log::error("FileManager: Failed to write to {$targetPath}: " . $e->getMessage());
-            return false;
+            throw $e;
         }
     }
 
@@ -334,7 +407,7 @@ class FileService
             return true;
         } catch (\Throwable $e) {
             Log::error("FileManager: Failed to chmod {$targetPath} to {$octal}: " . $e->getMessage());
-            return false;
+            throw $e;
         }
     }
 
@@ -343,8 +416,9 @@ class FileService
      */
     public function zip(string $relativePath, string $zipName): bool
     {
+        $this->assertNotRoot($relativePath);
+        $this->assertSafeArchiveName($zipName);
         $targetPath = $this->resolvePath($relativePath);
-        $parent = dirname($targetPath);
         $zipPath = $this->resolvePath(dirname($relativePath) . '/' . $zipName);
 
         if (!file_exists($targetPath)) {
@@ -354,8 +428,12 @@ class FileService
         AuditLog::record('filemanager.zip', $relativePath, ['archive' => $zipName]);
 
         if (class_exists(\ZipArchive::class)) {
+            $tempPath = tempnam(storage_path('app'), 'lp_zip_');
+            if ($tempPath === false) {
+                throw new \RuntimeException('No se pudo crear el archivo temporal para el ZIP.');
+            }
             $zip = new \ZipArchive();
-            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
+            if ($zip->open($tempPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
                 if (is_dir($targetPath)) {
                     $files = new \RecursiveIteratorIterator(
                         new \RecursiveDirectoryIterator($targetPath),
@@ -372,10 +450,84 @@ class FileService
                     $zip->addFile($targetPath, basename($targetPath));
                 }
                 $zip->close();
+
+                if (PHP_OS_FAMILY === 'Windows') {
+                    if (! rename($tempPath, $zipPath)) {
+                        throw new \RuntimeException('No se pudo guardar el archivo ZIP.');
+                    }
+                } else {
+                    $this->sudo->run(['cp', $tempPath, $zipPath]);
+                    $this->sudo->run(['chown', 'www-data:www-data', $zipPath]);
+                    @unlink($tempPath);
+                }
                 return true;
             }
+            @unlink($tempPath);
         }
-        return false;
+        throw new \RuntimeException('La extensión PHP ZipArchive no está disponible o no se pudo crear el ZIP.');
+    }
+
+    public function zipMultiple(array $relativePaths, string $zipRelativePath): bool
+    {
+        if ($relativePaths === []) {
+            throw new \InvalidArgumentException('No hay elementos seleccionados para comprimir.');
+        }
+
+        $this->assertSafeArchiveName(basename($zipRelativePath));
+        $zipPath = $this->resolvePath($zipRelativePath);
+        $items = [];
+        foreach ($relativePaths as $relativePath) {
+            $this->assertNotRoot($relativePath);
+            $path = $this->resolvePath($relativePath);
+            if (! file_exists($path)) {
+                throw new \RuntimeException("El recurso '{$relativePath}' no existe.");
+            }
+            $items[] = [$relativePath, $path];
+        }
+
+        if (! class_exists(\ZipArchive::class)) {
+            throw new \RuntimeException('La extensión PHP ZipArchive no está instalada.');
+        }
+
+        $tempPath = tempnam(storage_path('app'), 'lp_zip_');
+        if ($tempPath === false) {
+            throw new \RuntimeException('No se pudo crear el archivo temporal para el ZIP.');
+        }
+
+        $zip = new \ZipArchive();
+        if ($zip->open($tempPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            @unlink($tempPath);
+            throw new \RuntimeException('No se pudo crear el archivo ZIP.');
+        }
+
+        foreach ($items as [$relativePath, $path]) {
+            $entryRoot = basename($relativePath);
+            if (is_dir($path)) {
+                $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path), \RecursiveIteratorIterator::LEAVES_ONLY);
+                foreach ($iterator as $file) {
+                    if ($file->isDir()) continue;
+                    $filePath = $file->getRealPath();
+                    $entry = $entryRoot . '/' . substr($filePath, strlen($path) + 1);
+                    $zip->addFile($filePath, str_replace('\\', '/', $entry));
+                }
+            } else {
+                $zip->addFile($path, $entryRoot);
+            }
+        }
+        $zip->close();
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            if (! rename($tempPath, $zipPath)) {
+                throw new \RuntimeException('No se pudo guardar el archivo ZIP.');
+            }
+        } else {
+            $this->sudo->run(['cp', $tempPath, $zipPath]);
+            $this->sudo->run(['chown', 'www-data:www-data', $zipPath]);
+            @unlink($tempPath);
+        }
+
+        AuditLog::record('filemanager.zip_multiple', $zipRelativePath, ['items' => $relativePaths]);
+        return true;
     }
 
     /**
@@ -395,12 +547,26 @@ class FileService
         if (class_exists(\ZipArchive::class)) {
             $zip = new \ZipArchive();
             if ($zip->open($zipPath) === true) {
+                $this->assertSafeZipEntries($zip);
                 $total = $zip->numFiles;
+
+                if (! is_writable($destPath) && PHP_OS_FAMILY !== 'Windows') {
+                    $result = $this->sudo->run(['unzip', '-o', $zipPath, '-d', $destPath], false);
+                    $zip->close();
+                    if ($result->failed()) {
+                        throw new \RuntimeException('No se pudo extraer el archivo ZIP: ' . $result->stderr);
+                    }
+                    $onProgress('Extracción completada', $total, $total);
+                    $this->sudo->run(['chown', '-R', 'www-data:www-data', $destPath]);
+                    return true;
+                }
                 
                 // Extraer de a grupos pequeños o uno por uno
                 for ($i = 0; $i < $total; $i++) {
                     $filename = $zip->getNameIndex($i);
-                    $zip->extractTo($destPath, $filename);
+                    if (! $zip->extractTo($destPath, $filename)) {
+                        throw new \RuntimeException("No se pudo extraer '{$filename}'.");
+                    }
                     
                     // Si el callback devuelve false, abortamos (útil para errores)
                     if ($onProgress($filename, $i + 1, $total) === false) {
@@ -449,7 +615,7 @@ class FileService
             return true;
         } catch (\Throwable $e) {
             Log::error("FileManager: Failed to move {$source} to {$dest}: " . $e->getMessage());
-            return false;
+            throw $e;
         }
     }
 
@@ -488,7 +654,7 @@ class FileService
             return true;
         } catch (\Throwable $e) {
             Log::error("FileManager: Failed to copy {$source} to {$dest}: " . $e->getMessage());
-            return false;
+            throw $e;
         }
     }
 

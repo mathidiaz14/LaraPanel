@@ -6,7 +6,6 @@ use App\Services\FileService;
 use App\Services\MonitoringService;
 use Livewire\Component;
 use Livewire\WithFileUploads;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class FileManager extends Component
 {
@@ -95,7 +94,9 @@ class FileManager extends Component
         ]);
 
         try {
-            $fileService->createFolder($this->currentPath, $this->newFolderName);
+            if (! $fileService->createFolder($this->currentPath, $this->newFolderName)) {
+                throw new \RuntimeException('No se pudo crear la carpeta.');
+            }
             $this->successMessage = "Carpeta '{$this->newFolderName}' creada con éxito.";
             $this->showCreateFolderModal = false;
             $this->newFolderName = '';
@@ -114,7 +115,9 @@ class FileManager extends Component
         ]);
 
         try {
-            $fileService->createFile($this->currentPath, $this->newFileName);
+            if (! $fileService->createFile($this->currentPath, $this->newFileName)) {
+                throw new \RuntimeException('No se pudo crear el archivo.');
+            }
             $this->successMessage = "Archivo '{$this->newFileName}' creado con éxito.";
             $this->showCreateFileModal = false;
             $this->newFileName = '';
@@ -177,7 +180,9 @@ class FileManager extends Component
         ]);
 
         try {
-            $fileService->rename($this->renamingPath, $this->newName);
+            if (! $fileService->rename($this->renamingPath, $this->newName)) {
+                throw new \RuntimeException('No se pudo renombrar el recurso.');
+            }
             $this->successMessage = "Cambiado de nombre a '{$this->newName}' con éxito.";
             $this->renamingPath = null;
         } catch (\Throwable $e) {
@@ -202,7 +207,9 @@ class FileManager extends Component
         ]);
 
         try {
-            $fileService->chmod($this->chmodPath, $this->chmodOctal);
+            if (! $fileService->chmod($this->chmodPath, $this->chmodOctal)) {
+                throw new \RuntimeException('No se pudieron cambiar los permisos.');
+            }
             $this->successMessage = "Permisos actualizados con éxito.";
             $this->chmodPath = null;
         } catch (\Throwable $e) {
@@ -233,7 +240,9 @@ class FileManager extends Component
         }
 
         try {
-            $fileService->updateFileContent($this->editingPath, $content);
+            if (! $fileService->updateFileContent($this->editingPath, $content)) {
+                throw new \RuntimeException('No se pudo guardar el archivo.');
+            }
             $this->successMessage = "Archivo guardado correctamente.";
             $this->editingPath = null;
         } catch (\Throwable $e) {
@@ -399,42 +408,13 @@ class FileManager extends Component
         try {
             $zipPath = $this->currentPath . '/' . $zipName;
             
-            // Si solo es uno, usamos el zip estándar
             if (count($this->selectedItems) === 1) {
                 $fileService->zip($this->currentPath . '/' . $this->selectedItems[0], $zipName);
             } else {
-                $absZipPath = $fileService->resolvePath($zipPath);
-                
-                if (class_exists(\ZipArchive::class)) {
-                    $zip = new \ZipArchive();
-                    if ($zip->open($absZipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) === true) {
-                        foreach ($this->selectedItems as $item) {
-                            $itemPath = $this->currentPath . '/' . $item;
-                            $absItemPath = $fileService->resolvePath($itemPath);
-                            
-                            if (is_dir($absItemPath)) {
-                                $files = new \RecursiveIteratorIterator(
-                                    new \RecursiveDirectoryIterator($absItemPath),
-                                    \RecursiveIteratorIterator::LEAVES_ONLY
-                                );
-                                foreach ($files as $file) {
-                                    if (!$file->isDir()) {
-                                        $filePath = $file->getRealPath();
-                                        $relativePathInZip = $item . '/' . substr($filePath, strlen($absItemPath) + 1);
-                                        $zip->addFile($filePath, $relativePathInZip);
-                                    }
-                                }
-                            } else {
-                                $zip->addFile($absItemPath, $item);
-                            }
-                        }
-                        $zip->close();
-                    } else {
-                        throw new \RuntimeException("No se pudo crear el archivo zip.");
-                    }
-                } else {
-                    throw new \RuntimeException("La clase ZipArchive no está disponible en PHP.");
-                }
+                $fileService->zipMultiple(
+                    array_map(fn ($item) => $this->currentPath . '/' . $item, $this->selectedItems),
+                    $zipPath,
+                );
             }
 
             $this->successMessage = "Comprimido como {$zipName} con éxito.";
@@ -444,6 +424,42 @@ class FileManager extends Component
         } catch (\Throwable $e) {
             $this->errorMessage = $e->getMessage();
         }
+    }
+
+    public function prepareZip(?string $name = null): void
+    {
+        if ($name !== null) {
+            $this->selectedItems = [$name];
+            $this->newFolderName = $name . '.zip';
+        } elseif (empty($this->selectedItems)) {
+            return;
+        } else {
+            $this->newFolderName = 'archivo_comprimido.zip';
+        }
+
+        $this->showCreateFolderModal = true;
+    }
+
+    public function prepareBulkMove(): void
+    {
+        if (! empty($this->selectedItems)) {
+            $this->bulkDestDirectory = '';
+            $this->showBulkMoveModal = true;
+        }
+    }
+
+    public function prepareBulkCopy(): void
+    {
+        if (! empty($this->selectedItems)) {
+            $this->bulkDestDirectory = '';
+            $this->showBulkCopyModal = true;
+        }
+    }
+
+    public function closeCreateFolderModal(): void
+    {
+        $this->showCreateFolderModal = false;
+        $this->newFolderName = '';
     }
 
     /**
@@ -561,8 +577,18 @@ class FileManager extends Component
             ];
         }
 
-        $snapshot = $monitoringService->snapshot();
-        $diskInfo = $snapshot['disk'] ?? ['usage' => 0, 'total' => 0, 'used' => 0, 'free' => 0];
+        try {
+            $partitions = $monitoringService->getDiskMetrics();
+            $disk = collect($partitions)->firstWhere('mount', '/') ?? ($partitions[0] ?? null);
+            $diskInfo = $disk ? [
+                'usage' => $disk['percent'],
+                'total' => $disk['size'],
+                'used' => $disk['used'],
+                'free' => $disk['free'],
+            ] : ['usage' => 0, 'total' => 0, 'used' => 0, 'free' => 0];
+        } catch (\Throwable) {
+            $diskInfo = ['usage' => 0, 'total' => 0, 'used' => 0, 'free' => 0];
+        }
 
         return view('livewire.files.file-manager', [
             'items' => $items,
