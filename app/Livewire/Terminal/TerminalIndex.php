@@ -20,14 +20,7 @@ class TerminalIndex extends Component
             ? request()->getHost()
             : $configuredHost;
 
-        $configuredPort = (int) config('reverb.apps.apps.0.options.port', 443);
-        // Si el puerto configurado es el interno de Reverb (8080/8081), usar el puerto público Nginx (443/80 o request()->getPort())
-        if (in_array($configuredPort, [8080, 8081, 0], true)) {
-            $reverbPort = (int) (request()->getPort() ?: (request()->secure() ? 443 : 80));
-        } else {
-            $reverbPort = $configuredPort;
-        }
-
+        $reverbPort = (int) config('reverb.apps.apps.0.options.port', 443);
         $reverbScheme = config('reverb.apps.apps.0.options.scheme', request()->secure() ? 'https' : 'http');
 
         return view('livewire.terminal.terminal-index', [

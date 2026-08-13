@@ -222,9 +222,9 @@
                         : window.location.hostname;
                     const isSecure = reverb.scheme === 'https' || window.location.protocol === 'https:';
                     
-                    // Si el puerto de reverb es el puerto interno (ej. 8081 o 8080), conectar a través del puerto público de Nginx (443 o 80)
+                    // Resolver puerto de WebSocket (respetar puerto configurado o puerto del navegador)
                     let wsPort = parseInt(reverb.port, 10);
-                    if (!wsPort || isNaN(wsPort) || wsPort === 8081 || wsPort === 8080) {
+                    if (!wsPort || isNaN(wsPort)) {
                         wsPort = parseInt(window.location.port || (isSecure ? 443 : 80), 10);
                     }
 

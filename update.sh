@@ -44,13 +44,6 @@ fi
 log_info "Iniciando actualización en: $PANEL_DIR"
 cd "$PANEL_DIR"
 
-# Ajustar REVERB_PORT=443 en el .env del VPS si está configurado con el puerto interno (8081/8080)
-if grep -E '^REVERB_PORT=(8080|8081)' "$PANEL_DIR/.env" >/dev/null 2>&1; then
-    log_info "Ajustando REVERB_PORT=443 y REVERB_SCHEME=https en .env para proxy Nginx..."
-    sed -i -E 's/^REVERB_PORT=.*/REVERB_PORT=443/' "$PANEL_DIR/.env" || true
-    sed -i -E 's/^REVERB_SCHEME=.*/REVERB_SCHEME=https/' "$PANEL_DIR/.env" || true
-fi
-
 # Leer el puerto interno Reverb del .env (fallback: 8081)
 REVERB_SERVER_PORT=$(grep -E '^REVERB_SERVER_PORT=' "$PANEL_DIR/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'" || true)
 REVERB_SERVER_PORT="${REVERB_SERVER_PORT:-8081}"
@@ -183,7 +176,11 @@ fi
 # Actualizar el puerto en la directiva proxy_pass de Nginx si el archivo del panel existe
 if [ -f "/etc/nginx/sites-available/larapanel" ]; then
     log_info "Sincronizando el puerto proxy de Reverb (${REVERB_SERVER_PORT}) en la configuración de Nginx..."
-    sed -i -E "s|proxy_pass http://127.0.0.1:[0-9]+;|proxy_pass http://127.0.0.1:${REVERB_SERVER_PORT};|g" /etc/nginx/sites-available/larapanel
+    if ! grep -q "location /app" /etc/nginx/sites-available/larapanel; then
+        sed -i '$ s|}|  location /app {\n    proxy_http_version 1.1;\n    proxy_set_header Upgrade $http_upgrade;\n    proxy_set_header Connection "Upgrade";\n    proxy_set_header Host $host;\n    proxy_set_header X-Real-IP $remote_addr;\n    proxy_pass http://127.0.0.1:'"${REVERB_SERVER_PORT}"';\n  }\n}|' /etc/nginx/sites-available/larapanel
+    else
+        sed -i -E "s|proxy_pass http://127.0.0.1:[0-9]+;|proxy_pass http://127.0.0.1:${REVERB_SERVER_PORT};|g" /etc/nginx/sites-available/larapanel
+    fi
     nginx -t && systemctl reload nginx || true
 fi
 
