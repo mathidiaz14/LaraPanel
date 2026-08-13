@@ -72,14 +72,6 @@ class AppServiceProvider extends ServiceProvider
             }
         }
 
-        // 2. Interceptor de errores para suprimir el aviso de tempnam() si PHP recurre a /tmp de forma segura
-        set_error_handler(function ($level, $message) {
-            if (str_contains($message, 'tempnam()')) {
-                return true; // Ignorar el aviso para que PHP continúe usando /tmp sin lanzar ErrorException 500
-            }
-            return false;
-        }, E_WARNING | E_NOTICE);
-
         // Enforce 2FA for admin users (Phase 0 stub — full impl in Phase 1)
         // \Illuminate\Support\Facades\Gate::define('admin', fn($user) => $user->isAdmin());
 
