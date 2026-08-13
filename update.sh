@@ -44,14 +44,14 @@ fi
 log_info "Iniciando actualización en: $PANEL_DIR"
 cd "$PANEL_DIR"
 
-# Leer el puerto Reverb del .env (fallback: 8080)
-REVERB_SERVER_PORT=$(grep -E '^REVERB_SERVER_PORT=' "$PANEL_DIR/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'")
-REVERB_SERVER_PORT="${REVERB_SERVER_PORT:-8080}"
+# Leer el puerto Reverb del .env (fallback: 8081)
+REVERB_SERVER_PORT=$(grep -E '^REVERB_SERVER_PORT=' "$PANEL_DIR/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'" || true)
+REVERB_SERVER_PORT="${REVERB_SERVER_PORT:-8081}"
 
 # ─── 0. Dependencias del sistema ───────────────────────────────────────────────
 log_info "Verificando dependencias del sistema..."
-apt-get update -qq
-apt-get install -y -qq openssh-client util-linux sshpass
+apt-get update -qq || true
+apt-get install -y -qq openssh-client util-linux sshpass || true
 
 # ─── 1. Configurar git safe.directory ─────────────────────────────────────────
 log_info "Configurando excepciones de seguridad en Git..."
@@ -59,14 +59,14 @@ git config --global --add safe.directory "$PANEL_DIR" || true
 
 # ─── 2. Descargar última versión desde Git ────────────────────────────────────
 log_info "Obteniendo los últimos cambios de Git..."
-git fetch --all
-git reset --hard origin/main || git reset --hard origin/master || log_warn "No se pudo realizar el reset de git. Intentando git pull estándar..."
+git fetch --all || true
+git reset --hard origin/main 2>/dev/null || git reset --hard origin/master 2>/dev/null || log_warn "No se pudo realizar el reset de git. Intentando git pull estándar..."
 git pull || log_warn "Git pull falló. Continuando con el resto del proceso..."
 
 # ─── 3. Permisos temporales de larapanel:www-data ─────────────────────────────
 log_info "Ajustando la propiedad de los archivos a larapanel:www-data..."
-chown -R larapanel:www-data "$PANEL_DIR"
-chmod -R 755 "$PANEL_DIR"
+chown -R larapanel:www-data "$PANEL_DIR" || true
+chmod -R 755 "$PANEL_DIR" || true
 
 # ─── 4. Actualizar dependencias de PHP ────────────────────────────────────────
 log_info "Instalando dependencias de PHP (Composer)..."
@@ -78,28 +78,28 @@ sudo -u larapanel php artisan migrate --force
 
 # ─── 6. Limpiar y optimizar cachés de Laravel ─────────────────────────────────
 log_info "Limpiando y optimizando configuraciones y cachés de Laravel..."
-sudo -u larapanel php artisan config:clear
-sudo -u larapanel php artisan cache:clear
-sudo -u larapanel php artisan route:clear
-sudo -u larapanel php artisan view:clear
-sudo -u larapanel php artisan event:clear
+sudo -u larapanel php artisan config:clear || true
+sudo -u larapanel php artisan cache:clear || true
+sudo -u larapanel php artisan route:clear || true
+sudo -u larapanel php artisan view:clear || true
+sudo -u larapanel php artisan event:clear || true
 
 # Optimizar para producción
-sudo -u larapanel php artisan config:cache
-sudo -u larapanel php artisan route:cache
-sudo -u larapanel php artisan view:cache
-sudo -u larapanel php artisan event:cache
+sudo -u larapanel php artisan config:cache || true
+sudo -u larapanel php artisan route:cache || true
+sudo -u larapanel php artisan view:cache || true
+sudo -u larapanel php artisan event:cache || true
 
 # ─── 7. Instalar dependencias JS y compilar assets ────────────────────────────
 if [ -f "package.json" ]; then
     log_info "Instalando dependencias de Node.js y compilando assets con Vite..."
-    # Usar npm ci para instalación reproducible en producción
+    # NO usar --omit=dev para permitir que Vite compile los assets
     if [ -f "package-lock.json" ]; then
-        sudo -u larapanel npm ci --omit=dev
+        sudo -u larapanel npm ci || sudo -u larapanel npm install
     else
-        sudo -u larapanel npm install --omit=dev
+        sudo -u larapanel npm install
     fi
-    sudo -u larapanel npm run build
+    sudo -u larapanel npm run build || log_warn "Falló la compilación de assets Vite."
 else
     log_warn "No se encontró package.json. Omitiendo compilación de assets..."
 fi
@@ -109,10 +109,10 @@ log_info "Configurando permisos finales..."
 mkdir -p "$PANEL_DIR/storage/framework/"{sessions,views,cache/data} "$PANEL_DIR/storage/logs" "$PANEL_DIR/bootstrap/cache" "$PANEL_DIR/database"
 touch "$PANEL_DIR/database/database.sqlite" || true
 
-chown -R larapanel:www-data "$PANEL_DIR"
-chmod -R 755 "$PANEL_DIR"
+chown -R larapanel:www-data "$PANEL_DIR" || true
+chmod -R 755 "$PANEL_DIR" || true
 
-# storage, bootstrap/cache y database pertenecen a www-data y tienen permisos 777 para que SQLite y la app funcionen sin bloqueos
+# storage, bootstrap/cache y database pertenecen a www-data y tienen permisos 777
 chown -R www-data:www-data "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache" "$PANEL_DIR/database"
 chmod -R 777 "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache" "$PANEL_DIR/database"
 
@@ -120,14 +120,13 @@ chmod -R 777 "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache" "$PANEL_DIR/datab
 log_info "Reiniciando el worker de colas (Queue Worker)..."
 sudo -u larapanel php artisan queue:restart || true
 
-# ─── 10. Reiniciar Reverb vía Supervisor ──────────────────────────────────────
+# ─── 10. Reiniciar Reverb vía Supervisor y actualizar Nginx ───────────────────
 log_info "Gestionando el proceso WebSocket Reverb..."
 
 if command -v supervisorctl > /dev/null 2>&1; then
     supervisorctl reread || true
     supervisorctl update || true
 
-    # Reiniciar el proceso Reverb
     if supervisorctl status larapanel-reverb > /dev/null 2>&1; then
         log_info "Reiniciando proceso Reverb en Supervisor..."
         supervisorctl restart larapanel-reverb || log_warn "No se pudo reiniciar larapanel-reverb vía supervisorctl."
@@ -169,17 +168,20 @@ else
 fi
 
 # ─── 12. Reiniciar PHP-FPM para vaciar OPcache ────────────────────────────────
-PHP_FPM_SERVICE=$(systemctl list-units --type=service --all 2>/dev/null | grep -oE "php[0-9]+\.[0-9]+-fpm" | head -n 1 || true)
-if [ -n "$PHP_FPM_SERVICE" ]; then
-    log_info "Reiniciando servicio PHP-FPM ($PHP_FPM_SERVICE) para aplicar cambios en OPcache..."
-    systemctl restart "$PHP_FPM_SERVICE"
+log_info "Reiniciando servicios PHP-FPM activos..."
+FPM_SERVICES=$(systemctl list-units --type=service --state=running 2>/dev/null | grep -oE "php[0-9]+\.[0-9]+-fpm" || true)
+if [ -n "$FPM_SERVICES" ]; then
+    for fpm in $FPM_SERVICES; do
+        log_info "Reiniciando $fpm..."
+        systemctl restart "$fpm" || true
+    done
 else
-    log_warn "No se pudo detectar el servicio PHP-FPM automáticamente. Intenta reiniciarlo manualmente."
+    log_warn "No se detectaron servicios PHP-FPM activos para reiniciar."
 fi
 
 # ─── 13. Reiniciar Nginx ──────────────────────────────────────────────────────
 log_info "Reiniciando servidor Nginx..."
-systemctl restart nginx
+systemctl restart nginx || true
 
 # ─── Resumen final ────────────────────────────────────────────────────────────
 echo ""
