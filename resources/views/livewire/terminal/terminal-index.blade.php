@@ -52,14 +52,6 @@
                 </div>
             </div>
             <div id="terminal-container" wire:ignore style="height:360px;padding:12px;background:#090b10;"></div>
-            <div style="padding:10px 14px;background:rgba(0,0,0,.32);border-top:1px solid var(--glass-border);display:flex;gap:8px;align-items:center;">
-                <span style="color:#a6e3a1;font-family:monospace;font-size:12px;">$</span>
-                <input id="terminal-command-input" list="terminal-suggestions" wire:model="command" wire:keydown.enter="runCommand" class="form-control form-control-sm" placeholder="Escribe un comando permitido..." style="font-family:monospace;">
-                <button wire:click="runCommand" class="btn btn-primary btn-sm"><i class="fa-solid fa-play"></i> Ejecutar</button>
-                <datalist id="terminal-suggestions">
-                    @foreach($suggestions as $suggestion)<option value="{{ $suggestion }}">@endforeach
-                </datalist>
-            </div>
             <div style="padding:8px 14px;display:flex;gap:14px;font-size:11px;color:var(--text-muted);">
                 <span><kbd>Tab</kbd> autocompletar</span><span><kbd>↑ ↓</kbd> historial</span><span><kbd>Ctrl+L</kbd> limpiar</span><span><kbd>Ctrl+C</kbd> cancelar línea</span>
                 @if($exitCode !== null)<span style="margin-left:auto;color:{{ $exitCode === 0 ? '#a6e3a1' : '#f38ba8' }};">Salida: {{ $exitCode }} · {{ $durationMs ?? 0 }} ms</span>@endif
