@@ -51,7 +51,7 @@ REVERB_SERVER_PORT="${REVERB_SERVER_PORT:-8081}"
 # ─── 0. Dependencias del sistema ───────────────────────────────────────────────
 log_info "Verificando dependencias del sistema..."
 apt-get update -qq || true
-apt-get install -y -qq openssh-client util-linux sshpass || true
+apt-get install -y -qq openssh-client util-linux sshpass supervisor || true
 
 # ─── 1. Configurar git safe.directory ─────────────────────────────────────────
 log_info "Configurando excepciones de seguridad en Git..."
@@ -93,7 +93,6 @@ sudo -u larapanel php artisan event:cache || true
 # ─── 7. Instalar dependencias JS y compilar assets ────────────────────────────
 if [ -f "package.json" ]; then
     log_info "Instalando dependencias de Node.js y compilando assets con Vite..."
-    # NO usar --omit=dev para permitir que Vite compile los assets
     if [ -f "package-lock.json" ]; then
         sudo -u larapanel npm ci || sudo -u larapanel npm install
     else
@@ -120,22 +119,58 @@ chmod -R 777 "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache" "$PANEL_DIR/datab
 log_info "Reiniciando el worker de colas (Queue Worker)..."
 sudo -u larapanel php artisan queue:restart || true
 
-# ─── 10. Reiniciar Reverb vía Supervisor y actualizar Nginx ───────────────────
-log_info "Gestionando el proceso WebSocket Reverb..."
+# ─── 10. Configurar e Iniciar Supervisor (Queue Worker, Scheduler, Reverb) ───
+log_info "Configurando y registrando servicios en Supervisor..."
 
 if command -v supervisorctl > /dev/null 2>&1; then
+    mkdir -p /etc/supervisor/conf.d
+
+    cat > /etc/supervisor/conf.d/larapanel.conf <<SUP_EOF
+[program:larapanel-worker]
+process_name=%(program_name)s_%(process_num)02d
+command=php ${PANEL_DIR}/artisan queue:work database --sleep=3 --tries=3 --max-time=3600
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+user=larapanel
+numprocs=2
+redirect_stderr=true
+stdout_logfile=${PANEL_DIR}/storage/logs/worker.log
+stopwaitsecs=3600
+
+[program:larapanel-scheduler]
+process_name=%(program_name)s
+command=/bin/bash -c 'while true; do php ${PANEL_DIR}/artisan schedule:run --no-interaction >> /dev/null 2>&1; sleep 60; done'
+autostart=true
+autorestart=true
+user=larapanel
+redirect_stderr=true
+stdout_logfile=${PANEL_DIR}/storage/logs/scheduler.log
+
+[program:larapanel-reverb]
+process_name=%(program_name)s
+command=php ${PANEL_DIR}/artisan reverb:start --no-interaction
+directory=${PANEL_DIR}
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=${PANEL_DIR}/storage/logs/reverb.log
+stopwaitsecs=10
+SUP_EOF
+
+    systemctl enable supervisor || true
+    systemctl start supervisor || true
     supervisorctl reread || true
     supervisorctl update || true
-
-    if supervisorctl status larapanel-reverb > /dev/null 2>&1; then
-        log_info "Reiniciando proceso Reverb en Supervisor..."
-        supervisorctl restart larapanel-reverb || log_warn "No se pudo reiniciar larapanel-reverb vía supervisorctl."
-    else
-        log_warn "El programa larapanel-reverb no existe en Supervisor. Intentando iniciarlo..."
-        supervisorctl start larapanel-reverb || log_warn "No se pudo iniciar larapanel-reverb."
-    fi
+    supervisorctl restart larapanel-worker:* 2>/dev/null || supervisorctl start larapanel-worker:* 2>/dev/null || true
+    supervisorctl restart larapanel-reverb 2>/dev/null || supervisorctl start larapanel-reverb 2>/dev/null || true
+    supervisorctl restart larapanel-scheduler 2>/dev/null || supervisorctl start larapanel-scheduler 2>/dev/null || true
 else
-    log_warn "supervisorctl no está disponible. Verificando si Reverb está corriendo vía artisan..."
+    log_warn "supervisorctl no está disponible. No se pudo registrar la configuración de Supervisor."
 fi
 
 # Actualizar el puerto en la directiva proxy_pass de Nginx si el archivo del panel existe
@@ -189,6 +224,6 @@ log_success "¡LaraPanel se ha actualizado y optimizado correctamente a la últi
 echo ""
 log_info "Estado de procesos Supervisor:"
 if command -v supervisorctl > /dev/null 2>&1; then
-    supervisorctl status larapanel-worker larapanel-reverb larapanel-scheduler 2>/dev/null || true
+    supervisorctl status larapanel-worker:* larapanel-reverb larapanel-scheduler 2>/dev/null || true
 fi
 echo ""
