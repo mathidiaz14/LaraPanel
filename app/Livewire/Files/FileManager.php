@@ -343,7 +343,7 @@ class FileManager extends Component
                 // Mover al destino real usando el resolvePath para evitar errores de permisos si el directorio webroot es de root
                 $destPath = $fileService->resolvePath($this->currentPath . '/' . $filename);
                 
-                if (app()->isProduction()) {
+                if (PHP_OS_FAMILY !== 'Windows') {
                     // Mover usando sudo cp y chown www-data
                     app(\App\Shell\SudoExecutor::class)->run(['cp', $fullTmpPath, $destPath]);
                     app(\App\Shell\SudoExecutor::class)->run(['chown', 'www-data:www-data', $destPath]);

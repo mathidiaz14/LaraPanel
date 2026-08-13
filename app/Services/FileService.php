@@ -13,19 +13,22 @@ class FileService
     ) {}
 
     /**
-     * Get base directory path depending on env.
+     * Get base directory path depending on system environment.
+     * If /var/www (or configured webroot) exists, use it. Otherwise fallback to local dev path.
      */
     public function getRootPath(): string
     {
-        if (!app()->isProduction()) {
-            $devPath = storage_path('app/public/webroot');
-            if (!file_exists($devPath)) {
-                @mkdir($devPath, 0755, true);
-                @file_put_contents($devPath . '/index.html', '<html><body><h1>LaraPanel Dev Webroot</h1></body></html>');
-            }
-            return $devPath;
+        $customRoot = config('larapanel.paths.webroots', '/var/www');
+        if (file_exists($customRoot)) {
+            return $customRoot;
         }
-        return config('larapanel.paths.webroots', '/var/www');
+
+        $devPath = storage_path('app/public/webroot');
+        if (!file_exists($devPath)) {
+            @mkdir($devPath, 0755, true);
+            @file_put_contents($devPath . '/index.html', '<html><body><h1>LaraPanel Dev Webroot</h1></body></html>');
+        }
+        return $devPath;
     }
 
     /**
@@ -92,7 +95,11 @@ class FileService
         }
 
         $files = [];
-        $items = scandir($absolutePath);
+        $items = @scandir($absolutePath);
+
+        if ($items === false) {
+            return [];
+        }
 
         foreach ($items as $item) {
             if ($item === '.' || $item === '..') {
@@ -100,7 +107,7 @@ class FileService
             }
 
             $itemPath = $absolutePath . '/' . $item;
-            $isDir = is_dir($itemPath);
+            $isDir = @is_dir($itemPath);
             
             // Resolver owner y group si la extensión posix está instalada
             $ownerId = @fileowner($itemPath);
@@ -108,15 +115,18 @@ class FileService
             $owner = function_exists('posix_getpwuid') && $ownerId !== false ? (@posix_getpwuid($ownerId)['name'] ?? $ownerId) : $ownerId;
             $group = function_exists('posix_getgrgid') && $groupId !== false ? (@posix_getgrgid($groupId)['name'] ?? $groupId) : $groupId;
 
+            $perms = @fileperms($itemPath);
+            $permissions = $perms !== false ? substr(sprintf('%o', $perms), -4) : '0755';
+
             $files[] = [
                 'name' => $item,
                 'is_dir' => $isDir,
-                'size' => $isDir ? 0 : filesize($itemPath),
-                'permissions' => substr(sprintf('%o', fileperms($itemPath)), -4),
+                'size' => $isDir ? 0 : (@filesize($itemPath) ?: 0),
+                'permissions' => $permissions,
                 'owner' => $owner ?: 'unknown',
                 'group' => $group ?: 'unknown',
-                'updated_at' => filemtime($itemPath),
-                'mime' => $isDir ? 'directory' : (mime_content_type($itemPath) ?: 'application/octet-stream'),
+                'updated_at' => @filemtime($itemPath) ?: time(),
+                'mime' => $isDir ? 'directory' : (@mime_content_type($itemPath) ?: 'application/octet-stream'),
             ];
         }
 
@@ -143,7 +153,7 @@ class FileService
 
         AuditLog::record('filemanager.folder.create', $parentPath . '/' . $name);
 
-        if (!app()->isProduction()) {
+        if (PHP_OS_FAMILY === 'Windows') {
             return mkdir($targetPath, 0755, true);
         }
 
@@ -170,7 +180,7 @@ class FileService
 
         AuditLog::record('filemanager.file.create', $parentPath . '/' . $name);
 
-        if (!app()->isProduction()) {
+        if (PHP_OS_FAMILY === 'Windows') {
             return touch($targetPath);
         }
 
@@ -196,7 +206,7 @@ class FileService
 
         AuditLog::record('filemanager.delete', $relativePath);
 
-        if (!app()->isProduction()) {
+        if (PHP_OS_FAMILY === 'Windows') {
             return $this->deleteRecursive($targetPath);
         }
 
@@ -239,7 +249,7 @@ class FileService
 
         AuditLog::record('filemanager.rename', $relativePath, ['new_name' => $newName]);
 
-        if (!app()->isProduction()) {
+        if (PHP_OS_FAMILY === 'Windows') {
             return rename($oldPath, $newPath);
         }
 
@@ -282,7 +292,7 @@ class FileService
 
         AuditLog::record('filemanager.file.write', $relativePath);
 
-        if (!app()->isProduction()) {
+        if (PHP_OS_FAMILY === 'Windows') {
             return file_put_contents($targetPath, $content) !== false;
         }
 
@@ -315,7 +325,7 @@ class FileService
 
         AuditLog::record('filemanager.chmod', $relativePath, ['mode' => $octal]);
 
-        if (!app()->isProduction()) {
+        if (PHP_OS_FAMILY === 'Windows') {
             return chmod($targetPath, octdec($octal));
         }
 
@@ -399,7 +409,7 @@ class FileService
                 }
                 $zip->close();
                 
-                if (app()->isProduction()) {
+                if (PHP_OS_FAMILY !== 'Windows') {
                     try {
                         $this->sudo->run(['chown', '-R', 'www-data:www-data', $destPath]);
                     } catch (\Throwable $e) {}
@@ -430,7 +440,7 @@ class FileService
 
         AuditLog::record('filemanager.move', $relativeSource, ['dest' => $relativeDestParent]);
 
-        if (!app()->isProduction()) {
+        if (PHP_OS_FAMILY === 'Windows') {
             return rename($source, $dest);
         }
 
@@ -461,7 +471,7 @@ class FileService
 
         AuditLog::record('filemanager.copy', $relativeSource, ['dest' => $relativeDestParent]);
 
-        if (!app()->isProduction()) {
+        if (PHP_OS_FAMILY === 'Windows') {
             if (is_dir($source)) {
                 return $this->copyRecursive($source, $dest);
             }
