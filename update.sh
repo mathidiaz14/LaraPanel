@@ -44,7 +44,14 @@ fi
 log_info "Iniciando actualización en: $PANEL_DIR"
 cd "$PANEL_DIR"
 
-# Leer el puerto Reverb del .env (fallback: 8081)
+# Ajustar REVERB_PORT=443 en el .env del VPS si está configurado con el puerto interno (8081/8080)
+if grep -E '^REVERB_PORT=(8080|8081)' "$PANEL_DIR/.env" >/dev/null 2>&1; then
+    log_info "Ajustando REVERB_PORT=443 y REVERB_SCHEME=https en .env para proxy Nginx..."
+    sed -i -E 's/^REVERB_PORT=.*/REVERB_PORT=443/' "$PANEL_DIR/.env" || true
+    sed -i -E 's/^REVERB_SCHEME=.*/REVERB_SCHEME=https/' "$PANEL_DIR/.env" || true
+fi
+
+# Leer el puerto interno Reverb del .env (fallback: 8081)
 REVERB_SERVER_PORT=$(grep -E '^REVERB_SERVER_PORT=' "$PANEL_DIR/.env" 2>/dev/null | cut -d= -f2 | tr -d '"' | tr -d "'" || true)
 REVERB_SERVER_PORT="${REVERB_SERVER_PORT:-8081}"
 
