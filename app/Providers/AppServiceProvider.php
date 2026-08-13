@@ -53,6 +53,33 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // 1. Auto-curación de permisos y carpetas de storage en boot
+        $frameworkPaths = [
+            storage_path('framework/views'),
+            storage_path('framework/sessions'),
+            storage_path('framework/cache'),
+            storage_path('framework/cache/data'),
+            storage_path('logs'),
+            base_path('bootstrap/cache'),
+        ];
+
+        foreach ($frameworkPaths as $path) {
+            if (!is_dir($path)) {
+                @mkdir($path, 0777, true);
+            }
+            if (is_dir($path) && !is_writable($path)) {
+                @chmod($path, 0777);
+            }
+        }
+
+        // 2. Interceptor de errores para suprimir el aviso de tempnam() si PHP recurre a /tmp de forma segura
+        set_error_handler(function ($level, $message) {
+            if (str_contains($message, 'tempnam()')) {
+                return true; // Ignorar el aviso para que PHP continúe usando /tmp sin lanzar ErrorException 500
+            }
+            return false;
+        }, E_WARNING | E_NOTICE);
+
         // Enforce 2FA for admin users (Phase 0 stub — full impl in Phase 1)
         // \Illuminate\Support\Facades\Gate::define('admin', fn($user) => $user->isAdmin());
 

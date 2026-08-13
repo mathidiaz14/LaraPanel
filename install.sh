@@ -472,10 +472,8 @@ sudo -u "$PANEL_USER" php artisan event:cache
 
 # Configurar permisos finales
 mkdir -p "${INSTALL_DIR}/storage/framework/"{sessions,views,cache/data} "${INSTALL_DIR}/storage/logs" "${INSTALL_DIR}/bootstrap/cache"
-chmod -R 777 "${INSTALL_DIR}/storage"
-chmod -R 777 "${INSTALL_DIR}/bootstrap/cache"
-chown -R "${PANEL_USER}:www-data" "${INSTALL_DIR}/storage"
-chown -R "${PANEL_USER}:www-data" "${INSTALL_DIR}/bootstrap/cache"
+chown -R www-data:www-data "${INSTALL_DIR}/storage" "${INSTALL_DIR}/bootstrap/cache"
+chmod -R 777 "${INSTALL_DIR}/storage" "${INSTALL_DIR}/bootstrap/cache"
 
 success "Aplicación Laravel configurada."
 

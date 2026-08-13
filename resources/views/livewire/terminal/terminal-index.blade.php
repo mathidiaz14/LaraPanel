@@ -181,11 +181,17 @@
                     sessionToken = session.token;
                     target.textContent = session.type === 'ssh' ? session.server.name : 'www-data@servidor-local';
 
+                    const wsHost = (reverb.host && !['localhost', '127.0.0.1'].includes(reverb.host))
+                        ? reverb.host
+                        : window.location.hostname;
+                    const isSecure = reverb.scheme === 'https' || window.location.protocol === 'https:';
+                    const wsPort = parseInt(reverb.port || window.location.port || (isSecure ? 443 : 80), 10);
+
                     pusher = new Pusher(reverb.key, {
-                        wsHost: reverb.host,
-                        wsPort: reverb.port,
-                        wssPort: reverb.port,
-                        forceTLS: reverb.scheme === 'https',
+                        wsHost: wsHost,
+                        wsPort: wsPort,
+                        wssPort: wsPort,
+                        forceTLS: isSecure,
                         enabledTransports: ['ws', 'wss'],
                         authEndpoint: '{{ url('/broadcasting/auth') }}',
                         auth: { headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' } },
@@ -228,7 +234,7 @@
                     pusher.connection.bind('state_change', (states) => {
                         if (states.current === 'connected') setStatus('CONECTADA', 'success');
                         if (states.current === 'unavailable' || states.current === 'failed') {
-                            writeNotice(`Reverb no está disponible (${states.current}).`);
+                            writeNotice(`Reverb WebSocket no disponible (${states.current}). Verifica el servicio Reverb.`);
                             setStatus('ERROR WS', 'danger');
                         }
                     });

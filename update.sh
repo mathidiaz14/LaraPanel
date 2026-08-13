@@ -110,9 +110,9 @@ mkdir -p "$PANEL_DIR/storage/framework/"{sessions,views,cache/data} "$PANEL_DIR/
 chown -R larapanel:www-data "$PANEL_DIR"
 chmod -R 755 "$PANEL_DIR"
 
-# storage y bootstrap/cache necesitan permisos de escritura 777 para que tanto CLI (larapanel) como Web (www-data) puedan crear/reemplazar achivos
+# storage y bootstrap/cache pertenecen a www-data y tienen permisos 777 para evitar bloqueos entre CLI (larapanel) y Web (www-data)
+chown -R www-data:www-data "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"
 chmod -R 777 "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"
-chown -R larapanel:www-data "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"
 
 # ─── 9. Reiniciar worker de colas ─────────────────────────────────────────────
 log_info "Reiniciando el worker de colas (Queue Worker)..."
@@ -135,6 +135,13 @@ if command -v supervisorctl > /dev/null 2>&1; then
     fi
 else
     log_warn "supervisorctl no está disponible. Verificando si Reverb está corriendo vía artisan..."
+fi
+
+# Actualizar el puerto en la directiva proxy_pass de Nginx si el archivo del panel existe
+if [ -f "/etc/nginx/sites-available/larapanel" ]; then
+    log_info "Sincronizando el puerto proxy de Reverb (${REVERB_SERVER_PORT}) en la configuración de Nginx..."
+    sed -i -E "s|proxy_pass http://127.0.0.1:[0-9]+;|proxy_pass http://127.0.0.1:${REVERB_SERVER_PORT};|g" /etc/nginx/sites-available/larapanel
+    nginx -t && systemctl reload nginx || true
 fi
 
 # ─── 11. Verificar que Reverb está escuchando ─────────────────────────────────
