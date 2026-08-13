@@ -70,6 +70,7 @@
             const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
             if (!container || !connectButton || !window.Pusher || !window.Terminal || !window.FitAddon) {
+                console.error("LaraPanel Terminal: Faltan dependencias frontend.");
                 return;
             }
 
@@ -87,10 +88,14 @@
             };
 
             const decodeBase64 = (value) => {
-                const binary = atob(value);
-                const bytes = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-                return bytes;
+                try {
+                    const binary = atob(value);
+                    const bytes = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                    return bytes;
+                } catch (e) {
+                    return new TextEncoder().encode(value);
+                }
             };
 
             const encodeBase64 = (value) => {
@@ -100,8 +105,19 @@
                 return btoa(binary);
             };
 
-            const writeNotice = (message) => {
-                terminal.writeln(`\r\n\x1b[1;33m${message}\x1b[0m`);
+            const writeNotice = (message, color = '\x1b[1;33m') => {
+                if (terminal) {
+                    terminal.writeln(`\r\n${color}${message}\x1b[0m`);
+                }
+            };
+
+            const writeError = (title, details) => {
+                if (terminal) {
+                    terminal.writeln(`\r\n\x1b[1;31m[ERROR] ${title}\x1b[0m`);
+                    if (details) {
+                        terminal.writeln(`\x1b[0;31m  Detalle: ${details}\x1b[0m`);
+                    }
+                }
             };
 
             const sendResize = () => {
@@ -127,7 +143,7 @@
                             headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
                         });
                     } catch (error) {
-                        // The server-side ChannelRemoved listener still cleans up the PTY.
+                        // Cleanup handled by server
                     }
                 }
 
@@ -138,7 +154,7 @@
                 serverSelect.disabled = false;
                 target.textContent = 'Sin sesión';
                 setStatus('DESCONECTADA');
-                if (notify && terminal) writeNotice('Sesión cerrada.');
+                if (notify && terminal) writeNotice('Sesión cerrada.', '\x1b[1;30m');
             };
 
             const createSession = async () => {
@@ -147,24 +163,43 @@
                 const body = { type };
                 if (type === 'ssh') body.server_id = Number(serverId);
 
-                const response = await fetch('{{ route('terminal.session.store') }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrf,
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify(body),
-                });
+                writeNotice('[1/3] Solicitando sesión de terminal al backend...', '\x1b[1;34m');
+
+                let response;
+                try {
+                    response = await fetch('{{ route('terminal.session.store') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrf,
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify(body),
+                    });
+                } catch (netErr) {
+                    throw new Error(`Error de red al conectar con el servidor: ${netErr.message}`);
+                }
 
                 const responseText = await response.text();
                 let payload = {};
                 try {
                     payload = JSON.parse(responseText);
-                } catch (error) {
-                    throw new Error(`El servidor respondió HTTP ${response.status}. Revisa storage/logs/laravel.log.`);
+                } catch (e) {
+                    if (response.status === 419) {
+                        throw new Error("HTTP 419 (Página o Token CSRF expirado). Por favor recarga la página.");
+                    }
+                    if (response.status === 403) {
+                        throw new Error("HTTP 403 (Acceso Denegado). Tu usuario no tiene permisos de administrador.");
+                    }
+                    throw new Error(`HTTP ${response.status}: ${responseText.substring(0, 150)}`);
                 }
-                if (!response.ok) throw new Error(payload.message || `No se pudo crear la sesión (HTTP ${response.status}).`);
+
+                if (!response.ok) {
+                    const errorMsg = payload.message || payload.error || `Error HTTP ${response.status}`;
+                    throw new Error(errorMsg);
+                }
+
+                writeNotice('[2/3] Sesión reservada correctamente.', '\x1b[1;32m');
                 return payload.data;
             };
 
@@ -181,11 +216,19 @@
                     sessionToken = session.token;
                     target.textContent = session.type === 'ssh' ? session.server.name : 'www-data@servidor-local';
 
-                    const wsHost = (reverb.host && !['localhost', '127.0.0.1'].includes(reverb.host))
+                    // Resolver host de WebSocket
+                    let wsHost = (reverb.host && !['localhost', '127.0.0.1'].includes(reverb.host))
                         ? reverb.host
                         : window.location.hostname;
                     const isSecure = reverb.scheme === 'https' || window.location.protocol === 'https:';
-                    const wsPort = parseInt(reverb.port || window.location.port || (isSecure ? 443 : 80), 10);
+                    
+                    // Si el puerto no se especifica o es inválido, usar el del navegador
+                    let wsPort = parseInt(reverb.port, 10);
+                    if (!wsPort || isNaN(wsPort)) {
+                        wsPort = parseInt(window.location.port || (isSecure ? 443 : 80), 10);
+                    }
+
+                    writeNotice(`[3/3] Conectando a WebSocket (${isSecure ? 'wss' : 'ws'}://${wsHost}:${wsPort})...`, '\x1b[1;34m');
 
                     pusher = new Pusher(reverb.key, {
                         wsHost: wsHost,
@@ -198,11 +241,14 @@
                     });
 
                     channel = pusher.subscribe(session.channel);
+
                     channel.bind('pusher:subscription_error', (error) => {
                         const code = error?.status || error?.data?.code || 'desconocido';
-                        writeNotice(`Falló la autenticación del canal WebSocket (código ${code}).`);
+                        const details = error?.error || error?.message || error?.type || (typeof error === 'object' ? JSON.stringify(error) : error);
+                        writeError(`Falló la autenticación en el canal WebSocket (HTTP ${code})`, details);
                         setStatus('ERROR AUTH', 'danger');
                     });
+
                     channel.bind('pusher:subscription_succeeded', () => {
                         connected = true;
                         setStatus('CONECTADA', 'success');
@@ -213,39 +259,48 @@
                         channel.trigger('client-terminal-attach', { token: sessionToken });
                         sendResize();
                     });
+
                     channel.bind('terminal-attached', () => {
                         setStatus('CONECTADA', 'success');
+                        writeNotice('¡Conexión establecida con el PTY interactivo!', '\x1b[1;32m');
                     });
+
                     channel.bind('terminal-output', (data) => {
                         if (data?.b64) terminal.write(decodeBase64(data.b64));
                     });
+
                     channel.bind('terminal-error', (data) => {
-                        writeNotice(data?.message || 'Error de terminal.');
+                        writeError('Error devuelto por la terminal', data?.message || 'Error desconocido.');
                         setStatus('ERROR', 'danger');
                     });
+
                     channel.bind('terminal-exit', (data) => {
                         connected = false;
-                        writeNotice(`El proceso terminó (código ${data?.code ?? 0}).`);
+                        writeNotice(`El proceso de terminal ha finalizado (código de salida: ${data?.code ?? 0}).`, '\x1b[1;33m');
                         setStatus('CERRADA', 'secondary');
                         disconnectButton.hidden = true;
                         connectButton.hidden = false;
                         serverSelect.disabled = false;
                     });
+
                     pusher.connection.bind('state_change', (states) => {
                         if (states.current === 'connected') setStatus('CONECTADA', 'success');
                         if (states.current === 'unavailable' || states.current === 'failed') {
-                            writeNotice(`Reverb WebSocket no disponible (${states.current}). Verifica el servicio Reverb.`);
+                            writeError(`WebSocket Reverb no disponible (Estado: ${states.current})`,
+                                       `Verifica que Reverb esté corriendo en el VPS ('supervisorctl status larapanel-reverb').`);
                             setStatus('ERROR WS', 'danger');
                         }
                     });
+
                     pusher.connection.bind('error', (error) => {
-                        const message = error?.error?.data?.message || error?.message || 'Error de conexión WebSocket.';
-                        writeNotice(message);
+                        const message = error?.error?.data?.message || error?.message || (typeof error === 'object' ? JSON.stringify(error) : 'Error de conexión.');
+                        writeError('Error de conexión WebSocket', message);
                         setStatus('ERROR WS', 'danger');
                     });
+
                 } catch (error) {
                     await destroySession(false);
-                    writeNotice(error.message || 'No se pudo conectar.');
+                    writeError('Fallo al conectar la terminal', error.message);
                     setStatus('ERROR', 'danger');
                 } finally {
                     connectButton.disabled = false;
@@ -271,12 +326,14 @@
                 terminal.loadAddon(fitAddon);
                 terminal.open(container);
                 fitAddon.fit();
-                terminal.writeln('\x1b[1;36mLaraPanel Web Terminal\x1b[0m');
-                terminal.writeln('Selecciona un destino y pulsa Conectar. La sesión usa un PTY real.\r\n');
+                terminal.writeln('\x1b[1;36mLaraPanel Web Terminal v2.0\x1b[0m');
+                terminal.writeln('Selecciona un destino y pulsa Conectar.\r\n');
+
                 terminal.onData((data) => {
                     if (!channel || !connected) return;
                     channel.trigger('client-terminal-data', { b64: encodeBase64(data) });
                 });
+
                 window.addEventListener('resize', sendResize);
                 connectButton.addEventListener('click', connect);
                 disconnectButton.addEventListener('click', () => destroySession());

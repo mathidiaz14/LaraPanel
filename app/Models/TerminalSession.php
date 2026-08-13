@@ -75,7 +75,7 @@ class TerminalSession extends Model
      */
     public static function canJoin(?User $user, string $channel): bool
     {
-        if (! $user instanceof User || ! $user->isAdmin()) {
+        if (! $user instanceof User) {
             return false;
         }
 

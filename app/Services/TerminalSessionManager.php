@@ -208,7 +208,8 @@ class TerminalSessionManager
                 $cwd = base_path();
             }
             $proc = proc_open($command, $descriptors, $pipes, $cwd, $environment);
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("TerminalSessionManager spawn error: " . $e->getMessage());
             if (is_string($runtime['temp_key'] ?? null) && is_file($runtime['temp_key'])) {
                 @unlink($runtime['temp_key']);
                 $runtime['temp_key'] = null;
@@ -218,6 +219,7 @@ class TerminalSessionManager
         }
 
         if (! is_resource($proc)) {
+            \Illuminate\Support\Facades\Log::error("TerminalSessionManager: proc_open no devolvió un recurso válido para la terminal.");
             return false;
         }
 
