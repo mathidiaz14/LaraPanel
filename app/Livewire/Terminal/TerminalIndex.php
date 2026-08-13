@@ -2,48 +2,374 @@
 
 namespace App\Livewire\Terminal;
 
+use App\Jobs\ExecuteTerminalCommand;
+use App\Models\AuditLog;
+use App\Models\Server;
+use App\Models\TerminalCommandHistory;
+use App\Services\FileService;
+use App\Services\TerminalCommandPolicy;
 use App\Services\TerminalService;
+use App\Shell\RemoteShellExecutor;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class TerminalIndex extends Component
 {
+    use WithFileUploads;
+
     public string $command = '';
     public string $cwd = '/var/www';
     public array $history = [];
-    public int $historyIndex = -1;
+    public array $files = [];
+    public array $quickCommands = [];
+    public ?int $selectedServerId = null;
+    public ?int $activeJobId = null;
+    public string $jobStatus = '';
+    public string $output = '';
+    public ?int $exitCode = null;
+    public ?int $durationMs = null;
+    public bool $background = false;
+    public bool $allowDangerous = false;
+    public string $pendingCommand = '';
+    public string $notice = '';
+    public string $errorMessage = '';
+    public array $uploads = [];
 
-    public function runCommand(TerminalService $term): void
+    public function mount(): void
     {
-        $cmd = trim($this->command);
-        if (empty($cmd)) return;
+        $this->selectedServerId = Server::forUser(auth()->id())->where('is_local', true)->value('id');
+        $this->quickCommands = [
+            ['label' => 'Directorio actual', 'command' => 'pwd', 'icon' => 'fa-location-dot'],
+            ['label' => 'Lista detallada', 'command' => 'ls -la', 'icon' => 'fa-list'],
+            ['label' => 'Espacio en disco', 'command' => 'df -h', 'icon' => 'fa-hard-drive'],
+            ['label' => 'Memoria RAM', 'command' => 'free -h', 'icon' => 'fa-memory'],
+            ['label' => 'Procesos', 'command' => 'ps aux', 'icon' => 'fa-microchip'],
+            ['label' => 'Estado Git', 'command' => 'git status', 'icon' => 'fa-code-branch'],
+        ];
+        $this->loadHistory();
+        $this->loadFiles();
+    }
 
-        if ($cmd === 'clear') {
-            $this->dispatch('terminal-clear');
-            $this->command = '';
+    public function runCommand(TerminalCommandPolicy $policy, TerminalService $terminal): void
+    {
+        $this->errorMessage = '';
+        $this->notice = '';
+
+        try {
+            $command = $policy->validate($this->command);
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
             return;
         }
 
-        array_unshift($this->history, $cmd);
-        $this->history = array_slice($this->history, 0, 50);
-        $this->historyIndex = -1;
+        if ($this->isDangerous($command) && ! $this->allowDangerous) {
+            $this->pendingCommand = $command;
+            $this->notice = 'Este comando puede modificar o eliminar datos. Confirma para continuar.';
+            $this->dispatch('terminal-warning', message: $this->notice);
+            return;
+        }
 
-        $result = $term->execute($cmd, $this->cwd);
-        $this->cwd = $result['cwd'];
+        $this->allowDangerous = false;
+        $this->pendingCommand = '';
+        $this->command = '';
 
-        $this->dispatch('terminal-output', [
-            'command' => $cmd,
-            'output'  => $result['output'],
-            'cwd'     => $this->cwd,
-            'code'    => $result['code'],
+        if (in_array(strtolower($command), ['clear', 'cls'], true)) {
+            $this->output = '';
+            $this->dispatch('terminal-clear');
+            return;
+        }
+
+        $history = TerminalCommandHistory::create([
+            'user_id' => auth()->id(),
+            'server_id' => $this->selectedServerId,
+            'command' => $command,
+            'cwd' => $this->cwd,
+            'status' => $this->background ? 'queued' : 'running',
+            'background' => $this->background,
+            'started_at' => $this->background ? null : now(),
         ]);
 
-        $this->command = '';
+        AuditLog::record('terminal.command.start', $command, [
+            'history_id' => $history->id,
+            'server_id' => $this->selectedServerId,
+            'background' => $this->background,
+        ]);
+
+        if ($this->background) {
+            $this->activeJobId = $history->id;
+            $this->jobStatus = 'queued';
+            ExecuteTerminalCommand::dispatch($history->id);
+            $this->background = false;
+            $this->output = "Trabajo #{$history->id} en cola. Esta pantalla se actualizará automáticamente.";
+            $this->dispatch('terminal-output', output: $this->output, cwd: $this->cwd, code: null);
+            $this->loadHistory();
+            return;
+        }
+
+        $started = microtime(true);
+        try {
+            $server = $this->selectedServerId
+                ? Server::forUser(auth()->id())->findOrFail($this->selectedServerId)
+                : null;
+
+            if ($server && ! $server->is_local) {
+                $result = (new RemoteShellExecutor($server))
+                    ->withTimeout(120)
+                    ->inDirectory($this->cwd)
+                    ->run($policy->tokens($command), false);
+                $resultOutput = $result->stdout . $result->stderr;
+                $code = $result->exitCode;
+            } else {
+                $result = $terminal->execute($command, $this->cwd);
+                $resultOutput = $result['output'];
+                $code = $result['code'];
+                $this->cwd = $result['cwd'];
+            }
+
+            $this->output = $resultOutput;
+            $this->exitCode = $code;
+            $this->durationMs = (int) round((microtime(true) - $started) * 1000);
+            $history->update([
+                'status' => $code === 0 ? 'success' : 'failed',
+                'output' => $resultOutput,
+                'exit_code' => $code,
+                'finished_at' => now(),
+                'duration_ms' => $this->durationMs,
+            ]);
+        } catch (\Throwable $e) {
+            $this->output = $e->getMessage();
+            $this->exitCode = 1;
+            $history->update([
+                'status' => 'failed',
+                'output' => $this->output,
+                'exit_code' => 1,
+                'finished_at' => now(),
+                'duration_ms' => (int) round((microtime(true) - $started) * 1000),
+            ]);
+        }
+
+        $this->dispatch('terminal-output', output: $this->output, cwd: $this->cwd, code: $this->exitCode);
+        $this->loadHistory();
+        $this->loadFiles();
+    }
+
+    public function confirmCommand(TerminalCommandPolicy $policy, TerminalService $terminal): void
+    {
+        if ($this->pendingCommand === '') return;
+        $this->command = $this->pendingCommand;
+        $this->allowDangerous = true;
+        $this->runCommand($policy, $terminal);
+    }
+
+    public function runQuickCommand(string $command, TerminalCommandPolicy $policy, TerminalService $terminal): void
+    {
+        $this->command = $command;
+        $this->runCommand($policy, $terminal);
+    }
+
+    public function runMaintenance(string $name, TerminalCommandPolicy $policy, TerminalService $terminal): void
+    {
+        $commands = [
+            'optimize' => 'php artisan optimize',
+            'clear-cache' => 'php artisan optimize:clear',
+            'git-status' => 'git status',
+            'git-pull' => 'git pull',
+            'disk-report' => 'df -h',
+        ];
+
+        if (! isset($commands[$name])) return;
+        $this->command = $commands[$name];
+        $this->background = true;
+        $this->runCommand($policy, $terminal);
+    }
+
+    public function refreshJob(): void
+    {
+        if (! $this->activeJobId) return;
+
+        $job = TerminalCommandHistory::where('user_id', auth()->id())->find($this->activeJobId);
+        if (! $job) {
+            $this->activeJobId = null;
+            return;
+        }
+
+        $this->jobStatus = $job->status;
+        $this->output = $job->output ?? $this->output;
+        if ($job->isFinished()) {
+            $this->exitCode = $job->exit_code;
+            $this->durationMs = $job->duration_ms;
+            $this->activeJobId = null;
+            $this->loadHistory();
+            $this->dispatch('terminal-output', output: $this->output, cwd: $this->cwd, code: $this->exitCode);
+        }
+    }
+
+    public function cancelJob(): void
+    {
+        if (! $this->activeJobId) return;
+        TerminalCommandHistory::where('user_id', auth()->id())
+            ->whereKey($this->activeJobId)
+            ->update(['cancel_requested' => true]);
+        $this->jobStatus = 'cancelled';
+        $this->notice = 'Cancelación solicitada.';
+    }
+
+    public function loadFiles(?FileService $files = null): void
+    {
+        $files ??= app(FileService::class);
+        if ($this->selectedServerId && ! Server::whereKey($this->selectedServerId)->where('is_local', true)->exists()) {
+            $this->files = [];
+            return;
+        }
+
+        try {
+            $relative = str_starts_with($this->cwd, '/var/www') ? ltrim(substr($this->cwd, 8), '/') : '';
+            $this->files = array_slice($files->listDirectory($relative), 0, 80);
+        } catch (\Throwable) {
+            $this->files = [];
+        }
+    }
+
+    public function useFile(string $name, bool $directory): void
+    {
+        if ($directory) {
+            $this->cwd = rtrim($this->cwd, '/') . '/' . trim($name, '/');
+            $this->loadFiles();
+            return;
+        }
+
+        $this->command = 'cat ' . $name;
+    }
+
+    public function updatedUploads(FileService $files): void
+    {
+        if (! $this->uploads || ($this->selectedServerId && ! Server::whereKey($this->selectedServerId)->where('is_local', true)->exists())) {
+            return;
+        }
+
+        try {
+            $this->validate(['uploads.*' => 'file|max:2048000']);
+            foreach ($this->uploads as $upload) {
+                $name = preg_replace('/[^a-zA-Z0-9._-]/', '', $upload->getClientOriginalName());
+                if (! $name) continue;
+
+                $temporary = $upload->storeAs('livewire-tmp', $name);
+                $source = \Illuminate\Support\Facades\Storage::disk('local')->path($temporary);
+                $relative = $this->relativeCwd() . '/' . $name;
+                $destination = $files->resolvePath($relative);
+
+                if (PHP_OS_FAMILY === 'Windows') {
+                    rename($source, $destination);
+                } else {
+                    app(\App\Shell\SudoExecutor::class)->run(['cp', $source, $destination]);
+                    app(\App\Shell\SudoExecutor::class)->run(['chown', 'www-data:www-data', $destination]);
+                    @unlink($source);
+                }
+            }
+            $this->notice = 'Archivos subidos correctamente.';
+            $this->uploads = [];
+            $this->loadFiles($files);
+        } catch (\Throwable $e) {
+            $this->errorMessage = 'No se pudieron subir los archivos: ' . $e->getMessage();
+        }
+    }
+
+    public function renameFile(string $name, string $newName, FileService $files): void
+    {
+        if (! $this->isLocalServer()) return;
+        $newName = trim($newName);
+        if (! preg_match('/^[a-zA-Z0-9._-]{1,128}$/', $newName)) {
+            $this->errorMessage = 'El nuevo nombre no es válido.';
+            return;
+        }
+
+        try {
+            $files->rename($this->relativeCwd() . '/' . $name, $newName);
+            $this->loadFiles($files);
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    public function deleteFile(string $name, FileService $files): void
+    {
+        if (! $this->isLocalServer()) return;
+        try {
+            $files->delete($this->relativeCwd() . '/' . $name);
+            $this->loadFiles($files);
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    public function downloadFile(string $name, FileService $files): mixed
+    {
+        if (! $this->isLocalServer()) return null;
+        try {
+            $path = $files->resolvePath($this->relativeCwd() . '/' . $name);
+            return is_file($path) ? response()->download($path) : null;
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+            return null;
+        }
+    }
+
+    public function updatedSelectedServerId(): void
+    {
+        $this->cwd = '/var/www';
+        $this->loadFiles();
+    }
+
+    public function loadHistory(): void
+    {
+        $this->history = TerminalCommandHistory::with('server')
+            ->where('user_id', auth()->id())
+            ->latest()
+            ->limit(30)
+            ->get()
+            ->map(fn (TerminalCommandHistory $item) => [
+                'id' => $item->id,
+                'command' => $item->command,
+                'output' => $item->output,
+                'status' => $item->status,
+                'exit_code' => $item->exit_code,
+                'duration_ms' => $item->duration_ms,
+                'server' => $item->server?->name ?? 'Local',
+                'created_at' => $item->created_at?->format('d/m H:i'),
+            ])->all();
+    }
+
+    protected function isDangerous(string $command): bool
+    {
+        return (bool) preg_match('/(^|\s)(rm|mv|chmod|chown|apt|apt-get|systemctl|ufw|docker|git\s+pull|git\s+reset)(\s|$)/i', $command);
+    }
+
+    protected function relativeCwd(): string
+    {
+        return str_starts_with($this->cwd, '/var/www') ? ltrim(substr($this->cwd, 8), '/') : '';
+    }
+
+    protected function isLocalServer(): bool
+    {
+        return ! $this->selectedServerId
+            || Server::whereKey($this->selectedServerId)->where('is_local', true)->exists();
     }
 
     public function render()
     {
-        return view('livewire.terminal.terminal-index')->layout('layouts.app', [
-            'title'      => 'Terminal Web',
+        $servers = Server::forUser(auth()->id())
+            ->orderByDesc('is_local')
+            ->orderBy('name')
+            ->get(['id', 'name', 'hostname', 'status', 'is_local']);
+
+        return view('livewire.terminal.terminal-index', [
+            'servers' => $servers,
+            'suggestions' => array_values(array_unique(array_merge(
+                array_column($this->quickCommands, 'command'),
+                config('larapanel.security.allowed_terminal_commands', [])
+            ))),
+        ])->layout('layouts.app', [
+            'title' => 'Terminal Web',
             'breadcrumb' => '<span>Avanzado</span> / <strong>Terminal</strong>',
         ]);
     }
