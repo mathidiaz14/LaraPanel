@@ -93,8 +93,8 @@
             {{-- Per-mailbox table --}}
             <div class="glass" style="padding:20px;">
                 <h2 style="font-size:14px;font-weight:700;margin-bottom:14px;">Detalle por Buzón</h2>
-                <div style="overflow-x:auto;">
-                    <table class="table" style="width:100%;">
+                <div class="table-responsive">
+                    <table class="lp-table" style="width:100%;">
                         <thead>
                             <tr>
                                 <th>Email</th>

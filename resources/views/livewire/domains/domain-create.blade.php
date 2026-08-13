@@ -21,7 +21,7 @@
             {{-- Domain Type --}}
             <div class="form-group">
                 <label class="form-label">Tipo de dominio</label>
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:8px;">
                     @foreach([
                         'main'      => ['fa-globe',   'Principal', 'Dominio raíz'],
                         'subdomain' => ['fa-sitemap', 'Subdominio', 'sub.dominio.com'],

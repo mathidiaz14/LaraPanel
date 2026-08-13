@@ -115,7 +115,7 @@
                 <div class="glass lp-panel" style="padding:24px;">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                         <h2 class="panel-title" style="font-size:18px;margin:0;">
-                            <i class="fa-brands fa-git-alt" style="color:#f14e32;margin-right:8px;"></i>
+                            <i class="fa-brands fa-git-alt" style="color:var(--warning);margin-right:8px;"></i>
                             {{ $selectedDeployment->domain_name }}
                         </h2>
                         <div style="display:flex;gap:8px;">
@@ -133,7 +133,7 @@
                     @if(!empty($repoStatus))
                     <div style="background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);border-radius:8px;padding:16px;margin-bottom:24px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                            <h3 style="font-size:13px;font-weight:700;color:var(--text-primary);"><i class="fa-brands fa-git-alt" style="color:#f14e32;margin-right:6px;"></i> Estado del Repositorio Local</h3>
+                            <h3 style="font-size:13px;font-weight:700;color:var(--text-primary);"><i class="fa-brands fa-git-alt" style="color:var(--warning);margin-right:6px;"></i> Estado del Repositorio Local</h3>
                             <button wire:click="refreshRepoStatus" class="btn btn-ghost btn-sm" wire:loading.attr="disabled" wire:target="refreshRepoStatus">
                                 <span wire:loading.remove wire:target="refreshRepoStatus"><i class="fa-solid fa-rotate"></i> Actualizar</span>
                                 <span wire:loading wire:target="refreshRepoStatus"><i class="fa-solid fa-spinner fa-spin"></i></span>

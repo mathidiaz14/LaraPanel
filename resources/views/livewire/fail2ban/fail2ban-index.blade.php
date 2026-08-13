@@ -27,7 +27,7 @@
     @endif
 
     {{-- Status Cards --}}
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;">
+    <div class="stats-row" style="margin-bottom:20px;">
         {{-- Running state --}}
         <div class="glass lp-panel" style="text-align:center;border-color:{{ $isRunning ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)' }};">
             <i class="fa-solid fa-{{ $isRunning ? 'circle-check' : 'circle-xmark' }}" style="font-size:22px;color:{{ $isRunning ? 'var(--success)' : 'var(--danger)' }};margin-bottom:8px;display:block;"></i>

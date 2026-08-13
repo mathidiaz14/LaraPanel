@@ -34,36 +34,38 @@
     <div class="glass" style="padding:24px;">
         <h2 style="font-size:18px;font-weight:700;margin-bottom:20px;">Tokens Activos</h2>
         
-        <table class="table" style="width:100%;">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Último Uso</th>
-                    <th>Creado El</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($tokens as $token)
-                <tr>
-                    <td style="font-weight:600;">{{ $token->name }}</td>
-                    <td style="font-size:12px;color:var(--text-muted);">
-                        {{ $token->last_used_at ? $token->last_used_at->diffForHumans() : 'Nunca' }}
-                    </td>
-                    <td style="font-size:12px;color:var(--text-muted);">{{ $token->created_at->format('Y-m-d H:i') }}</td>
-                    <td>
-                        <button wire:click="revokeToken({{ $token->id }})" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de revocar este token? Las integraciones que lo usen dejarán de funcionar inmediatamente.')">
-                            <i class="fa-solid fa-trash"></i> Revocar
-                        </button>
-                    </td>
-                </tr>
-                @endforeach
-                @if($tokens->isEmpty())
-                <tr>
-                    <td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">No tienes tokens activos.</td>
-                </tr>
-                @endif
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="lp-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Último Uso</th>
+                        <th>Creado El</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($tokens as $token)
+                    <tr>
+                        <td style="font-weight:600;">{{ $token->name }}</td>
+                        <td style="font-size:12px;color:var(--text-muted);">
+                            {{ $token->last_used_at ? $token->last_used_at->diffForHumans() : 'Nunca' }}
+                        </td>
+                        <td style="font-size:12px;color:var(--text-muted);">{{ $token->created_at->format('Y-m-d H:i') }}</td>
+                        <td>
+                            <button wire:click="revokeToken({{ $token->id }})" class="btn btn-danger btn-sm" onclick="return confirm('¿Estás seguro de revocar este token? Las integraciones que lo usen dejarán de funcionar inmediatamente.')">
+                                <i class="fa-solid fa-trash"></i> Revocar
+                            </button>
+                        </td>
+                    </tr>
+                    @endforeach
+                    @if($tokens->isEmpty())
+                    <tr>
+                        <td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">No tienes tokens activos.</td>
+                    </tr>
+                    @endif
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>

@@ -113,6 +113,6 @@ Backlog de hallazgos identificados en la auditoría del 2026-08-10. Agrupados po
 
 ### 11.5 BAJO — Frontend (Visual Standards)
 
-- [ ] **11.5.1. Sustituir `class="table"` por `class="lp-table"`:** `admin/api-tokens.blade.php:37`, `admin/plan-index.blade.php:18`, `admin/user-index.blade.php:23`, `files/file-manager.blade.php:98`, `email/email-stats.blade.php:97`.
-- [ ] **11.5.2. Reemplazar grids fijos `repeat(4/5,1fr)` por `.stats-row`/`.lp-two-col`:** `fail2ban-index.blade.php:30`, `admin/plan-index.blade.php:84,122`, `antivirus-index.blade.php:132`, `antispam-index.blade.php:36`, `domains/domain-create.blade.php:24`, `servers/servers-index.blade.php:193`.
-- [ ] **11.5.3. Eliminar hex hardcodeados y `style=` inline** a favor de tokens CSS (`var(--success)`, etc.): `servers-index`, `terminal`, `uptime`, `git-index` (paleta catppuccin), `file-manager` (`#38bdf8`, `#a78bfa`).
+- [x] **11.5.1. Sustituir `class="table"` por `class="lp-table"`:** `admin/api-tokens.blade.php`, `admin/plan-index.blade.php`, `admin/user-index.blade.php`, `files/file-manager.blade.php`, `email/email-stats.blade.php`. ✅
+- [x] **11.5.2. Reemplazar grids fijos `repeat(4/5,1fr)` por `.stats-row`/`.lp-two-col`/`.lp-three-col`:** `fail2ban-index.blade.php`, `admin/plan-index.blade.php`, `antivirus-index.blade.php`, `antispam-index.blade.php`, `domains/domain-create.blade.php`, `servers/servers-index.blade.php`. ✅
+- [x] **11.5.3. Eliminar hex hardcodeados y `style=` inline** a favor de tokens CSS (`var(--success)`, `var(--info)`, etc.): `servers-index`, `git-index`, `file-manager`, `tree-node`, `wordpress-index`. ✅

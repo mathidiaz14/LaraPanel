@@ -20,72 +20,74 @@
                 <button wire:click="create" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Nuevo Usuario</button>
             </div>
 
-            <table class="table" style="width:100%;">
-                <thead>
-                    <tr>
-                        <th>Usuario</th>
-                        <th>Rol</th>
-                        <th>Plan Asignado</th>
-                        <th>Dominios</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($users as $user)
-                    <tr>
-                        <td>
-                            <div style="font-weight:600;">{{ $user->name }}</div>
-                            <div style="font-size:11px;color:var(--text-muted);">{{ $user->email }}</div>
-                        </td>
-                        <td>
-                            @if($user->role === 'admin')
-                                <span class="badge badge-danger">Admin</span>
-                            @elseif($user->role === 'reseller')
-                                <span class="badge badge-warning">Reseller</span>
-                            @else
-                                <span class="badge badge-info">Cliente</span>
-                            @endif
-                        </td>
-                        <td>
-                            @if($user->plan)
-                                <span style="font-size:12px;">{{ $user->plan->name }}</span>
-                            @else
-                                <span style="font-size:12px;color:var(--text-muted);">Ninguno</span>
-                            @endif
-                        </td>
-                        <td><span class="badge" style="background:rgba(255,255,255,0.1);">{{ $user->domains_count }}</span></td>
-                        <td>
-                            @if($user->is_active)
-                                <span class="badge badge-success">Activo</span>
-                            @else
-                                <span class="badge badge-danger">Suspendido</span>
-                            @endif
-                        </td>
-                        <td>
-                            @if($user->id !== auth()->id())
-                                <a href="{{ route('admin.impersonate.start', $user->id) }}" class="btn btn-ghost btn-sm" title="Iniciar sesión como {{ $user->name }}" style="color:var(--accent-light); margin-right: 4px;">
-                                    <i class="fa-solid fa-user-secret"></i>
-                                </a>
-                            @endif
-                            <button wire:click="edit({{ $user->id }})" class="btn btn-ghost btn-sm" title="Editar"><i class="fa-solid fa-edit"></i></button>
-                            @if($user->is_active)
-                                <button wire:click="suspend({{ $user->id }})" class="btn btn-ghost btn-sm" title="Suspender Cuenta" style="color:var(--danger);" onclick="return confirm('¿Suspender usuario? Se desactivarán sus dominios.')"><i class="fa-solid fa-ban"></i></button>
-                            @else
-                                <button wire:click="activate({{ $user->id }})" class="btn btn-ghost btn-sm" title="Reactivar Cuenta" style="color:var(--success);"><i class="fa-solid fa-check"></i></button>
-                            @endif
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="lp-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Rol</th>
+                            <th>Plan Asignado</th>
+                            <th>Dominios</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($users as $user)
+                        <tr>
+                            <td>
+                                <div style="font-weight:600;">{{ $user->name }}</div>
+                                <div style="font-size:11px;color:var(--text-muted);">{{ $user->email }}</div>
+                            </td>
+                            <td>
+                                @if($user->role === 'admin')
+                                    <span class="badge badge-danger">Admin</span>
+                                @elseif($user->role === 'reseller')
+                                    <span class="badge badge-warning">Reseller</span>
+                                @else
+                                    <span class="badge badge-accent">Cliente</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($user->plan)
+                                    <span style="font-size:12px;">{{ $user->plan->name }}</span>
+                                @else
+                                    <span style="font-size:12px;color:var(--text-muted);">Ninguno</span>
+                                @endif
+                            </td>
+                            <td><span class="badge" style="background:rgba(255,255,255,0.1);">{{ $user->domains_count }}</span></td>
+                            <td>
+                                @if($user->is_active)
+                                    <span class="badge badge-success">Activo</span>
+                                @else
+                                    <span class="badge badge-danger">Suspendido</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($user->id !== auth()->id())
+                                    <a href="{{ route('admin.impersonate.start', $user->id) }}" class="btn btn-ghost btn-sm" title="Iniciar sesión como {{ $user->name }}" style="color:var(--accent-light); margin-right: 4px;">
+                                        <i class="fa-solid fa-user-secret"></i>
+                                    </a>
+                                @endif
+                                <button wire:click="edit({{ $user->id }})" class="btn btn-ghost btn-sm" title="Editar"><i class="fa-solid fa-edit"></i></button>
+                                @if($user->is_active)
+                                    <button wire:click="suspend({{ $user->id }})" class="btn btn-ghost btn-sm" title="Suspender Cuenta" style="color:var(--danger);" onclick="return confirm('¿Suspender usuario? Se desactivarán sus dominios.')"><i class="fa-solid fa-ban"></i></button>
+                                @else
+                                    <button wire:click="activate({{ $user->id }})" class="btn btn-ghost btn-sm" title="Reactivar Cuenta" style="color:var(--success);"><i class="fa-solid fa-check"></i></button>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
     @else
         <div class="glass" style="padding:24px;">
             <h2 style="font-size:18px;font-weight:700;margin-bottom:24px;">{{ $userId ? 'Editar Usuario' : 'Crear Usuario' }}</h2>
             
             <form wire:submit.prevent="save">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:20px;margin-bottom:20px;">
                     <div class="form-group">
                         <label class="form-label">Nombre Completo</label>
                         <input type="text" wire:model="name" class="form-input" required>

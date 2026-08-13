@@ -128,8 +128,7 @@
                                 </div>
                                 <div style="font-size:11px;color:var(--text-muted);">{{ $scanPath }}</div>
                             </div>
-                        </div>
-                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+                        <div class="stats-row" style="margin-bottom:0;">
                             <div style="text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--glass-border);">
                                 <div style="font-size:22px;font-weight:700;color:var(--text-primary);">{{ number_format($lastScanResult['files_scanned']) }}</div>
                                 <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Archivos escaneados</div>

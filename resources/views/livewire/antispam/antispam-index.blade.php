@@ -33,7 +33,7 @@
     {{-- TAB: Dashboard --}}
     @if($activeTab === 'dashboard')
     {{-- Stats Cards --}}
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
+    <div class="stats-row" style="margin-bottom:20px;">
         <div class="glass lp-panel" style="text-align:center;">
             <div style="font-size:28px;font-weight:800;color:var(--text-primary);">{{ number_format($stats['scanned']) }}</div>
             <div style="font-size:11px;color:var(--text-secondary);">Mensajes Escaneados</div>

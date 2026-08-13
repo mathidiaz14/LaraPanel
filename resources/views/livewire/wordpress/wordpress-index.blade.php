@@ -1,7 +1,7 @@
 <div style="display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start;">
     {{-- Sidebar: Instalaciones y Dominios --}}
     <div class="glass lp-panel" style="padding:16px;">
-        <h2 class="panel-title" style="margin-bottom:16px;"><i class="fa-brands fa-wordpress" style="color:#21759b;margin-right:8px;"></i> Dominios</h2>
+        <h2 class="panel-title" style="margin-bottom:16px;"><i class="fa-brands fa-wordpress" style="color:var(--info);margin-right:8px;"></i> Dominios</h2>
         
         <div style="display:flex;flex-direction:column;gap:8px;">
             @foreach($domains as $domain)
@@ -10,7 +10,7 @@
                 <div>
                     <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">{{ $domain['name'] }}</div>
                     @if($domain['has_wp'])
-                        <div style="font-size:11px;color:#27c93f;display:flex;align-items:center;gap:4px;"><i class="fa-solid fa-check-circle"></i> Instalado</div>
+                        <div style="font-size:11px;color:var(--success);display:flex;align-items:center;gap:4px;"><i class="fa-solid fa-check-circle"></i> Instalado</div>
                     @else
                         <div style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px;"><i class="fa-regular fa-circle"></i> Sin WP</div>
                     @endif
@@ -25,7 +25,7 @@
     <div>
         @if(!$selectedDomain)
             <div class="glass lp-panel" style="padding:60px 20px;text-align:center;">
-                <i class="fa-brands fa-wordpress" style="font-size:48px;color:#21759b;opacity:0.2;margin-bottom:16px;display:block;"></i>
+                <i class="fa-brands fa-wordpress" style="font-size:48px;color:var(--info);opacity:0.2;margin-bottom:16px;display:block;"></i>
                 <h3 class="panel-title" style="font-size:18px;margin-bottom:8px;">Instalador 1-Click</h3>
                 <p style="color:var(--text-secondary);font-size:13px;max-width:400px;margin:0 auto;">
                     Selecciona un dominio en la barra lateral para instalar WordPress automáticamente o gestionar una instalación existente.
@@ -39,14 +39,14 @@
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;border-bottom:1px solid var(--glass-border);padding-bottom:16px;">
                         <div>
                             <h2 class="panel-title" style="font-size:20px;margin-bottom:4px;display:flex;align-items:center;gap:12px;">
-                                <i class="fa-brands fa-wordpress" style="color:#21759b;"></i> {{ $selectedDomain }}
+                                <i class="fa-brands fa-wordpress" style="color:var(--info);"></i> {{ $selectedDomain }}
                             </h2>
                             <p style="font-size:12px;color:var(--text-muted);">Gestionando instalación de WordPress</p>
                         </div>
                         <a href="https://{{ $selectedDomain }}/wp-admin" target="_blank" class="btn btn-primary btn-sm"><i class="fa-solid fa-external-link-alt"></i> WP Admin</a>
                     </div>
                     
-                    <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:16px;margin-bottom:24px;">
+                    <div class="lp-three-col" style="margin-bottom:24px;">
                         <div style="background:rgba(255,255,255,0.02);padding:16px;border-radius:8px;border:1px solid var(--glass-border);">
                             <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Versión Core</div>
                             <div style="font-size:18px;font-weight:700;">6.5.2</div>

@@ -190,7 +190,7 @@
                                 $disk = $os['disk'] ?? ['percent' => 0, 'total' => 0, 'used' => 0];
                             @endphp
 
-                            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
+                            <div class="lp-three-col" style="margin-bottom:24px;">
                                 {{-- CPU --}}
                                 <div class="glass" style="padding:16px;text-align:center;">
                                     <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Uso de CPU</div>
@@ -198,7 +198,7 @@
                                         {{ $cpuPercent }}%
                                     </div>
                                     <div style="width:100%;height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;">
-                                        <div style="width:{{ $cpuPercent }}%;height:100%;background:#89b4fa;border-radius:4px;transition:width 0.4s;"></div>
+                                        <div style="width:{{ $cpuPercent }}%;height:100%;background:var(--accent-light);border-radius:4px;transition:width 0.4s;"></div>
                                     </div>
                                 </div>
                                 {{-- RAM --}}
@@ -211,7 +211,7 @@
                                         {{ $ram['used'] }} GB / {{ $ram['total'] }} GB
                                     </div>
                                     <div style="width:100%;height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;">
-                                        <div style="width:{{ $ram['percent'] }}%;height:100%;background:#a6e3a1;border-radius:4px;transition:width 0.4s;"></div>
+                                        <div style="width:{{ $ram['percent'] }}%;height:100%;background:var(--success);border-radius:4px;transition:width 0.4s;"></div>
                                     </div>
                                 </div>
                                 {{-- Disk --}}
@@ -224,7 +224,7 @@
                                         {{ $disk['used'] }} GB / {{ $disk['total'] }} GB
                                     </div>
                                     <div style="width:100%;height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;">
-                                        <div style="width:{{ $disk['percent'] }}%;height:100%;background:#f9e2af;border-radius:4px;transition:width 0.4s;"></div>
+                                        <div style="width:{{ $disk['percent'] }}%;height:100%;background:var(--warning);border-radius:4px;transition:width 0.4s;"></div>
                                     </div>
                                 </div>
                             </div>

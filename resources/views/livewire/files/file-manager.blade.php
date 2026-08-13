@@ -94,8 +94,8 @@
         @endif
 
         {{-- File List Container --}}
-        <div style="flex:1;overflow-y:auto;padding:0;position:relative;">
-            <table class="table" style="width:100%;margin:0;border-collapse:collapse;font-size:13px;">
+        <div style="flex:1;overflow-y:auto;padding:0;position:relative;" class="table-responsive">
+            <table class="lp-table" style="width:100%;margin:0;border-collapse:collapse;font-size:13px;">
                 <thead style="position:sticky;top:0;background:rgba(15, 23, 42, 0.95);backdrop-filter:blur(12px);z-index:10;border-bottom:1px solid var(--glass-border);">
                     <tr>
                         <th style="padding:14px 20px;width:4%;text-align:center;">

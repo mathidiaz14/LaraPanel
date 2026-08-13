@@ -9,7 +9,7 @@
             
             {{-- Folder Icon & Name (Navigate) --}}
             <div wire:click.stop="navigate('{{ $node['path'] }}')" style="display:flex;align-items:center;flex:1;gap:8px;">
-                <i class="fa-solid fa-{{ $node['isExpanded'] ? 'folder-open' : 'folder' }}" style="font-size:14px;color:{{ $currentPath === $node['path'] ? 'var(--accent-light)' : '#38bdf8' }};"></i> 
+                <i class="fa-solid fa-{{ $node['isExpanded'] ? 'folder-open' : 'folder' }}" style="font-size:14px;color:{{ $currentPath === $node['path'] ? 'var(--accent-light)' : 'var(--info)' }};"></i> 
                 <span>{{ $node['name'] }}</span>
             </div>
             
