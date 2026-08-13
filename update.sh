@@ -106,11 +106,12 @@ fi
 
 # ─── 8. Asegurar permisos correctos finales ───────────────────────────────────
 log_info "Configurando permisos finales..."
+mkdir -p "$PANEL_DIR/storage/framework/"{sessions,views,cache/data} "$PANEL_DIR/storage/logs" "$PANEL_DIR/bootstrap/cache"
 chown -R larapanel:www-data "$PANEL_DIR"
 chmod -R 755 "$PANEL_DIR"
 
-# storage y bootstrap/cache necesitan permisos de escritura para el grupo www-data
-chmod -R 775 "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"
+# storage y bootstrap/cache necesitan permisos de escritura 777 para que tanto CLI (larapanel) como Web (www-data) puedan crear/reemplazar achivos
+chmod -R 777 "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"
 chown -R larapanel:www-data "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"
 
 # ─── 9. Reiniciar worker de colas ─────────────────────────────────────────────
