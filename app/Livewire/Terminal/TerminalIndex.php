@@ -15,13 +15,13 @@ class TerminalIndex extends Component
             ->orderBy('name')
             ->get(['id', 'name', 'hostname', 'username', 'port', 'status']);
 
-        $configuredHost = config('reverb.apps.apps.0.options.host');
+        $configuredHost = env('REVERB_HOST') ?: config('reverb.apps.apps.0.options.host');
         $reverbHost = (empty($configuredHost) || in_array($configuredHost, ['localhost', '127.0.0.1'], true))
             ? request()->getHost()
             : $configuredHost;
 
-        $reverbPort = (int) config('reverb.apps.apps.0.options.port', 443);
-        $reverbScheme = config('reverb.apps.apps.0.options.scheme', request()->secure() ? 'https' : 'http');
+        $reverbPort = (int) (env('REVERB_PORT') ?: (config('reverb.apps.apps.0.options.port') ?: 8081));
+        $reverbScheme = env('REVERB_SCHEME') ?: (config('reverb.apps.apps.0.options.scheme') ?: (request()->secure() ? 'https' : 'http'));
 
         return view('livewire.terminal.terminal-index', [
             'remoteServers' => $remoteServers,
