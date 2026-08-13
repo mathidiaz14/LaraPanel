@@ -53,7 +53,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // 1. Auto-curación de permisos y carpetas de storage en boot
+        // 1. Auto-curación de permisos y carpetas de storage y database en boot
         $frameworkPaths = [
             storage_path('framework/views'),
             storage_path('framework/sessions'),
@@ -61,6 +61,7 @@ class AppServiceProvider extends ServiceProvider
             storage_path('framework/cache/data'),
             storage_path('logs'),
             base_path('bootstrap/cache'),
+            database_path(),
         ];
 
         foreach ($frameworkPaths as $path) {
@@ -70,6 +71,14 @@ class AppServiceProvider extends ServiceProvider
             if (is_dir($path) && !is_writable($path)) {
                 @chmod($path, 0777);
             }
+        }
+
+        $sqliteFile = database_path('database.sqlite');
+        if (!file_exists($sqliteFile)) {
+            @touch($sqliteFile);
+            @chmod($sqliteFile, 0666);
+        } elseif (!is_writable($sqliteFile)) {
+            @chmod($sqliteFile, 0666);
         }
 
         // Enforce 2FA for admin users (Phase 0 stub — full impl in Phase 1)

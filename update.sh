@@ -106,13 +106,15 @@ fi
 
 # ─── 8. Asegurar permisos correctos finales ───────────────────────────────────
 log_info "Configurando permisos finales..."
-mkdir -p "$PANEL_DIR/storage/framework/"{sessions,views,cache/data} "$PANEL_DIR/storage/logs" "$PANEL_DIR/bootstrap/cache"
+mkdir -p "$PANEL_DIR/storage/framework/"{sessions,views,cache/data} "$PANEL_DIR/storage/logs" "$PANEL_DIR/bootstrap/cache" "$PANEL_DIR/database"
+touch "$PANEL_DIR/database/database.sqlite" || true
+
 chown -R larapanel:www-data "$PANEL_DIR"
 chmod -R 755 "$PANEL_DIR"
 
-# storage y bootstrap/cache pertenecen a www-data y tienen permisos 777 para evitar bloqueos entre CLI (larapanel) y Web (www-data)
-chown -R www-data:www-data "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"
-chmod -R 777 "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache"
+# storage, bootstrap/cache y database pertenecen a www-data y tienen permisos 777 para que SQLite y la app funcionen sin bloqueos
+chown -R www-data:www-data "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache" "$PANEL_DIR/database"
+chmod -R 777 "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache" "$PANEL_DIR/database"
 
 # ─── 9. Reiniciar worker de colas ─────────────────────────────────────────────
 log_info "Reiniciando el worker de colas (Queue Worker)..."
