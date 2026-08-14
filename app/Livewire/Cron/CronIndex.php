@@ -5,7 +5,6 @@ namespace App\Livewire\Cron;
 use App\Models\CronJob;
 use App\Models\CronRunLog;
 use App\Services\CronService;
-use App\Shell\SudoExecutor;
 use App\Shell\ShellExecutor;
 use Livewire\Component;
 
@@ -107,7 +106,7 @@ class CronIndex extends Component
         }
     }
 
-    public function runJobNow(int $id, SudoExecutor $sudo, ShellExecutor $shell): void
+    public function runJobNow(int $id, ShellExecutor $shell): void
     {
         $cron = CronJob::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
         
@@ -115,18 +114,14 @@ class CronIndex extends Component
         $this->errorMessage = '';
 
         try {
-            $cmd = escapeshellcmd($cron->command);
             $startMs = (int)(microtime(true) * 1000);
 
-            if (app()->isProduction()) {
-                $result = $sudo->run(['su', '-', 'www-data', '-s', '/bin/bash', '-c', $cmd], checkExit: false);
-                $exitCode = $result->exitCode;
-                $output = $result->stdout . "\n" . $result->stderr;
-            } else {
-                $result = $shell->run(['sh', '-c', $cron->command], false);
-                $exitCode = $result->exitCode;
-                $output = trim($result->stdout . "\n" . $result->stderr) ?: '(sin salida)';
-            }
+            // The PHP-FPM worker already runs as www-data, so no sudo/su is
+            // required. The command is passed raw to `sh -c` so pipes, redirects
+            // and globs work exactly as they do when cron runs it.
+            $result = $shell->run(['sh', '-c', $cron->command], checkExit: false);
+            $exitCode = $result->exitCode;
+            $output = trim($result->stdout . "\n" . $result->stderr) ?: '(sin salida)';
 
             $durationMs = (int)(microtime(true) * 1000) - $startMs;
             $status = ($exitCode === 0) ? 'success' : 'failure';

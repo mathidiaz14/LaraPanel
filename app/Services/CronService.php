@@ -5,13 +5,13 @@ namespace App\Services;
 use App\Models\CronJob;
 use App\Models\User;
 use App\Models\AuditLog;
-use App\Shell\SudoExecutor;
+use App\Shell\ShellExecutor;
 use Illuminate\Support\Facades\Log;
 
 class CronService
 {
     public function __construct(
-        protected SudoExecutor $sudo,
+        protected ShellExecutor $shell,
     ) {}
 
     /**
@@ -37,7 +37,13 @@ class CronService
 
         AuditLog::record('cron.created', $cron->label, ['command' => $cron->command]);
 
-        $this->syncSystemCrontab();
+        try {
+            $this->syncSystemCrontab();
+        } catch (\Throwable $e) {
+            // Keep DB and system crontab consistent if the sync fails.
+            $cron->delete();
+            throw $e;
+        }
 
         return $cron;
     }
@@ -71,10 +77,12 @@ class CronService
     public function syncSystemCrontab(): void
     {
         $activeJobs = CronJob::where('is_active', true)->get();
-        
+
         $crontabLines = [
             "# --- LaraPanel Generated Cron Jobs ---",
             "# DO NOT EDIT THIS BLOCK DIRECTLY - IT WILL BE OVERWRITTEN",
+            // Cron runs with a minimal environment; make common binaries resolvable.
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
         ];
 
         foreach ($activeJobs as $job) {
@@ -86,9 +94,9 @@ class CronService
                 throw new \InvalidArgumentException("El comando de '{$job->label}' contiene saltos de línea no permitidos.");
             }
 
-            $cmd = escapeshellcmd($job->command);
-            // Append log output redirect or just standard job formatting
-            $crontabLines[] = "{$job->schedule} {$cmd} # LaraPanel_Job_ID_{$job->id}";
+            // Cron runs the line through /bin/sh, so the command must be written
+            // verbatim. escapeshellcmd() would break pipes, redirects and globs.
+            $crontabLines[] = "{$job->schedule} {$job->command} # LaraPanel_Job_ID_{$job->id}";
         }
         $crontabLines[] = "# --- End LaraPanel Generated Cron Jobs ---";
 
@@ -96,18 +104,28 @@ class CronService
 
         if (!app()->isProduction()) {
             // Write locally in development
-            $devCronFile = storage_path('app/public/crontab.txt');
-            file_put_contents($devCronFile, $crontabContent);
+            $devDir = storage_path('app/cron');
+            if (!is_dir($devDir)) {
+                mkdir($devDir, 0775, true);
+            }
+            file_put_contents($devDir . '/crontab.txt', $crontabContent);
             return;
         }
 
         try {
-            $tmpFile = tempnam('/tmp', 'lp_cron_');
+            $tmpFile = tempnam(sys_get_temp_dir(), 'lp_cron_');
             file_put_contents($tmpFile, $crontabContent);
-            
-            // Apply crontab for www-data
-            $this->sudo->run(['crontab', '-u', 'www-data', $tmpFile]);
-            unlink($tmpFile);
+
+            // The PHP-FPM worker already runs as www-data, so `crontab` can be
+            // invoked directly (no sudo) to install www-data's crontab.
+            $result = $this->shell->run(['crontab', $tmpFile], checkExit: false);
+
+            @unlink($tmpFile);
+
+            if ($result->failed()) {
+                $message = trim($result->stderr ?: $result->stdout);
+                throw new \RuntimeException("crontab: {$message}");
+            }
         } catch (\Throwable $e) {
             Log::error("CronService: Failed to sync crontab: " . $e->getMessage());
             throw new \RuntimeException("No se pudo sincronizar el crontab del sistema: " . $e->getMessage());
