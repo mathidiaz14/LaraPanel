@@ -55,6 +55,8 @@
             <div style="padding:8px 14px;display:flex;gap:14px;font-size:11px;color:var(--text-muted);">
                 <span><kbd>Tab</kbd> autocompletar</span><span><kbd>↑ ↓</kbd> historial</span><span><kbd>Ctrl+L</kbd> limpiar</span><span><kbd>Ctrl+C</kbd> cancelar línea</span>
                 @if($exitCode !== null)<span style="margin-left:auto;color:{{ $exitCode === 0 ? '#a6e3a1' : '#f38ba8' }};">Salida: {{ $exitCode }} · {{ $durationMs ?? 0 }} ms</span>@endif
+                <button onclick="copyTerminalOutput(this)" data-output="{{ base64_encode($output) }}" class="btn btn-ghost btn-sm" title="Copiar salida"><i class="fa-solid fa-copy"></i></button>
+                <button onclick="downloadTerminalOutput(this)" data-output="{{ base64_encode($output) }}" class="btn btn-ghost btn-sm" title="Descargar salida"><i class="fa-solid fa-download"></i></button>
             </div>
         </section>
 
@@ -80,64 +82,8 @@
                 </div>
             </section>
 
-            <section class="glass" style="padding:15px;">
-                <h3 style="font-size:13px;margin:0 0 10px;color:var(--text-primary);"><i class="fa-solid fa-folder-tree" style="color:#cba6f7;"></i> Archivos en {{ $cwd }}</h3>
-                @if(!$selectedServerId || $servers->firstWhere('id', $selectedServerId)?->is_local)
-                    <label class="btn btn-ghost btn-sm" style="display:block;text-align:center;margin-bottom:8px;cursor:pointer;">
-                        <i class="fa-solid fa-upload"></i> Subir archivos
-                        <input type="file" wire:model="uploads" multiple hidden>
-                    </label>
-                @endif
-                @if($files)
-                    <div style="max-height:190px;overflow:auto;display:flex;flex-direction:column;gap:3px;">
-                        @foreach($files as $file)
-                            <div style="display:flex;align-items:center;gap:3px;">
-                                <button wire:click="useFile('{{ addslashes($file['name']) }}', {{ $file['is_dir'] ? 'true' : 'false' }})" class="btn btn-ghost btn-sm" style="font-family:monospace;font-size:10px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">
-                                    <i class="fa-solid {{ $file['is_dir'] ? 'fa-folder' : 'fa-file' }}" style="color:{{ $file['is_dir'] ? '#f9e2af' : '#bac2de' }};width:16px;"></i>{{ $file['name'] }}
-                                </button>
-                                @if(!$file['is_dir'])
-                                    <button wire:click="downloadFile('{{ addslashes($file['name']) }}')" class="btn btn-ghost btn-sm" title="Descargar"><i class="fa-solid fa-download"></i></button>
-                                @endif
-                                <button onclick="renameTerminalFile({{ Js::from($file['name']) }})" class="btn btn-ghost btn-sm" title="Renombrar"><i class="fa-solid fa-pen"></i></button>
-                                <button wire:click="deleteFile('{{ addslashes($file['name']) }}')" wire:confirm="¿Eliminar {{ addslashes($file['name']) }}?" class="btn btn-ghost btn-sm" style="color:#f38ba8;" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
-                            </div>
-                        @endforeach
-                    </div>
-                @else
-                    <p style="font-size:11px;color:var(--text-muted);margin:0;">No hay archivos locales disponibles para este servidor.</p>
-                @endif
-            </section>
         </aside>
     </div>
-
-    <section class="glass" style="padding:15px;margin-top:16px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;">
-            <h3 style="font-size:13px;margin:0;color:var(--text-primary);"><i class="fa-solid fa-clock-rotate-left" style="color:#89b4fa;"></i> Historial persistente</h3>
-            <span style="font-size:10px;color:var(--text-muted);">Últimos 30 comandos · privado por usuario</span>
-        </div>
-        <div style="overflow:auto;max-height:230px;">
-            <table style="width:100%;font-size:11px;border-collapse:collapse;">
-                <thead><tr style="color:var(--text-muted);text-align:left;"><th style="padding:6px;">Comando</th><th style="padding:6px;">Servidor</th><th style="padding:6px;">Estado</th><th style="padding:6px;">Fecha</th><th style="padding:6px;"></th></tr></thead>
-                <tbody>
-                    @forelse($history as $item)
-                        <tr style="border-top:1px solid rgba(255,255,255,.05);">
-                            <td style="padding:7px;font-family:monospace;color:#cdd6f4;max-width:430px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ $item['command'] }}</td>
-                            <td style="padding:7px;color:var(--text-muted);">{{ $item['server'] }}</td>
-                            <td style="padding:7px;color:{{ $item['status'] === 'success' ? '#a6e3a1' : ($item['status'] === 'failed' ? '#f38ba8' : '#f9e2af') }};">{{ $item['status'] }}@if($item['exit_code'] !== null) ({{ $item['exit_code'] }}) @endif</td>
-                            <td style="padding:7px;color:var(--text-muted);">{{ $item['created_at'] }}</td>
-                            <td style="padding:7px;text-align:right;"><button wire:click="$set('command', '{{ addslashes($item['command']) }}')" class="btn btn-ghost btn-sm" title="Repetir"><i class="fa-solid fa-rotate-right"></i></button></td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="5" style="padding:18px;text-align:center;color:var(--text-muted);">Todavía no hay comandos ejecutados.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        <div style="display:flex;gap:7px;margin-top:10px;">
-            <button onclick="copyTerminalOutput(this)" data-output="{{ base64_encode($output) }}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-copy"></i> Copiar salida</button>
-            <button onclick="downloadTerminalOutput(this)" data-output="{{ base64_encode($output) }}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-download"></i> Descargar salida</button>
-        </div>
-    </section>
 
     @assets
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
@@ -145,8 +91,9 @@
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
     <style>
         #terminal-container { width:100%; overflow:hidden; position:relative; box-sizing:border-box; }
-        #terminal-container .xterm { width:100%; height:100%; }
-        #terminal-container .xterm-viewport { overflow-y:auto !important; padding-bottom:14px; box-sizing:border-box; }
+        #terminal-container .xterm { width:100%; height:100%; max-height:100%; }
+        #terminal-container .xterm-viewport { height:100% !important; max-height:100%; overflow-y:auto !important; padding-bottom:0; box-sizing:border-box; }
+        #terminal-container .xterm-screen { padding-bottom:1px; }
         kbd { background:rgba(255,255,255,.1);padding:2px 5px;border-radius:3px; }
         @media (max-width:900px) { .page-header { flex-direction:column; } .page-header > div:last-child { justify-content:flex-start !important; } }
         @media (max-width:760px) { .glass.lp-panel + aside, aside { display:block; } [style*="grid-template-columns:minmax(0,1fr) 290px"] { display:flex !important; flex-direction:column; } }
@@ -157,7 +104,6 @@
     <script>
         window.copyTerminalOutput = (button) => navigator.clipboard?.writeText(atob(button.dataset.output || ''));
         window.downloadTerminalOutput = (button) => { const blob = new Blob([atob(button.dataset.output || '')], {type: 'text/plain'}); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'terminal-output.txt'; link.click(); URL.revokeObjectURL(link.href); };
-        window.renameTerminalFile = (name) => { const next = window.prompt('Nuevo nombre', name); if (next) Livewire.dispatch('terminal-rename-file', {name, next}); };
         (() => {
             const container = document.getElementById('terminal-container');
             if (!container || !window.Terminal || !window.FitAddon) return;
@@ -167,7 +113,7 @@
             const resizeTerminal = () => { if (container.offsetParent !== null) fit.fit(); };
             window.addEventListener('resize', resizeTerminal);
             if (window.ResizeObserver) new ResizeObserver(resizeTerminal).observe(container);
-            let line = ''; let position = 0; let history = []; let historyIndex = -1; let draft = ''; let currentCwd = @js($cwd);
+            let line = ''; let position = 0; let history = @js($history); let historyIndex = -1; let draft = ''; let currentCwd = @js($cwd);
             const suggestions = @json($suggestions);
             const prompt = () => '\x1b[1;32mroot@larapanel\x1b[0m:\x1b[1;34m' + currentCwd + '\x1b[0m# ';
             const redraw = (value = line) => { term.write('\r\x1b[K' + prompt() + value); line = value; position = value.length; };
@@ -188,9 +134,8 @@
                 if (data === '\x1b[C' || data === '\x1bOC') { if (position < line.length) { position++; term.write('\x1b[C'); } return; }
                 insert(data);
             });
-            $wire.on('terminal-output', event => { const data = event[0] || event; if (data.cwd) currentCwd = data.cwd; if (data.output) data.output.split('\n').forEach(row => term.writeln(row.replace(/\r/g, ''))); term.write(prompt()); });
+            $wire.on('terminal-output', event => { const data = event[0] || event; if (data.cwd) currentCwd = data.cwd; if (data.output) data.output.split('\n').forEach(row => term.writeln(row.replace(/\r/g, ''))); term.write(prompt()); term.scrollToBottom(); });
             $wire.on('terminal-clear', () => { clearTerminal(); });
-            $wire.on('terminal-rename-file', event => { const data = event[0] || event; $wire.call('renameFile', data.name, data.next); });
         })();
     </script>
     @endscript

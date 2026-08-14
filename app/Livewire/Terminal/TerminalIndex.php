@@ -6,21 +6,16 @@ use App\Jobs\ExecuteTerminalCommand;
 use App\Models\AuditLog;
 use App\Models\Server;
 use App\Models\TerminalCommandHistory;
-use App\Services\FileService;
 use App\Services\TerminalCommandPolicy;
 use App\Services\TerminalService;
 use App\Shell\RemoteShellExecutor;
 use Livewire\Component;
-use Livewire\WithFileUploads;
 
 class TerminalIndex extends Component
 {
-    use WithFileUploads;
-
     public string $command = '';
     public string $cwd = '/var/www';
     public array $history = [];
-    public array $files = [];
     public array $quickCommands = [];
     public ?int $selectedServerId = null;
     public ?int $activeJobId = null;
@@ -33,7 +28,6 @@ class TerminalIndex extends Component
     public string $pendingCommand = '';
     public string $notice = '';
     public string $errorMessage = '';
-    public array $uploads = [];
 
     public function mount(): void
     {
@@ -47,7 +41,6 @@ class TerminalIndex extends Component
             ['label' => 'Estado Git', 'command' => 'git status', 'icon' => 'fa-code-branch'],
         ];
         $this->loadHistory();
-        $this->loadFiles();
     }
 
     public function runCommand(TerminalCommandPolicy $policy, TerminalService $terminal): void
@@ -150,7 +143,6 @@ class TerminalIndex extends Component
 
         $this->dispatch('terminal-output', output: $this->output, cwd: $this->cwd, code: $this->exitCode);
         $this->loadHistory();
-        $this->loadFiles();
     }
 
     public function confirmCommand(TerminalCommandPolicy $policy, TerminalService $terminal): void
@@ -214,145 +206,25 @@ class TerminalIndex extends Component
         $this->notice = 'Cancelación solicitada.';
     }
 
-    public function loadFiles(?FileService $files = null): void
-    {
-        $files ??= app(FileService::class);
-        if ($this->selectedServerId && ! Server::whereKey($this->selectedServerId)->where('is_local', true)->exists()) {
-            $this->files = [];
-            return;
-        }
-
-        try {
-            $relative = str_starts_with($this->cwd, '/var/www') ? ltrim(substr($this->cwd, 8), '/') : '';
-            $this->files = array_slice($files->listDirectory($relative), 0, 80);
-        } catch (\Throwable) {
-            $this->files = [];
-        }
-    }
-
-    public function useFile(string $name, bool $directory): void
-    {
-        if ($directory) {
-            $this->cwd = rtrim($this->cwd, '/') . '/' . trim($name, '/');
-            $this->loadFiles();
-            return;
-        }
-
-        $this->command = 'cat ' . $name;
-    }
-
-    public function updatedUploads(FileService $files): void
-    {
-        if (! $this->uploads || ($this->selectedServerId && ! Server::whereKey($this->selectedServerId)->where('is_local', true)->exists())) {
-            return;
-        }
-
-        try {
-            $this->validate(['uploads.*' => 'file|max:2048000']);
-            foreach ($this->uploads as $upload) {
-                $name = preg_replace('/[^a-zA-Z0-9._-]/', '', $upload->getClientOriginalName());
-                if (! $name) continue;
-
-                $temporary = $upload->storeAs('livewire-tmp', $name);
-                $source = \Illuminate\Support\Facades\Storage::disk('local')->path($temporary);
-                $relative = $this->relativeCwd() . '/' . $name;
-                $destination = $files->resolvePath($relative);
-
-                if (PHP_OS_FAMILY === 'Windows') {
-                    rename($source, $destination);
-                } else {
-                    app(\App\Shell\SudoExecutor::class)->run(['cp', $source, $destination]);
-                    app(\App\Shell\SudoExecutor::class)->run(['chown', 'www-data:www-data', $destination]);
-                    @unlink($source);
-                }
-            }
-            $this->notice = 'Archivos subidos correctamente.';
-            $this->uploads = [];
-            $this->loadFiles($files);
-        } catch (\Throwable $e) {
-            $this->errorMessage = 'No se pudieron subir los archivos: ' . $e->getMessage();
-        }
-    }
-
-    public function renameFile(string $name, string $newName, FileService $files): void
-    {
-        if (! $this->isLocalServer()) return;
-        $newName = trim($newName);
-        if (! preg_match('/^[a-zA-Z0-9._-]{1,128}$/', $newName)) {
-            $this->errorMessage = 'El nuevo nombre no es válido.';
-            return;
-        }
-
-        try {
-            $files->rename($this->relativeCwd() . '/' . $name, $newName);
-            $this->loadFiles($files);
-        } catch (\Throwable $e) {
-            $this->errorMessage = $e->getMessage();
-        }
-    }
-
-    public function deleteFile(string $name, FileService $files): void
-    {
-        if (! $this->isLocalServer()) return;
-        try {
-            $files->delete($this->relativeCwd() . '/' . $name);
-            $this->loadFiles($files);
-        } catch (\Throwable $e) {
-            $this->errorMessage = $e->getMessage();
-        }
-    }
-
-    public function downloadFile(string $name, FileService $files): mixed
-    {
-        if (! $this->isLocalServer()) return null;
-        try {
-            $path = $files->resolvePath($this->relativeCwd() . '/' . $name);
-            return is_file($path) ? response()->download($path) : null;
-        } catch (\Throwable $e) {
-            $this->errorMessage = $e->getMessage();
-            return null;
-        }
-    }
-
     public function updatedSelectedServerId(): void
     {
         $this->cwd = '/var/www';
-        $this->loadFiles();
     }
 
     public function loadHistory(): void
     {
-        $this->history = TerminalCommandHistory::with('server')
+        $this->history = TerminalCommandHistory::query()
             ->where('user_id', auth()->id())
             ->latest()
             ->limit(30)
             ->get()
-            ->map(fn (TerminalCommandHistory $item) => [
-                'id' => $item->id,
-                'command' => $item->command,
-                'output' => $item->output,
-                'status' => $item->status,
-                'exit_code' => $item->exit_code,
-                'duration_ms' => $item->duration_ms,
-                'server' => $item->server?->name ?? 'Local',
-                'created_at' => $item->created_at?->format('d/m H:i'),
-            ])->all();
+            ->pluck('command')
+            ->all();
     }
 
     protected function isDangerous(string $command): bool
     {
         return (bool) preg_match('/(^|\s)(rm|mv|chmod|chown|apt|apt-get|systemctl|ufw|docker|git\s+pull|git\s+reset)(\s|$)/i', $command);
-    }
-
-    protected function relativeCwd(): string
-    {
-        return str_starts_with($this->cwd, '/var/www') ? ltrim(substr($this->cwd, 8), '/') : '';
-    }
-
-    protected function isLocalServer(): bool
-    {
-        return ! $this->selectedServerId
-            || Server::whereKey($this->selectedServerId)->where('is_local', true)->exists();
     }
 
     public function render()
