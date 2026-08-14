@@ -46,6 +46,7 @@
     {{-- TAB: SCANNER                                                          --}}
     {{-- ══════════════════════════════════════════════════════════════════════ --}}
     @if($activeTab === 'scanner')
+        <div @if($isScanning) wire:poll.3s="refreshScan" @endif>
         <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start;">
 
             {{-- Left column: Scan form + output --}}
@@ -108,6 +109,24 @@
                         </button>
                     </form>
                 </div>
+
+                {{-- Background scan in progress --}}
+                @if($isScanning)
+                    <div class="glass lp-panel" style="margin-bottom:20px;border-color:rgba(137,180,250,0.25);background:rgba(137,180,250,0.05);">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <i class="fa-solid fa-spinner fa-spin" style="color:#89b4fa;font-size:22px;"></i>
+                            <div>
+                                <div class="panel-title" style="font-size:14px;margin-bottom:2px;">Escaneo en progreso...</div>
+                                <div style="font-size:11px;color:var(--text-muted);">
+                                    El escaneo se ejecuta en segundo plano. Esta página se actualizará automáticamente al finalizar.
+                                </div>
+                            </div>
+                        </div>
+                        <div style="height:6px;background:rgba(255,255,255,0.06);border-radius:4px;margin-top:14px;overflow:hidden;">
+                            <div class="scan-progress-bar"></div>
+                        </div>
+                    </div>
+                @endif
 
                 {{-- Scan Result Summary --}}
                 @if($lastScanResult)
@@ -196,6 +215,7 @@
                 </div>
             </div>
 
+        </div>
         </div>
     @endif
 

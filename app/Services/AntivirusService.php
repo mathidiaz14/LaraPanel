@@ -7,6 +7,8 @@ use App\Models\QuarantineFile;
 use App\Shell\SudoExecutor;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\Process\PhpExecutableFinder;
+use Symfony\Component\Process\Process;
 
 class AntivirusService
 {
@@ -91,26 +93,7 @@ class AntivirusService
     {
         $this->validatePath($path);
 
-        $quarantineDir = config('larapanel.antivirus.quarantine_path', '/var/larapanel/quarantine');
-        $userId        = Auth::id();
-        $timeout       = config('larapanel.antivirus.max_scan_timeout', 300);
-
-        // Build the clamscan command
-        $command = [
-            'clamscan',
-            '--recursive',
-            '--infected',         // only print infected files
-            '--no-summary=no',    // show summary at end
-        ];
-
-        if ($withQuarantine) {
-            if (!is_dir($quarantineDir)) {
-                @mkdir($quarantineDir, 0750, true);
-            }
-            $command[] = '--move=' . $quarantineDir;
-        }
-
-        $command[] = $path;
+        $userId = Auth::id();
 
         // Create pending scan record
         $scan = AntivirusScan::create([
@@ -119,6 +102,77 @@ class AntivirusService
             'status'             => 'running',
             'quarantine_enabled' => $withQuarantine,
         ]);
+
+        try {
+            if (app()->isProduction()) {
+                // Kick off the scan in a detached background process. The web
+                // request would otherwise time out on large trees. The worker is
+                // spawned as the current process user (www-data in production),
+                // so the sudo allowlist for clamscan keeps working.
+                $this->spawnBackgroundScan($scan);
+            } else {
+                // In local/dev, run synchronously so behaviour is predictable.
+                $this->executeScan($scan);
+            }
+        } catch (\Throwable $e) {
+            Log::error('AntivirusService::scan failed to launch', ['error' => $e->getMessage()]);
+            $scan->update([
+                'status'           => 'error',
+                'raw_output'       => 'No se pudo lanzar el escaneo: ' . $e->getMessage(),
+                'duration_seconds' => 0,
+            ]);
+        }
+
+        return $scan->fresh();
+    }
+
+    /**
+     * Launch `antivirus:scan {id}` detached from the web request.
+     */
+    private function spawnBackgroundScan(AntivirusScan $scan): void
+    {
+        $php = (new PhpExecutableFinder())->find() ?: 'php';
+        $artisan = base_path('artisan');
+
+        $logFile = storage_path('logs/antivirus-scan-' . $scan->id . '.log');
+
+        $command = sprintf(
+            'nohup %s %s antivirus:scan %d > %s 2>&1 &',
+            escapeshellarg($php),
+            escapeshellarg($artisan),
+            $scan->id,
+            escapeshellarg($logFile),
+        );
+
+        $process = Process::fromShellCommandline($command);
+        $process->setTimeout(5);
+        $process->run();
+    }
+
+    /**
+     * Execute the scan for an already-persisted record. Called from the
+     * `antivirus:scan` console command (background worker).
+     */
+    public function executeScan(AntivirusScan $scan): void
+    {
+        $quarantineDir = config('larapanel.antivirus.quarantine_path', '/var/larapanel/quarantine');
+        $timeout       = config('larapanel.antivirus.max_scan_timeout', 300);
+
+        // Build the clamscan command
+        $command = [
+            'clamscan',
+            '--recursive',
+            '--infected',         // only print infected files
+        ];
+
+        if ($scan->quarantine_enabled) {
+            if (!is_dir($quarantineDir)) {
+                @mkdir($quarantineDir, 0750, true);
+            }
+            $command[] = '--move=' . $quarantineDir;
+        }
+
+        $command[] = $scan->path;
 
         $startTime = microtime(true);
 
@@ -150,20 +204,18 @@ class AntivirusService
             ]);
 
             // If quarantine was used, parse infected paths and persist them
-            if ($withQuarantine && $summary['infected'] > 0) {
-                $this->persistQuarantinedFiles($output, $scan, $quarantineDir, $userId);
+            if ($scan->quarantine_enabled && $summary['infected'] > 0) {
+                $this->persistQuarantinedFiles($output, $scan, $quarantineDir, $scan->user_id);
             }
 
         } catch (\Throwable $e) {
             $scan->update([
-                'status'     => 'error',
-                'raw_output' => $e->getMessage(),
+                'status'           => 'error',
+                'raw_output'       => $e->getMessage(),
                 'duration_seconds' => (int)(microtime(true) - $startTime),
             ]);
-            Log::error('AntivirusService::scan failed', ['error' => $e->getMessage()]);
+            Log::error('AntivirusService::executeScan failed', ['scan_id' => $scan->id, 'error' => $e->getMessage()]);
         }
-
-        return $scan->fresh();
     }
 
     /**
@@ -260,18 +312,39 @@ class AntivirusService
 
     /**
      * Run freshclam to update virus definitions.
+     *
+     * The clamav-freshclam daemon keeps an exclusive lock on its log file, so a
+     * manual `freshclam` run fails with "Failed to lock the log file". We stop
+     * the daemon, run the update, then restart it.
      */
     public function updateDefinitions(): string
     {
+        $output = '';
+
+        try {
+            $this->sudo->run(['systemctl', 'stop', 'clamav-freshclam'], checkExit: false);
+        } catch (\Throwable $e) {
+            // Daemon may not exist; continue anyway.
+            Log::warning('AntivirusService: could not stop clamav-freshclam', ['error' => $e->getMessage()]);
+        }
+
         try {
             $result = $this->sudo
                 ->withTimeout(180)
                 ->run(['freshclam'], checkExit: false);
 
-            return trim($result->stdout . "\n" . $result->stderr);
+            $output = trim($result->stdout . "\n" . $result->stderr);
         } catch (\Throwable $e) {
-            return "Error al actualizar: " . $e->getMessage();
+            $output = "Error al actualizar: " . $e->getMessage();
         }
+
+        try {
+            $this->sudo->run(['systemctl', 'start', 'clamav-freshclam'], checkExit: false);
+        } catch (\Throwable $e) {
+            Log::warning('AntivirusService: could not restart clamav-freshclam', ['error' => $e->getMessage()]);
+        }
+
+        return $output;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

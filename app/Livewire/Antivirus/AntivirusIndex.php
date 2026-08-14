@@ -21,6 +21,7 @@ class AntivirusIndex extends Component
     public array  $scanSummary       = [];
     public ?array $lastScanResult    = null;
     public array  $scanHistory       = [];
+    public ?int   $activeScanId      = null;
 
     // ── Quarantine tab ────────────────────────────────────────────────────────
     public array $quarantineFiles = [];
@@ -65,35 +66,56 @@ class AntivirusIndex extends Component
     public function runScan(AntivirusService $av): void
     {
         $this->validate();
-        $this->isScanning  = true;
-        $this->scanOutput  = '';
-        $this->scanSummary = [];
+        $this->isScanning     = true;
+        $this->scanOutput     = '';
+        $this->scanSummary    = [];
         $this->lastScanResult = null;
+        $this->activeScanId   = null;
 
         try {
             $scan = $av->scan($this->scanPath, $this->withQuarantine);
-
-            $this->lastScanResult = [
-                'id'              => $scan->id,
-                'status'          => $scan->status,
-                'files_scanned'   => $scan->files_scanned,
-                'infected_count'  => $scan->infected_count,
-                'error_count'     => $scan->error_count,
-                'duration_seconds'=> $scan->duration_seconds,
-                'badge_class'     => $scan->statusBadgeClass(),
-            ];
-
-            $this->scanOutput = $scan->raw_output ?? '';
-            $this->loadScanHistory($av);
-
-            // Refresh quarantine if we sent things there
-            if ($this->withQuarantine && $scan->infected_count > 0) {
-                $this->loadQuarantine($av);
-            }
+            $this->activeScanId = $scan->id;
+            $this->refreshScan($av);
         } catch (\Throwable $e) {
             $this->scanOutput = "❌ Error: " . $e->getMessage();
-        } finally {
             $this->isScanning = false;
+        }
+    }
+
+    /**
+     * Polled by the UI while isScanning. Loads the finished scan result once
+     * the background worker has persisted a final status.
+     */
+    public function refreshScan(AntivirusService $av): void
+    {
+        if (!$this->isScanning || !$this->activeScanId) {
+            return;
+        }
+
+        $scan = AntivirusScan::where('user_id', auth()->id())->find($this->activeScanId);
+        if (!$scan || $scan->status === 'running') {
+            return; // still in progress
+        }
+
+        $this->isScanning     = false;
+        $this->activeScanId   = null;
+
+        $this->lastScanResult = [
+            'id'              => $scan->id,
+            'status'          => $scan->status,
+            'files_scanned'   => $scan->files_scanned,
+            'infected_count'  => $scan->infected_count,
+            'error_count'     => $scan->error_count,
+            'duration_seconds'=> $scan->duration_seconds,
+            'badge_class'     => $scan->statusBadgeClass(),
+        ];
+
+        $this->scanOutput = $scan->raw_output ?? '';
+        $this->loadScanHistory($av);
+
+        // Refresh quarantine if we sent things there
+        if ($this->withQuarantine && $scan->infected_count > 0) {
+            $this->loadQuarantine($av);
         }
     }
 

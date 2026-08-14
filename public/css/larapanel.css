@@ -406,6 +406,8 @@ select.form-input option {
 /* Utilidades Componentes */
 .lp-loading-toast { position: fixed; bottom: 24px; right: 24px; z-index: 300; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius); padding: 10px 16px; font-size: 13px; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(12px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); color: var(--text-primary); font-weight: 500; animation: toastEnter 200ms var(--ease-out); }
 @keyframes toastEnter { from { opacity: 0; transform: translateY(12px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.scan-progress-bar { height: 100%; width: 40%; background: linear-gradient(90deg, #89b4fa, #a6e3a1); border-radius: 4px; animation: scanProgress 1.4s ease-in-out infinite; }
+@keyframes scanProgress { 0% { transform: translateX(-100%); } 100% { transform: translateX(350%); } }
 .lp-row-actions { display: inline-flex; gap: 6px; justify-content: flex-end; flex-wrap: nowrap; }
 .btn-secondary { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: var(--text-primary); }
 .btn-secondary:hover { background: rgba(255,255,255,0.15); }

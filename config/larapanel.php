@@ -245,7 +245,7 @@ return [
     */
     'antivirus' => [
         'quarantine_path'    => env('AV_QUARANTINE_PATH', '/var/larapanel/quarantine'),
-        'max_scan_timeout'   => 300, // seconds (5 min)
+        'max_scan_timeout'   => 1800, // seconds (30 min) — runs in background worker
         'allowed_scan_paths' => [
             '/home',
             '/var/www',
