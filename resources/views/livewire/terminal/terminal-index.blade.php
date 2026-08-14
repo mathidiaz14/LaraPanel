@@ -51,7 +51,7 @@
                     @endif
                 </div>
             </div>
-            <div id="terminal-container" wire:ignore style="height:360px;box-sizing:border-box;padding:12px;background:#090b10;"></div>
+            <div id="terminal-container" wire:ignore style="height:360px;box-sizing:border-box;padding:12px 12px 24px;background:#090b10;"></div>
             <div style="padding:8px 14px;display:flex;gap:14px;font-size:11px;color:var(--text-muted);">
                 <span><kbd>Tab</kbd> autocompletar</span><span><kbd>↑ ↓</kbd> historial</span><span><kbd>Ctrl+L</kbd> limpiar</span><span><kbd>Ctrl+C</kbd> cancelar línea</span>
                 @if($exitCode !== null)<span style="margin-left:auto;color:{{ $exitCode === 0 ? '#a6e3a1' : '#f38ba8' }};">Salida: {{ $exitCode }} · {{ $durationMs ?? 0 }} ms</span>@endif
@@ -93,7 +93,7 @@
         #terminal-container { width:100%; overflow:hidden; position:relative; box-sizing:border-box; }
         #terminal-container .xterm { width:100%; height:100%; max-height:100%; }
         #terminal-container .xterm-viewport { height:100% !important; max-height:100%; overflow-y:auto !important; padding-bottom:0; box-sizing:border-box; }
-        #terminal-container .xterm-screen { padding-bottom:1px; }
+        #terminal-container .xterm-screen { padding-bottom:0; }
         kbd { background:rgba(255,255,255,.1);padding:2px 5px;border-radius:3px; }
         @media (max-width:900px) { .page-header { flex-direction:column; } .page-header > div:last-child { justify-content:flex-start !important; } }
         @media (max-width:760px) { .glass.lp-panel + aside, aside { display:block; } [style*="grid-template-columns:minmax(0,1fr) 290px"] { display:flex !important; flex-direction:column; } }
@@ -109,8 +109,8 @@
             if (!container || !window.Terminal || !window.FitAddon) return;
             const term = new Terminal({ cursorBlink: true, cursorStyle: 'block', scrollback: 3000, fontFamily: 'Fira Code, Menlo, Monaco, monospace', fontSize: 13, theme: { background: '#090b10', foreground: '#cdd6f4', cursor: '#6366f1', selectionBackground: 'rgba(99,102,241,.3)' } });
             const fit = new FitAddon.FitAddon();
-            term.loadAddon(fit); term.open(container); setTimeout(() => fit.fit(), 80);
-            const resizeTerminal = () => { if (container.offsetParent !== null) fit.fit(); };
+            term.loadAddon(fit); term.open(container); setTimeout(() => { fit.fit(); term.scrollToBottom(); }, 80);
+            const resizeTerminal = () => { if (container.offsetParent !== null) { fit.fit(); term.scrollToBottom(); } };
             window.addEventListener('resize', resizeTerminal);
             if (window.ResizeObserver) new ResizeObserver(resizeTerminal).observe(container);
             let line = ''; let position = 0; let history = @js($history); let historyIndex = -1; let draft = ''; let currentCwd = @js($cwd);
