@@ -552,6 +552,9 @@ www-data ALL=(ALL) NOPASSWD: /bin/mv
 www-data ALL=(ALL) NOPASSWD: /bin/cp
 www-data ALL=(ALL) NOPASSWD: /bin/ln
 
+# LaraPanel updater
+www-data ALL=(root) NOPASSWD: ${INSTALL_DIR}/update.sh
+
 # Logs y archivos
 www-data ALL=(ALL) NOPASSWD: /usr/bin/tail
 www-data ALL=(ALL) NOPASSWD: /usr/bin/truncate

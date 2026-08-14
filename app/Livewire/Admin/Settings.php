@@ -3,9 +3,8 @@
 namespace App\Livewire\Admin;
 
 use Livewire\Component;
-use App\Shell\SudoExecutor;
-use App\Shell\ShellExecutor;
 use Illuminate\Support\Facades\File;
+use App\Services\UpdateService;
 
 class Settings extends Component
 {
@@ -36,6 +35,8 @@ class Settings extends Component
     public string $latestCommitHash = '';
     public string $latestCommitMessage = '';
     public array $pendingCommits = [];
+    public bool $workingTreeDirty = false;
+    public string $updateCheckedAt = '';
     
     // Update execution state
     public bool $isUpdating = false;
@@ -119,44 +120,25 @@ class Settings extends Component
         $this->errorMessage = '';
         
         // Clear cached update flag to force fresh check
-        \App\Services\UpdateService::clearCache();
+        UpdateService::clearCache();
+
+        $this->isUpdateAvailable = false;
+        $this->currentCommitHash = '';
+        $this->latestCommitHash = '';
+        $this->pendingCommits = [];
 
         try {
-            $executor = new ShellExecutor();
-            $baseDir = base_path();
+            $result = UpdateService::check();
+            $this->currentCommitHash = $result['current_hash'];
+            $this->currentCommitMessage = $result['current_message'];
+            $this->latestCommitHash = $result['latest_hash'];
+            $this->latestCommitMessage = $result['latest_message'];
+            $this->pendingCommits = $result['pending_commits'];
+            $this->workingTreeDirty = $result['working_tree_dirty'];
+            $this->updateCheckedAt = $result['checked_at'];
+            $this->isUpdateAvailable = $this->currentCommitHash !== $this->latestCommitHash;
 
-            // Fetch latest information from remote
-            $executor->inDirectory($baseDir)->run(['git', 'fetch', 'origin'], false);
-
-            // Get current active branch
-            $branchResult = $executor->inDirectory($baseDir)->run(['git', 'rev-parse', '--abbrev-ref', 'HEAD']);
-            $branch = trim($branchResult->stdout);
-
-            // Get local commit info
-            $localHashRes = $executor->inDirectory($baseDir)->run(['git', 'rev-parse', 'HEAD']);
-            $this->currentCommitHash = trim($localHashRes->stdout);
-            
-            $localMsgRes = $executor->inDirectory($baseDir)->run(['git', 'log', '-1', '--pretty=%B']);
-            $this->currentCommitMessage = trim($localMsgRes->stdout);
-
-            // Get remote commit info
-            $remoteHashRes = $executor->inDirectory($baseDir)->run(['git', 'rev-parse', "origin/{$branch}"]);
-            $this->latestCommitHash = trim($remoteHashRes->stdout);
-
-            if ($this->currentCommitHash !== $this->latestCommitHash) {
-                $this->isUpdateAvailable = true;
-                
-                // Get pending commits list
-                $pendingRes = $executor->inDirectory($baseDir)->run(['git', 'log', "HEAD..origin/{$branch}", '--oneline']);
-                $this->pendingCommits = array_filter(explode("\n", trim($pendingRes->stdout)));
-
-                // Get latest remote message
-                $remoteMsgRes = $executor->inDirectory($baseDir)->run(['git', 'log', '-1', "origin/{$branch}", '--pretty=%B']);
-                $this->latestCommitMessage = trim($remoteMsgRes->stdout);
-            } else {
-                $this->isUpdateAvailable = false;
-                $this->pendingCommits = [];
-                $this->latestCommitHash = $this->currentCommitHash;
+            if (! $this->isUpdateAvailable && empty($this->latestCommitMessage)) {
                 $this->latestCommitMessage = $this->currentCommitMessage;
             }
         } catch (\Throwable $e) {
@@ -170,6 +152,11 @@ class Settings extends Component
     public function startUpdate(): void
     {
         if ($this->isUpdating) {
+            return;
+        }
+
+        if (! $this->isUpdateAvailable) {
+            $this->errorMessage = 'No hay una actualización confirmada. Pulsa "Buscar de nuevo" antes de actualizar.';
             return;
         }
 
@@ -192,8 +179,14 @@ class Settings extends Component
                 throw new \RuntimeException("El script update.sh no se encuentra en " . $scriptPath);
             }
 
-            // Command to run update in background
-            $command = "nohup sudo -n {$scriptPath} > {$logFile} 2>&1 & echo \$! > {$pidFile}";
+            // update.sh performs the complete deployment: Git, Composer,
+            // migrations, assets, permissions and service restarts.
+            $command = sprintf(
+                'nohup sudo -n %s > %s 2>&1 & echo $! > %s',
+                escapeshellarg($scriptPath),
+                escapeshellarg($logFile),
+                escapeshellarg($pidFile),
+            );
             
             $process = \Symfony\Component\Process\Process::fromShellCommandline($command);
             $process->run();
@@ -232,7 +225,7 @@ class Settings extends Component
                     $isRunning = posix_kill((int)$pid, 0);
                 } else {
                     // Fallback to ps command
-                    $executor = new ShellExecutor();
+                    $executor = new \App\Shell\ShellExecutor();
                     $check = $executor->run(['ps', '-p', $pid], false);
                     $isRunning = $check->successful();
                 }
@@ -244,7 +237,7 @@ class Settings extends Component
                     if (str_contains($this->updateLog, '¡LaraPanel se ha actualizado y optimizado correctamente') || str_contains($this->updateLog, 'successfully')) {
                         $this->updateStatus = 'success';
                         $this->successMessage = "¡LaraPanel se actualizó con éxito a la última versión!";
-                        \App\Services\UpdateService::clearCache();
+                        UpdateService::clearCache();
                         $this->checkForUpdates();
                     } else {
                         $this->updateStatus = 'failed';

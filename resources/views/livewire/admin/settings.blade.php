@@ -31,6 +31,13 @@
             </div>
             @endif
 
+            @if($workingTreeDirty && $isUpdateAvailable)
+            <div class="glass" style="padding:14px 18px;background:rgba(245,158,11,0.12);color:#fbbf24;font-size:13px;border:1px solid rgba(245,158,11,0.25);border-radius:12px;display:flex;align-items:center;gap:10px;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Hay cambios locales sin confirmar. El actualizador ejecuta <code>git reset --hard</code> y puede sobrescribirlos.</span>
+            </div>
+            @endif
+
             {{-- Status Banner --}}
             <div class="glass" style="padding:32px;border-radius:16px;background:rgba(255,255,255,0.01);display:flex;align-items:center;justify-content:between;gap:30px;flex-wrap:wrap;">
                 <div style="display:flex;align-items:center;gap:20px;">
@@ -40,7 +47,7 @@
                         </div>
                         <div>
                             <h3 style="font-size:20px;font-weight:700;margin:0 0 6px;">¡Actualización Disponible!</h3>
-                            <p style="font-size:13px;color:var(--text-secondary);margin:0;">Hay nuevas características y mejoras listas para descargar en tu panel.</p>
+                            <p style="font-size:13px;color:var(--text-secondary);margin:0;">Hay cambios disponibles en el repositorio remoto para instalar en tu panel.</p>
                         </div>
                     @else
                         <div style="width:64px;height:64px;background:rgba(16,185,129,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(16,185,129,0.25);">
@@ -48,7 +55,7 @@
                         </div>
                         <div>
                             <h3 style="font-size:20px;font-weight:700;margin:0 0 6px;">LaraPanel está al día</h3>
-                            <p style="font-size:13px;color:var(--text-secondary);margin:0;">Tienes instalada la última versión disponible del sistema.</p>
+                            <p style="font-size:13px;color:var(--text-secondary);margin:0;">El commit instalado coincide con el commit remoto consultado.</p>
                         </div>
                     @endif
                 </div>
@@ -95,7 +102,7 @@
                     <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;font-weight:800;margin-bottom:16px;">Última Versión en GitHub</div>
                     <div style="display:flex;flex-direction:column;gap:12px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.03);padding-bottom:10px;">
-                            <span style="color:var(--text-secondary);">Repuesto remoto:</span>
+                            <span style="color:var(--text-secondary);">Repositorio remoto:</span>
                             <span style="font-weight:600;color:var(--text-primary);">GitHub (origin)</span>
                         </div>
                         <div style="display:flex;justify-content:space-between;align-items:center;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.03);padding-bottom:10px;">
@@ -107,6 +114,9 @@
                             <p style="font-family:monospace;font-size:12px;margin:0;color:var(--text-secondary);background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;white-space:pre-wrap;">{{ $latestCommitMessage ?: 'Sin detalles remotos.' }}</p>
                         </div>
                     </div>
+                    @if($updateCheckedAt)
+                        <div style="font-size:10px;color:var(--text-muted);margin-top:12px;">Consulta realizada: {{ $updateCheckedAt }}</div>
+                    @endif
                 </div>
 
             </div>
