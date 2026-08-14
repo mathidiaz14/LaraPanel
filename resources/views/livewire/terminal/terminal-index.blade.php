@@ -164,9 +164,9 @@
             const fit = new FitAddon.FitAddon();
             term.loadAddon(fit); term.open(container); setTimeout(() => fit.fit(), 80);
             window.addEventListener('resize', () => { if (container.offsetParent !== null) fit.fit(); });
-            let line = ''; let position = 0; let history = []; let historyIndex = -1; let draft = '';
+            let line = ''; let position = 0; let history = []; let historyIndex = -1; let draft = ''; let currentCwd = @js($cwd);
             const suggestions = @json($suggestions);
-            const prompt = () => '\x1b[1;32mroot@larapanel\x1b[0m:\x1b[1;34m' + @js($cwd) + '\x1b[0m# ';
+            const prompt = () => '\x1b[1;32mroot@larapanel\x1b[0m:\x1b[1;34m' + currentCwd + '\x1b[0m# ';
             const redraw = (value = line) => { term.write('\r\x1b[K' + prompt() + value); line = value; position = value.length; };
             term.writeln('\x1b[1;36mLaraPanel Web Terminal · HTTP + Livewire\x1b[0m');
             term.writeln('No se usa WebSocket. Tab completa comandos y las tareas largas usan polling.\r\n');
@@ -184,7 +184,7 @@
                 if (data === '\x1b[C' || data === '\x1bOC') { if (position < line.length) { position++; term.write('\x1b[C'); } return; }
                 insert(data);
             });
-            $wire.on('terminal-output', event => { const data = event[0] || event; if (data.output) data.output.split('\n').forEach(row => term.writeln(row.replace(/\r/g, ''))); term.write(prompt()); });
+            $wire.on('terminal-output', event => { const data = event[0] || event; if (data.cwd) currentCwd = data.cwd; if (data.output) data.output.split('\n').forEach(row => term.writeln(row.replace(/\r/g, ''))); term.write(prompt()); });
             $wire.on('terminal-clear', () => { term.clear(); term.write(prompt()); });
             $wire.on('terminal-rename-file', event => { const data = event[0] || event; $wire.call('renameFile', data.name, data.next); });
         })();
