@@ -27,7 +27,7 @@ class GitIndex extends Component
     protected array $rules = [
         'domain_name'    => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z0-9\-\.]+$/'],
         'deploy_path'    => ['nullable', 'string', 'max:255', 'regex:/^\/[a-zA-Z0-9\-\.\/_]+$/'],
-        'repository_url' => 'required|url|max:255',
+        'repository_url' => ['required', 'string', 'max:255', 'regex:/^https?:\/\/[^\s]+$/'],
         'branch'         => ['required', 'string', 'max:100', 'regex:/^[a-zA-Z0-9\-\.\/_]+$/'],
         'deploy_script'  => 'nullable|string',
         'auto_deploy'    => 'boolean',
