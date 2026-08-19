@@ -8,7 +8,8 @@
  */
 class larapanel_autologin extends rcube_plugin
 {
-    public $task = 'login';
+    // Sin restricción de tarea: debe cargarse también en la tarea "mail",
+    // donde se aplican los hooks storage_connect / smtp_connect con el master user.
 
     function init()
     {
