@@ -5,7 +5,6 @@ namespace App\Livewire\Cron;
 use App\Models\CronJob;
 use App\Models\CronRunLog;
 use App\Services\CronService;
-use App\Shell\ShellExecutor;
 use Livewire\Component;
 
 class CronIndex extends Component
@@ -106,7 +105,7 @@ class CronIndex extends Component
         }
     }
 
-    public function runJobNow(int $id, ShellExecutor $shell): void
+    public function runJobNow(int $id, CronService $cronService): void
     {
         $cron = CronJob::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
         
@@ -114,38 +113,16 @@ class CronIndex extends Component
         $this->errorMessage = '';
 
         try {
-            $startMs = (int)(microtime(true) * 1000);
+            // Manual runs from the browser should not block the request for too
+            // long, so keep a shorter timeout than automatic (CLI) executions.
+            $result = $cronService->executeJob($cron, timeout: 60);
 
-            // The PHP-FPM worker already runs as www-data, so no sudo/su is
-            // required. The command is passed raw to `sh -c` so pipes, redirects
-            // and globs work exactly as they do when cron runs it.
-            $result = $shell->run(['sh', '-c', $cron->command], checkExit: false);
-            $exitCode = $result->exitCode;
-            $output = trim($result->stdout . "\n" . $result->stderr) ?: '(sin salida)';
+            if ($result['status'] === 'skipped') {
+                $this->successMessage = $result['output'];
+                return;
+            }
 
-            $durationMs = (int)(microtime(true) * 1000) - $startMs;
-            $status = ($exitCode === 0) ? 'success' : 'failure';
-
-            // Save to historical log
-            CronRunLog::create([
-                'cron_job_id' => $cron->id,
-                'status'      => $status,
-                'output'      => $output,
-                'exit_code'   => $exitCode,
-                'duration_ms' => $durationMs,
-                'ran_at'      => now(),
-            ]);
-
-            // Update cron job summary fields
-            $cron->increment('run_count');
-            if ($status === 'failure') $cron->increment('fail_count');
-            $cron->update([
-                'last_run_at'     => now(),
-                'last_run_status' => $status,
-                'last_run_output' => $output,
-            ]);
-
-            $this->successMessage = "Ejecución finalizada con estado: " . strtoupper($status) . " ({$durationMs}ms)";
+            $this->successMessage = "Ejecución finalizada con estado: " . strtoupper($result['status']) . " ({$result['duration_ms']}ms)";
         } catch (\Throwable $e) {
             $this->errorMessage = "Error de ejecución: " . $e->getMessage();
         }
