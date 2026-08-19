@@ -4,7 +4,7 @@
  * LaraPanel AutoLogin Plugin for Roundcube
  *
  * Authenticates users using a token stored in /tmp/larapanel_autologin/
- * Uses Dovecot Master User for IMAP authentication.
+ * Uses Dovecot Master User (larapanel) for IMAP/SMTP authentication.
  */
 class larapanel_autologin extends rcube_plugin
 {
@@ -12,49 +12,54 @@ class larapanel_autologin extends rcube_plugin
 
     function init()
     {
-        $this->add_hook('startup', array($this, 'startup'));
+        $this->add_hook('authenticate', array($this, 'authenticate'));
+        $this->add_hook('storage_connect', array($this, 'override_imap'));
+        $this->add_hook('smtp_connect', array($this, 'override_smtp'));
     }
 
-    function startup($args)
+    function authenticate($args)
     {
-        $rcmail = rcmail::get_instance();
-        
-        // Check if token is provided
-        if (empty($_SESSION['user_id']) && !empty($_GET['_autologin_token'])) {
-            $token = $_GET['_autologin_token'];
-            
-            // Validate token format
-                        if (preg_match('/^[a-zA-Z0-9]+$/', $token)) {
-                            $token_file = '/var/www/panel/storage/app/webmail-autologin/' . $token;
-                            
-                            if (file_exists($token_file)) {
-                    $email = trim(file_get_contents($token_file));
-                    
-                    if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                        
-                        // Read Dovecot Master Password
-                        $master_pass = '';
-                        if (file_exists('/etc/roundcube/master_pass')) {
-                            $master_pass = trim(file_get_contents('/etc/roundcube/master_pass'));
-                        }
+        $token = rcube_utils::get_input_value('_autologin_token', rcube_utils::INPUT_GET);
 
-                        if ($master_pass) {
-                            // We found a valid token. Set it in POST array to trigger login
-                            $args['action'] = 'login';
-                            
-                            // Dovecot master user format: login_user*master_user
-                            // As configured in 10-auth.conf: auth_master_user_separator = *
-                            $_POST['_user'] = $email . '*roundcube';
-                            $_POST['_pass'] = $master_pass;
-                            
-                            // Delete token so it can't be reused
-                            @unlink($token_file);
-                        }
-                    }
+        if (!empty($token) && preg_match('/^[a-zA-Z0-9]+$/', $token)) {
+            $token_file = '/tmp/larapanel_autologin/' . $token;
+            if (file_exists($token_file)) {
+                $email = trim(file_get_contents($token_file));
+                if ($email && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $args['user'] = $email;
+                    $args['pass'] = 'autologin'; // Fake password to pass validation
+                    $args['cookiecheck'] = false;
+                    $args['valid'] = true;
+                    $args['abort'] = false;
+                    $_SESSION['larapanel_master_login'] = true;
+                    @unlink($token_file);
                 }
             }
         }
-        
+        return $args;
+    }
+
+    function override_imap($args)
+    {
+        if (!empty($_SESSION['larapanel_master_login'])) {
+            $master_pwd = trim(@file_get_contents('/etc/roundcube/larapanel_master_pwd'));
+            if ($master_pwd) {
+                $args['user'] = $args['user'] . '*larapanel';
+                $args['pass'] = $master_pwd;
+            }
+        }
+        return $args;
+    }
+
+    function override_smtp($args)
+    {
+        if (!empty($_SESSION['larapanel_master_login'])) {
+            $master_pwd = trim(@file_get_contents('/etc/roundcube/larapanel_master_pwd'));
+            if ($master_pwd) {
+                $args['smtp_user'] = $args['smtp_user'] . '*larapanel';
+                $args['smtp_pass'] = $master_pwd;
+            }
+        }
         return $args;
     }
 }

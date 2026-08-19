@@ -1147,6 +1147,9 @@ systemctl restart dovecot || true
 PLUGIN_DIR="/usr/share/roundcube/plugins/larapanel_autologin"
 mkdir -p "${PLUGIN_DIR}"
 
+# Roundcube en Ubuntu carga los plugins desde /var/lib/roundcube/plugins
+ln -sfn "${PLUGIN_DIR}" /var/lib/roundcube/plugins/larapanel_autologin
+
 cat > "${PLUGIN_DIR}/larapanel_autologin.php" << 'EOF'
 <?php
 /**

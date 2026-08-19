@@ -33,6 +33,15 @@ class EmailService
             throw new \RuntimeException("El correo electrónico {$email} ya existe.");
         }
 
+        // Si existe una cuenta previamente eliminada (soft delete) con el mismo
+        // email, la columna UNIQUE de MySQL seguiría bloqueando la creación.
+        // La eliminamos permanentemente (el maildir en disco se conserva) y
+        // creamos la cuenta nueva con la contraseña indicada.
+        $trashed = EmailAccount::withTrashed()->where('email', $email)->first();
+        if ($trashed) {
+            $trashed->forceDelete();
+        }
+
         // Dovecot-compatible password hashing or Laravel native bcrypt
         $passwordHash = Hash::make($data['password']);
 

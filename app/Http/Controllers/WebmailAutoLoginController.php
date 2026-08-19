@@ -24,21 +24,25 @@ class WebmailAutoLoginController extends Controller
             abort(410, 'Este enlace de acceso automático ya fue utilizado o expiró.');
         }
 
-        // Mover a storage para mayor seguridad fuera de /tmp
-        $tokenDir = storage_path('app/webmail-autologin');
+        // Mover a /tmp/larapanel_autologin (ruta que lee el plugin de
+        // Roundcube) en lugar de storage, para mantener ambos consistentes.
+        $tokenDir = '/tmp/larapanel_autologin';
         if (!is_dir($tokenDir)) {
-            @mkdir($tokenDir, 0700, true);
+            @mkdir($tokenDir, 0770, true);
+            @chmod($tokenDir, 0770);
         }
-        @chmod($tokenDir, 0700);
-        
+        @chmod($tokenDir, 0770);
+
         $roundcubeToken = \Illuminate\Support\Str::random(40);
         file_put_contents("$tokenDir/$roundcubeToken", $email);
-        @chmod("$tokenDir/$roundcubeToken", 0600);
+        @chmod("$tokenDir/$roundcubeToken", 0640);
 
         $webmailHost = 'webmail.' . explode('@', $email)[1];
         $webmailUrl  = 'https://' . $webmailHost;
 
-        return redirect()->away($webmailUrl . '/?_autologin_token=' . $roundcubeToken);
+        // _task/_action=login es necesario para que Roundcube procese la
+        // autenticación (dispara el hook authenticate del plugin).
+        return redirect()->away($webmailUrl . '/?_task=login&_action=login&_autologin_token=' . $roundcubeToken);
     }
 
     /**

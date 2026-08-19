@@ -115,6 +115,10 @@ mkdir -p /usr/share/roundcube/plugins/larapanel_autologin
 cp "/var/www/panel/resources/roundcube_plugin/larapanel_autologin.php" /usr/share/roundcube/plugins/larapanel_autologin/larapanel_autologin.php
 chown -R root:root /usr/share/roundcube/plugins/larapanel_autologin
 
+# Roundcube en Ubuntu carga los plugins desde /var/lib/roundcube/plugins
+mkdir -p /var/lib/roundcube/plugins
+ln -sfn /usr/share/roundcube/plugins/larapanel_autologin /var/lib/roundcube/plugins/larapanel_autologin
+
 # Configurar Dovecot Master User si no está configurado (para el auto-login)
 if [ -f "/var/www/panel/setup-dovecot-master.sh" ]; then
     bash "/var/www/panel/setup-dovecot-master.sh"

@@ -2,6 +2,8 @@
 
 # ==============================================================================
 # LaraPanel — Configurar Dovecot Master User (Para Auto-login en Webmail)
+# Usa el master user "larapanel" y guarda la clave en
+# /etc/roundcube/larapanel_master_pwd (consistente con install.sh).
 # ==============================================================================
 
 if [ "$EUID" -ne 0 ]; then
@@ -9,15 +11,18 @@ if [ "$EUID" -ne 0 ]; then
   exit 1
 fi
 
+MASTER_PWD_FILE="/etc/dovecot/master-users"
+ROUNDCUBE_PWD_FILE="/etc/roundcube/larapanel_master_pwd"
+
 if ! grep -q 'master = yes' /etc/dovecot/conf.d/10-auth.conf; then
     echo "Configuring Dovecot Master User..."
-    
+
     # Generate random master password
-    MASTER_PASS=$(head -c 16 /dev/urandom | xxd -p)
-    
-    echo "roundcube:{PLAIN}$MASTER_PASS" > /etc/dovecot/master-users
-    chmod 600 /etc/dovecot/master-users
-    chown root:root /etc/dovecot/master-users
+    MASTER_PASS=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)
+
+    echo "larapanel:{PLAIN}$MASTER_PASS" > "$MASTER_PWD_FILE"
+    chmod 644 "$MASTER_PWD_FILE"
+    chown root:root "$MASTER_PWD_FILE"
 
     cat << 'EOF' >> /etc/dovecot/conf.d/10-auth.conf
 auth_master_user_separator = *
@@ -29,11 +34,20 @@ passdb {
 }
 EOF
     systemctl restart dovecot
-    
+
     # Save the master password so Roundcube can use it
-    echo "$MASTER_PASS" > /etc/roundcube/master_pass
-    chmod 644 /etc/roundcube/master_pass
+    echo "$MASTER_PASS" > "$ROUNDCUBE_PWD_FILE"
+    chmod 640 "$ROUNDCUBE_PWD_FILE"
+    chown root:www-data "$ROUNDCUBE_PWD_FILE"
     echo "Dovecot Master User configurado con éxito."
 else
-    echo "Dovecot Master User ya estaba configurado."
+    # El master user ya estaba configurado; solo aseguramos que dovecot
+    # pueda leer el archivo (euid=dovecot) y que exista la clave para Roundcube.
+    if [ -f "$MASTER_PWD_FILE" ]; then
+        chmod 644 "$MASTER_PWD_FILE"
+        echo "Dovecot Master User ya estaba configurado."
+    else
+        echo "ERROR: $MASTER_PWD_FILE no existe. Ejecuta de nuevo con permisos." >&2
+        exit 1
+    fi
 fi
