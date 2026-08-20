@@ -182,6 +182,7 @@ return [
         'default_driver' => 'local',  // local | s3 | sftp
         'retention_days' => 30,
         'compress' => true,
+        'timeout' => 3600,  // seconds (1 hour) for long-running tar/mysqldump operations
     ],
 
     /*

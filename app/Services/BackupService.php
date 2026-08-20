@@ -171,8 +171,10 @@ class BackupService
 
                 if (app()->isProduction()) {
                     // Append existing sql file to tar
-                    $this->sudo->run(['tar', '-czf', $destPath . '.new', '-C', $tmpDir, '.']);
-                    $this->sudo->run(['mv', $destPath . '.new', $destPath]);
+                    $this->sudo->withTimeout(config('larapanel.backups.timeout', 3600))
+                        ->run(['tar', '-czf', $destPath . '.new', '-C', $tmpDir, '.']);
+                    $this->sudo->withTimeout(config('larapanel.backups.timeout', 3600))
+                        ->run(['mv', $destPath . '.new', $destPath]);
                 } else {
                     @rename($sqlDest, $dbFilename);
                 }
@@ -226,7 +228,8 @@ class BackupService
             throw new \RuntimeException("El directorio de origen no existe: {$sourcePath}");
         }
 
-        $this->sudo->run(['tar', '-czf', $destPath, '-C', dirname($sourcePath), basename($sourcePath)]);
+        $this->sudo->withTimeout(config('larapanel.backups.timeout', 3600))
+            ->run(['tar', '-czf', $destPath, '-C', dirname($sourcePath), basename($sourcePath)]);
     }
 
     /**
@@ -251,9 +254,12 @@ class BackupService
         $dbArgs = implode(' ', array_map('escapeshellarg', $databases));
         $tmpSql = sys_get_temp_dir() . '/lp_sql_' . uniqid() . '.sql';
 
-        $this->sudo->run(['mysqldump', '--databases', ...$databases, '--result-file=' . $tmpSql]);
-        $this->sudo->run(['gzip', $tmpSql]);
-        $this->sudo->run(['mv', $tmpSql . '.gz', $destPath]);
+        $this->sudo->withTimeout(config('larapanel.backups.timeout', 3600))
+            ->run(['mysqldump', '--databases', ...$databases, '--result-file=' . $tmpSql]);
+        $this->sudo->withTimeout(config('larapanel.backups.timeout', 3600))
+            ->run(['gzip', $tmpSql]);
+        $this->sudo->withTimeout(config('larapanel.backups.timeout', 3600))
+            ->run(['mv', $tmpSql . '.gz', $destPath]);
     }
 
     /**
@@ -305,7 +311,8 @@ class BackupService
             if (($type === 'files' || $type === 'full') && $domain) {
                 // Extract directly to webroot directory, replacing files
                 $docRoot = $domain->document_root;
-                $this->sudo->run(['tar', '-xzf', $localPath, '-C', dirname($docRoot)]);
+                $this->sudo->withTimeout(config('larapanel.backups.timeout', 3600))
+                    ->run(['tar', '-xzf', $localPath, '-C', dirname($docRoot)]);
             }
 
             // Restore Database
@@ -322,7 +329,8 @@ class BackupService
                     $this->sudo->run(['mkdir', '-p', $tmpDir]);
                     
                     // The tar has a file named database_dump.sql.gz inside
-                    $this->sudo->run(['tar', '-xzf', $localPath, '-C', $tmpDir, 'database_dump.sql.gz'], checkExit: false);
+                    $this->sudo->withTimeout(config('larapanel.backups.timeout', 3600))
+                        ->run(['tar', '-xzf', $localPath, '-C', $tmpDir, 'database_dump.sql.gz'], checkExit: false);
                     
                     $sqlGzPath = $tmpDir . '/database_dump.sql.gz';
                     if (file_exists($sqlGzPath) || $this->sudo->run(['test', '-f', $sqlGzPath], false)->successful()) {
@@ -335,7 +343,8 @@ class BackupService
                         if ($sql === false) {
                             throw new \RuntimeException('No se pudo leer el dump SQL restaurado.');
                         }
-                        $this->sudo->withInput($sql)->run(['mysql']);
+                        $this->sudo->withTimeout(config('larapanel.backups.timeout', 3600))
+                            ->withInput($sql)->run(['mysql']);
                     }
                     
                     $this->sudo->run(['rm', '-rf', $tmpDir]);
