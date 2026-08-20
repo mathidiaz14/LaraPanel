@@ -51,7 +51,7 @@ class GitService
                     ->timeout(120)
                     ->run(['git', 'fetch', 'origin', $branch]);
                 $result = $fetch->successful()
-                    ? Process::path($domainPath)->timeout(120)->run(['git', 'reset', '--hard', '--', "origin/{$branch}"])
+                    ? Process::path($domainPath)->timeout(120)->run(['git', 'reset', '--hard', "origin/{$branch}"])
                     : $fetch;
                 $outputBuffer .= $result->output() . $result->errorOutput() . "\n";
                 if (!$result->successful()) throw new \Exception('Git pull failed.');
