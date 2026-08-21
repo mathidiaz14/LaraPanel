@@ -306,7 +306,152 @@ class MonitoringService
         return "{$minutes}m";
     }
 
-    // ─── Top Processes ───────────────────────────────────────────────────────
+    /**
+     * Full process list with real RSS memory usage, sortable by CPU or RAM.
+     *
+     * @return array[] Each item: pid, user, cpu, mem_pct, rss_bytes, stat,
+     *                 start, cpu_time, command, full_cmd
+     */
+    public function getProcessList(string $sortBy = 'mem', int $limit = 0): array
+    {
+        if (\App\Shell\ServerContext::isRemote()) {
+            return $this->getRemoteProcessList(\App\Shell\ServerContext::executor());
+        }
+
+        if (!app()->isProduction()) {
+            return $this->sliceProcesses($this->getSimulatedProcessList(), $sortBy, $limit);
+        }
+
+        try {
+            $raw = $this->shell
+                ->withTimeout(15)
+                ->run(['ps', '-eo', 'pid=,user:24=,%cpu=,%mem=,rss=,stat=,start=,time=,args'], false)
+                ->stdout;
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $procs = [];
+        foreach (explode("\n", trim($raw)) as $line) {
+            if (trim($line) === '') continue;
+            $cols = preg_split('/\s+/', trim($line), 9);
+            if (count($cols) < 9) continue;
+
+            $procs[] = [
+                'pid'       => (int)$cols[0],
+                'user'      => $cols[1],
+                'cpu'       => (float)$cols[2],
+                'mem_pct'   => (float)$cols[3],
+                'rss_bytes' => ((int)$cols[4]) * 1024,
+                'stat'      => $cols[5],
+                'start'     => $cols[6],
+                'cpu_time'  => $cols[7],
+                'command'   => basename(explode(' ', $cols[8])[0]),
+                'full_cmd'  => $cols[8],
+            ];
+        }
+
+        return $this->sliceProcesses($procs, $sortBy, $limit);
+    }
+
+    /**
+     * Kill a process by PID (SIGTERM, or SIGKILL when forced). Audited.
+     */
+    public function killProcess(int $pid, bool $force = false): bool
+    {
+        if ($pid <= 1) {
+            throw new \InvalidArgumentException('PID inválido.');
+        }
+
+        if (\App\Shell\ServerContext::isRemote()) {
+            throw new \RuntimeException('Terminar procesos no está disponible en servidores remotos.');
+        }
+
+        $command = ['kill'];
+        if ($force) $command[] = '-9';
+        $command[] = (string)$pid;
+
+        $result = $this->sudo->run($command, checkExit: false);
+
+        try {
+            \App\Models\AuditLog::record(
+                action:   'process.kill',
+                subject:  "PID {$pid}",
+                meta:     [
+                    'signal'  => $force ? 'SIGKILL' : 'SIGTERM',
+                    'success' => $result->successful(),
+                    'stderr'  => substr($result->stderr, 0, 200),
+                ],
+                severity: 'warning',
+            );
+        } catch (\Throwable) {
+            // Audit persistence is best-effort
+        }
+
+        return $result->successful();
+    }
+
+    protected function sliceProcesses(array $procs, string $sortBy, int $limit): array
+    {
+        usort($procs, fn($a, $b) => match ($sortBy) {
+            'cpu'   => $b['cpu'] <=> $a['cpu'],
+            default => $b['rss_bytes'] <=> $a['rss_bytes'],
+        });
+
+        return $limit > 0 ? array_slice($procs, 0, $limit) : $procs;
+    }
+
+    protected function getRemoteProcessList(?\App\Shell\RemoteShellExecutor $executor): array
+    {
+        if ($executor === null) return [];
+
+        try {
+            $raw = $executor
+                ->withTimeout(15)
+                ->run(['ps', '-eo', 'pid=,user:24=,%cpu=,%mem=,rss=,stat=,start=,time=,args'], false)
+                ->stdout;
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $procs = [];
+        foreach (explode("\n", trim($raw)) as $line) {
+            if (trim($line) === '') continue;
+            $cols = preg_split('/\s+/', trim($line), 9);
+            if (count($cols) < 9) continue;
+
+            $procs[] = [
+                'pid'       => (int)$cols[0],
+                'user'      => $cols[1],
+                'cpu'       => (float)$cols[2],
+                'mem_pct'   => (float)$cols[3],
+                'rss_bytes' => ((int)$cols[4]) * 1024,
+                'stat'      => $cols[5],
+                'start'     => $cols[6],
+                'cpu_time'  => $cols[7],
+                'command'   => basename(explode(' ', $cols[8])[0]),
+                'full_cmd'  => $cols[8],
+            ];
+        }
+
+        return $procs;
+    }
+
+    protected function getSimulatedProcessList(): array
+    {
+        return [
+            ['pid' => 1234, 'user' => 'www-data', 'cpu' => 12.4, 'mem_pct' => 18.2, 'rss_bytes' => 1489 * 1024 * 1024, 'stat' => 'S', 'start' => '09:15', 'cpu_time' => '01:22:10', 'command' => 'php-fpm8.3', 'full_cmd' => 'php-fpm: pool www'],
+            ['pid' => 890,  'user' => 'mysql',    'cpu' => 8.1,  'mem_pct' => 14.5, 'rss_bytes' => 1180 * 1024 * 1024, 'stat' => 'Ssl', 'start' => 'Aug 12', 'cpu_time' => '04:51:33', 'command' => 'mysqld', 'full_cmd' => '/usr/sbin/mysqld'],
+            ['pid' => 2341, 'user' => 'www-data', 'cpu' => 3.2,  'mem_pct' => 2.1,  'rss_bytes' => 171 * 1024 * 1024,  'stat' => 'S',  'start' => '09:15', 'cpu_time' => '00:31:07', 'command' => 'nginx', 'full_cmd' => 'nginx: worker process'],
+            ['pid' => 555,  'user' => 'redis',    'cpu' => 1.1,  'mem_pct' => 4.8,  'rss_bytes' => 391 * 1024 * 1024,  'stat' => 'Ssl', 'start' => 'Aug 12', 'cpu_time' => '02:10:44', 'command' => 'redis-server', 'full_cmd' => 'redis-server 127.0.0.1:6379'],
+            ['pid' => 771,  'user' => 'clamav',   'cpu' => 0.8,  'mem_pct' => 9.3,  'rss_bytes' => 758 * 1024 * 1024,  'stat' => 'Ssl', 'start' => 'Aug 12', 'cpu_time' => '03:05:19', 'command' => 'clamd', 'full_cmd' => 'clamd'],
+            ['pid' => 3421, 'user' => 'postfix',  'cpu' => 0.1,  'mem_pct' => 0.4,  'rss_bytes' => 32 * 1024 * 1024,   'stat' => 'S',  'start' => 'Aug 14', 'cpu_time' => '00:02:11', 'command' => 'qmgr', 'full_cmd' => 'qmgr -l -t unix -u'],
+            ['pid' => 990,  'user' => 'root',     'cpu' => 0.3,  'mem_pct' => 1.2,  'rss_bytes' => 98 * 1024 * 1024,   'stat' => 'Ss', 'start' => 'Aug 12', 'cpu_time' => '00:45:52', 'command' => 'fail2ban-server', 'full_cmd' => '/usr/bin/python3 /usr/bin/fail2ban-server -xf start'],
+            ['pid' => 1,    'user' => 'root',     'cpu' => 0.0,  'mem_pct' => 0.1,  'rss_bytes' => 12 * 1024 * 1024,   'stat' => 'Ss', 'start' => 'Aug 12', 'cpu_time' => '00:18:40', 'command' => 'systemd', 'full_cmd' => '/sbin/init'],
+        ];
+    }
+
+    // ─── Top Processes (legacy) ──────────────────────────────────────────────
 
     public function getTopProcesses(int $limit = 8): array
     {

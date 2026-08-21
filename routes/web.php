@@ -27,6 +27,10 @@ use App\Livewire\Servers\ServersIndex;
 use App\Livewire\Terminal\TerminalIndex;
 use App\Livewire\Git\GitIndex;
 use App\Livewire\Logs\LogIndex;
+use App\Livewire\Processes\ProcessesIndex;
+use App\Livewire\Services\ServicesIndex;
+use App\Livewire\Network\NetworkIndex;
+use App\Livewire\DiskUsage\DiskUsageIndex;
 use App\Livewire\WordPress\WordPressIndex;
 use App\Livewire\Docker\DockerIndex;
 use App\Livewire\Admin\PlanIndex;
@@ -139,6 +143,13 @@ Route::middleware(['auth'])->group(function () {
             ->middleware('throttle:30,1');
         Route::get('/servers', ServersIndex::class)->name('servers.index');
         Route::get('/logs', LogIndex::class)->name('logs.index');
+
+        // System monitor & control
+        Route::get('/processes', ProcessesIndex::class)->name('processes.index');
+        Route::get('/services', ServicesIndex::class)->name('services.index');
+        Route::get('/network', NetworkIndex::class)->name('network.index');
+        Route::get('/disk-usage', DiskUsageIndex::class)->name('disk.index');
+
         Route::get('/uptime', \App\Livewire\Uptime\UptimeIndex::class)->name('uptime.index');
         Route::get('/performance', \App\Livewire\Performance\PerformanceIndex::class)->name('performance.index');
         Route::get('/wordpress', WordPressIndex::class)->name('wordpress.index');

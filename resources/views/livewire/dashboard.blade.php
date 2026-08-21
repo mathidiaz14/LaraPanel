@@ -125,6 +125,45 @@
     </div>
     @endif
 
+    {{-- Top Procesos (RAM) --}}
+    @if(auth()->user()?->isAdmin() && !empty($topProcs))
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;margin-top:32px;border-bottom:1px solid var(--glass-border);padding-bottom:8px;">
+        <h2 class="panel-title" style="margin:0;"><i class="fa-solid fa-memory" style="color:var(--accent-light);margin-right:8px;"></i>Top Procesos por RAM</h2>
+        <a href="{{ route('processes.index') }}" class="btn btn-ghost btn-sm">
+            Ver todos <i class="fa-solid fa-arrow-right"></i>
+        </a>
+    </div>
+    <div class="glass lp-panel" style="padding:0;overflow:hidden;margin-bottom:24px;">
+        <div class="table-responsive">
+            <table class="lp-table">
+                <thead>
+                    <tr>
+                        <th>Proceso</th>
+                        <th>PID</th>
+                        <th>Usuario</th>
+                        <th>RAM</th>
+                        <th>CPU %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($topProcs as $p)
+                    <tr>
+                        <td style="font-weight:600;">
+                            {{ $p['command'] }}
+                            <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;" title="{{ $p['full_cmd'] }}">{{ $p['full_cmd'] }}</div>
+                        </td>
+                        <td style="font-family:monospace;color:var(--text-muted);">{{ $p['pid'] }}</td>
+                        <td>{{ $p['user'] }}</td>
+                        <td style="white-space:nowrap;">{{ \App\Services\MonitoringService::formatBytes($p['rss_bytes']) }} <span style="color:var(--text-muted);">({{ number_format($p['mem_pct'], 1) }}%)</span></td>
+                        <td>{{ number_format($p['cpu'], 1) }}%</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
     {{-- Estado de Servicios --}}
     @if(auth()->user()?->isAdmin() && !empty($services))
     <h2 class="panel-title" style="margin-bottom:16px;border-bottom:1px solid var(--glass-border);padding-bottom:8px;">Estado de Servicios</h2>

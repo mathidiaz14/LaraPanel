@@ -13,6 +13,7 @@ class Dashboard extends Component
     public array $metrics = [];
     public array $services = [];
     public array $history = [];
+    public array $topProcs = [];
     public int $domainCount = 0;
     public bool $loading = true;
 
@@ -40,6 +41,15 @@ class Dashboard extends Component
     {
         $this->metrics  = $this->monitoring->snapshot();
         $this->services = $this->monitoring->servicesStatus();
+
+        if (auth()->user()?->isAdmin()) {
+            try {
+                $this->topProcs = $this->monitoring->getProcessList('mem', 5);
+            } catch (\Throwable) {
+                $this->topProcs = [];
+            }
+        }
+
         $this->loading  = false;
     }
 

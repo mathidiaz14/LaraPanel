@@ -240,6 +240,25 @@
                         <div class="nav-section-title">Sistema</div>
                     @endif
 
+                    @if(config('larapanel.modules.monitoring'))
+                        <a href="{{ route('processes.index') }}" class="nav-item {{ request()->routeIs('processes.*') ? 'active' : '' }}">
+                            <span class="nav-icon"><i class="fa-solid fa-microchip"></i></span>
+                            Procesos
+                        </a>
+                        <a href="{{ route('services.index') }}" class="nav-item {{ request()->routeIs('services.*') ? 'active' : '' }}">
+                            <span class="nav-icon"><i class="fa-solid fa-gears"></i></span>
+                            Servicios
+                        </a>
+                        <a href="{{ route('network.index') }}" class="nav-item {{ request()->routeIs('network.*') ? 'active' : '' }}">
+                            <span class="nav-icon"><i class="fa-solid fa-network-wired"></i></span>
+                            Red
+                        </a>
+                        <a href="{{ route('disk.index') }}" class="nav-item {{ request()->routeIs('disk.*') ? 'active' : '' }}">
+                            <span class="nav-icon"><i class="fa-solid fa-chart-pie"></i></span>
+                            Uso de Disco
+                        </a>
+                    @endif
+
                     @if(config('larapanel.modules.phpmanager'))
                         <a href="{{ route('php.index') }}" class="nav-item {{ request()->routeIs('php.*') ? 'active' : '' }}">
                             <span class="nav-icon"><i class="fa-brands fa-php"></i></span>

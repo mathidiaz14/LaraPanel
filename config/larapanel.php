@@ -108,6 +108,7 @@ return [
             'mmdbinspect',
             'wget',
             'which', 'test', 'gunzip', 'unzip', 'touch', 'su', 'wp',
+            'kill',
         ],
         'allowed_terminal_commands' => [
             // Navegacion y lectura
