@@ -8,6 +8,28 @@ use Illuminate\Support\Facades\Process;
 
 class GitService
 {
+    public function __construct()
+    {
+        $this->ensureSafeDirectory();
+    }
+
+    /**
+     * Git >= 2.35.2 refuses to operate on repositories owned by another user
+     * ("dubious ownership"). safe.directory is only honored from global config,
+     * so we register a wildcard exception for the PHP user once.
+     */
+    protected function ensureSafeDirectory(): void
+    {
+        try {
+            $result = Process::run(['git', 'config', '--global', '--get-all', 'safe.directory']);
+            if (!$result->output() || !str_contains($result->output(), '*')) {
+                Process::run(['git', 'config', '--global', '--add', 'safe.directory', '*']);
+            }
+        } catch (\Throwable) {
+            // Non-fatal: ownership may already be correct.
+        }
+    }
+
     /**
      * Executes a deployment for a given configuration.
      * Can be triggered manually or via webhook.
@@ -59,17 +81,21 @@ class GitService
                 // Not a repo, clone it
                 $outputBuffer .= ">>> Directory is not a repository. Cloning...\n";
                 $tmpDir = '/tmp/git_clone_' . bin2hex(random_bytes(12));
-                $result = Process::timeout(120)->run([
-                    'git', 'clone', '--branch', $branch, '--', $deployment->repository_url, $tmpDir,
-                ]);
-                if ($result->successful()) {
-                    $result = Process::path($domainPath)->run(['mv', $tmpDir.'/.git', $domainPath.'/.git']);
-                }
-                if ($result->successful()) {
-                    $result = Process::path($domainPath)->run(['git', 'reset', '--hard']);
-                }
-                if (is_dir($tmpDir)) {
-                    Process::run(['rm', '-rf', $tmpDir]);
+                try {
+                    $result = Process::timeout(300)->run([
+                        'git', 'clone', '--branch', $branch, '--', $deployment->repository_url, $tmpDir,
+                    ]);
+                    if ($result->successful()) {
+                        // -T prevents nesting when a .git directory already exists
+                        $result = Process::path($domainPath)->run(['mv', '-T', $tmpDir.'/.git', $domainPath.'/.git']);
+                    }
+                    if ($result->successful()) {
+                        $result = Process::path($domainPath)->run(['git', 'reset', '--hard']);
+                    }
+                } finally {
+                    if (is_dir($tmpDir)) {
+                        Process::run(['rm', '-rf', $tmpDir]);
+                    }
                 }
                 $outputBuffer .= $result->output() . $result->errorOutput() . "\n";
                 if (!$result->successful()) throw new \Exception('Git clone failed.');

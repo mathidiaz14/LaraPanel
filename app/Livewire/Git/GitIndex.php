@@ -14,6 +14,7 @@ class GitIndex extends Component
     public ?GitDeploymentLog $selectedLog = null;
     public string $activeTab = 'config'; // config | logs
     public array $repoStatus = [];
+    public ?array $webhookTestResult = null;
 
     // Form fields
     public bool $isCreating = false;
@@ -73,7 +74,8 @@ class GitIndex extends Component
         $this->isCreating = false;
         $this->activeTab = 'config';
         $this->selectedLog = null;
-        
+        $this->webhookTestResult = null;
+
         $this->refreshRepoStatus(app(GitService::class));
     }
 
@@ -122,9 +124,83 @@ class GitIndex extends Component
     {
         if ($this->selectedDeployment) {
             $log = $gitService->deploy($this->selectedDeployment, 'manual');
+            $this->selectedDeployment->refresh();
             $this->selectedDeployment->load('logs');
+            $this->refreshRepoStatus($gitService);
             $this->viewLog($log->id);
-            session()->flash('message', 'Despliegue manual completado.');
+
+            if ($log->status === 'success') {
+                session()->flash('message', 'Actualización forzada completada con éxito.');
+            } else {
+                session()->flash('error', 'El despliegue falló. Revisá el log para más detalles.');
+            }
+        }
+    }
+
+    /**
+     * Sends a signed test request to the public webhook URL to verify
+     * connectivity, route and secret without triggering a real deploy.
+     */
+    public function testWebhook()
+    {
+        if (!$this->selectedDeployment) {
+            return;
+        }
+
+        $dep = $this->selectedDeployment;
+
+        try {
+            $payload = json_encode([
+                'zen'  => 'LaraPanel webhook test',
+                'test' => true,
+                'ref'  => 'refs/heads/' . trim($dep->branch ?: 'main'),
+            ]);
+
+            $headers = [
+                'X-Larapanel-Test'   => '1',
+                'X-GitHub-Event'     => 'push',
+                'X-Hub-Signature-256' => 'sha256=' . hash_hmac('sha256', $payload, $dep->webhook_secret),
+                'Accept'             => 'application/json',
+            ];
+
+            $response = \Illuminate\Support\Facades\Http::timeout(20)
+                ->withHeaders($headers)
+                ->withBody($payload, 'application/json')
+                ->post($dep->webhook_url);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $checks = $data['checks'] ?? [];
+                $secret = $checks['secret'] ?? 'unknown';
+                $auto   = $checks['auto_deploy'] ?? 'unknown';
+
+                if ($secret === 'invalid') {
+                    $this->webhookTestResult = [
+                        'ok' => false,
+                        'message' => 'El webhook responde pero el secreto configurado NO coincide. Regeneralo y actualizalo en GitHub/GitLab.',
+                    ];
+                } elseif ($auto !== 'enabled') {
+                    $this->webhookTestResult = [
+                        'ok' => false,
+                        'message' => 'El webhook responde pero el Auto-Deploy está apagado. Activalo en Configuración.',
+                    ];
+                } else {
+                    $this->webhookTestResult = [
+                        'ok' => true,
+                        'message' => 'Webhook OK: URL accesible, secreto válido y auto-deploy activo para la rama ' . ($checks['tracked_branch'] ?? '?') . '.',
+                    ];
+                }
+            } else {
+                $this->webhookTestResult = [
+                    'ok' => false,
+                    'message' => 'El servidor respondió HTTP ' . $response->status() . '. Revisá que la URL sea accesible públicamente.',
+                ];
+            }
+        } catch (\Throwable $e) {
+            $this->webhookTestResult = [
+                'ok' => false,
+                'message' => 'No se pudo conectar con el webhook: ' . $e->getMessage(),
+            ];
         }
     }
 

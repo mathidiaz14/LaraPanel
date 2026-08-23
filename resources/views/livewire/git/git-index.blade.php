@@ -118,10 +118,17 @@
                             <i class="fa-brands fa-git-alt" style="color:var(--warning);margin-right:8px;"></i>
                             {{ $selectedDeployment->domain_name }}
                         </h2>
-                        <div style="display:flex;gap:8px;">
-                            <button wire:click="deployNow" class="btn btn-primary btn-sm" wire:loading.attr="disabled">
-                                <span wire:loading.remove><i class="fa-solid fa-rocket"></i> Desplegar Ahora</span>
-                                <span wire:loading><i class="fa-solid fa-spinner fa-spin"></i> Desplegando...</span>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <span style="font-size:11px;color:var(--text-muted);margin-right:4px;" title="{{ $selectedDeployment->last_deployed_at?->format('d/m/Y H:i') ?? '' }}">
+                                @if($selectedDeployment->last_deployed_at)
+                                    <i class="fa-regular fa-clock"></i> Último despliegue: {{ $selectedDeployment->last_deployed_at->diffForHumans() }}
+                                @else
+                                    Sin despliegues aún
+                                @endif
+                            </span>
+                            <button wire:click="deployNow" class="btn btn-primary btn-sm" wire:loading.attr="disabled" title="Fuerza git fetch + reset al último commit de la rama y ejecuta el script de post-despliegue">
+                                <span wire:loading.remove><i class="fa-solid fa-arrows-rotate"></i> Forzar Actualización</span>
+                                <span wire:loading><i class="fa-solid fa-spinner fa-spin"></i> Actualizando...</span>
                             </button>
                             <button wire:click="delete" class="btn btn-danger btn-sm" onclick="return confirm('¿Eliminar esta configuración? No se borrarán los archivos del servidor.')">
                                 <i class="fa-solid fa-trash"></i>
@@ -182,8 +189,19 @@
                             @endif
                         </div>
                         <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
-                            <input type="text" readonly value="{{ $selectedDeployment->webhook_url }}" class="form-input" style="font-family:monospace;font-size:12px;color:var(--text-primary);background:rgba(0,0,0,0.3);">
+                            <input type="text" readonly value="{{ $selectedDeployment->webhook_url }}" class="form-input" style="flex:1;font-family:monospace;font-size:12px;color:var(--text-primary);background:rgba(0,0,0,0.3);">
+                            <button wire:click="testWebhook" class="btn btn-ghost btn-sm" wire:loading.attr="disabled" wire:target="testWebhook" style="white-space:nowrap;" title="Envía una petición firmada al webhook para verificar conectividad y secreto (no despliega nada)">
+                                <span wire:loading.remove wire:target="testWebhook"><i class="fa-solid fa-satellite-dish"></i> Probar</span>
+                                <span wire:loading wire:target="testWebhook"><i class="fa-solid fa-spinner fa-spin"></i> Probando...</span>
+                            </button>
                         </div>
+
+                        @if($webhookTestResult)
+                        <div style="font-size:12px;margin-bottom:12px;padding:10px 14px;border-radius:6px;border:1px solid {{ $webhookTestResult['ok'] ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)' }};background:{{ $webhookTestResult['ok'] ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.08)' }};color:{{ $webhookTestResult['ok'] ? '#4ade80' : '#f87171' }};display:flex;align-items:flex-start;gap:8px;">
+                            <i class="fa-solid {{ $webhookTestResult['ok'] ? 'fa-circle-check' : 'fa-circle-xmark' }}" style="margin-top:2px;"></i>
+                            <span>{{ $webhookTestResult['message'] }}</span>
+                        </div>
+                        @endif
                         <div style="display:flex;gap:12px;align-items:center;">
                             <div style="flex:1;">
                                 <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Webhook Secret (X-Hub-Signature-256)</div>
@@ -193,6 +211,8 @@
                         </div>
                         <p style="font-size:11px;color:var(--text-muted);margin-top:12px;">
                             Configura esta URL en GitHub/GitLab para que LaraPanel despliegue automáticamente al hacer push a la rama <strong>{{ $selectedDeployment->branch }}</strong>.
+                            El despliegue se ejecuta en segundo plano (cola), por lo que el webhook responde al instante.
+                            Usa el botón <em>Probar</em> para verificar que todo esté bien conectado.
                         </p>
                     </div>
 
