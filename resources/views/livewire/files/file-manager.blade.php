@@ -96,8 +96,8 @@
         {{-- File List Container --}}
         <div style="flex:1;overflow-y:auto;padding:0;position:relative;" class="table-responsive">
             {{-- Loading indicator --}}
-            <div wire:loading.delay wire:target="navigate, navigateUp" style="position:absolute;inset:0;z-index:20;background:rgba(15,23,42,0.6);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);">
-                <div style="display:flex;align-items:center;gap:10px;color:var(--accent-light);font-size:13px;font-weight:600;">
+            <div wire:loading.delay wire:target="navigate, navigateUp" style="position:absolute;inset:0;z-index:20;background:rgba(15,23,42,0.6);backdrop-filter:blur(2px);">
+                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px;color:var(--accent-light);font-size:13px;font-weight:600;">
                     <i class="fa-solid fa-spinner fa-spin" style="font-size:18px;"></i>
                     <span>Cargando...</span>
                 </div>
