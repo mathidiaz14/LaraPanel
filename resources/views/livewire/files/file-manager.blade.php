@@ -8,36 +8,36 @@
 
     {{-- Left Sidebar: Tree Navigation --}}
     <div class="glass fm-sidebar">
-        <div style="padding:24px 20px;border-bottom:1px solid var(--glass-border);">
-            <h3 style="font-size:16px;font-weight:700;margin:0;display:flex;align-items:center;gap:10px;">
+        <div class="fm-sidebar-header">
+            <h3>
                 <i class="fa-solid fa-hard-drive" style="color:var(--accent-light);font-size:18px;"></i> 
                 <span>Explorador</span>
             </h3>
         </div>
         
-        <div style="flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:10px;">
+        <div class="fm-sidebar-content">
             <button wire:click="navigate('')" class="btn btn-ghost" style="width:100%;text-align:left;justify-content:flex-start;padding:10px 14px;border-radius:8px;background:{{ $currentPath === '' ? 'rgba(99,102,241,0.15)' : 'transparent' }};color:{{ $currentPath === '' ? 'var(--accent-light)' : 'var(--text-secondary)' }};font-size:13px;font-weight:600;margin-bottom:10px;">
                 <i class="fa-solid fa-server" style="width:20px;font-size:14px;color:{{ $currentPath === '' ? 'var(--accent-light)' : 'var(--text-muted)' }};"></i> /var/www
             </button>
             
-            <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;font-weight:800;margin:0 12px 10px;">Directorios</div>
+            <div class="fm-sidebar-label">Directorios</div>
             
             <div style="display:flex;flex-direction:column;gap:2px;">
                 @include('livewire.files.tree-node', ['nodes' => $tree, 'level' => 0])
             </div>
             
             {{-- Quick Stats --}}
-            <div style="margin-top:auto;background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);border-radius:12px;padding:16px;">
+            <div class="fm-storage-widget">
                 <div style="font-size:12px;font-weight:700;color:var(--text-secondary);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
                     <span>Almacenamiento VPS</span>
                     <i class="fa-solid fa-circle-info" style="color:var(--text-muted);" title="{{ \App\Services\MonitoringService::formatBytes($diskInfo['used'] ?? 0) }} usados de {{ \App\Services\MonitoringService::formatBytes($diskInfo['total'] ?? 0) }}"></i>
                 </div>
-                <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;margin-bottom:8px;">
-                    <div style="height:100%;background:linear-gradient(90deg, var(--accent-light), #818cf8);width:{{ $diskInfo['usage'] ?? 0 }}%;border-radius:3px;"></div>
+                <div class="fm-storage-bar">
+                    <div class="fm-storage-fill" style="width:{{ $diskInfo['usage'] ?? 0 }}%;"></div>
                 </div>
                 <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);">
                     <span>Uso aprox: {{ $diskInfo['usage'] ?? 0 }}%</span>
-                    <span>Hetzner VPS</span>
+                    <span>{{ $serverLabel }}</span>
                 </div>
             </div>
         </div>
@@ -46,9 +46,9 @@
     {{-- Main Panel: Explorer & Actions --}}
     <div class="glass fm-main">
         {{-- Top Toolbar --}}
-        <div style="padding:16px 24px;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;gap:20px;background:rgba(255,255,255,0.01);">
+        <div class="fm-toolbar">
             {{-- Breadcrumb path navigation --}}
-            <div style="display:flex;align-items:center;gap:6px;font-size:14px;overflow-x:auto;white-space:nowrap;flex:1;">
+            <div class="fm-breadcrumb">
                 <button wire:click="navigateUp" class="btn btn-ghost btn-sm" style="padding:6px 10px;border-radius:6px;background:rgba(255,255,255,0.03);" @if($currentPath === '') disabled style="opacity:0.3;cursor:not-allowed;" @endif>
                     <i class="fa-solid fa-level-up-alt" style="transform:rotate(-90deg);"></i>
                 </button>
@@ -62,7 +62,7 @@
             </div>
 
             {{-- New Item Actions --}}
-            <div style="display:flex;align-items:center;gap:8px;">
+            <div class="fm-toolbar-actions">
                 <button wire:click="$set('showCreateFolderModal', true)" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.03);">
                     <i class="fa-solid fa-folder-plus" style="color:var(--accent-light);"></i> 
                     <span>Nueva Carpeta</span>
@@ -81,13 +81,13 @@
 
         {{-- Alerts --}}
         @if($successMessage)
-            <div style="padding:12px 24px;background:rgba(34,197,94,0.12);color:#4ade80;font-size:13px;border-bottom:1px solid rgba(34,197,94,0.2);display:flex;align-items:center;gap:10px;">
+            <div class="fm-alert fm-alert-success">
                 <i class="fa-solid fa-circle-check" style="font-size:16px;"></i> 
                 <span>{{ $successMessage }}</span>
             </div>
         @endif
         @if($errorMessage)
-            <div style="padding:12px 24px;background:rgba(239,68,68,0.12);color:#f87171;font-size:13px;border-bottom:1px solid rgba(239,68,68,0.2);display:flex;align-items:center;gap:10px;">
+            <div class="fm-alert fm-alert-error">
                 <i class="fa-solid fa-circle-exclamation" style="font-size:16px;"></i> 
                 <span>{{ $errorMessage }}</span>
             </div>
@@ -95,8 +95,15 @@
 
         {{-- File List Container --}}
         <div style="flex:1;overflow-y:auto;padding:0;position:relative;" class="table-responsive">
-            <table class="lp-table" style="width:100%;margin:0;border-collapse:collapse;font-size:13px;">
-                <thead style="position:sticky;top:0;background:rgba(15, 23, 42, 0.95);backdrop-filter:blur(12px);z-index:10;border-bottom:1px solid var(--glass-border);">
+            {{-- Loading indicator --}}
+            <div wire:loading.delay wire:target="navigate, navigateUp" style="position:absolute;inset:0;z-index:20;background:rgba(15,23,42,0.6);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);">
+                <div style="display:flex;align-items:center;gap:10px;color:var(--accent-light);font-size:13px;font-weight:600;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size:18px;"></i>
+                    <span>Cargando...</span>
+                </div>
+            </div>
+            <table class="lp-table fm-table">
+                <thead>
                     <tr>
                         <th style="padding:14px 20px;width:4%;text-align:center;">
                             <input type="checkbox" x-model="selectedAll" @change="
@@ -134,22 +141,22 @@
                         $isBinary = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico', 'zip', 'tar', 'gz', 'rar', 'pdf', 'mp3', 'mp4', 'avi', 'mov', 'ttf', 'woff', 'woff2', 'eot', 'sqlite', 'sqlite3']);
                     @endphp
                     <tr wire:key="file-row-{{ md5($item['name'] . '-' . $item['updated_at']) }}" 
-                        style="border-bottom:1px solid rgba(255,255,255,0.03);transition:background 0.2s;background:{{ in_array($item['name'], $selectedItems) ? 'rgba(99, 102, 241, 0.05)' : 'transparent' }};cursor:default;" 
-                        class="file-row"
-                        @if($item['is_dir'])
-                            wire:dblclick="navigate('{{ ltrim($currentPath . '/' . $item['name'], '/') }}')"
-                        @elseif(!$isBinary)
-                            @if(!$isKnownText)
-                                x-on:dblclick="if(confirm('Este archivo tiene una extensión desconocida. ¿Intentar abrir como texto plano?')) { @this.editFile('{{ $item['name'] }}') }"
-                            @else
-                                wire:dblclick="editFile('{{ $item['name'] }}')"
-                            @endif
-                        @endif
+                        class="fm-row {{ in_array($item['name'], $selectedItems) ? 'fm-selected' : '' }}"
                     >
                         <td style="padding:12px 20px;text-align:center;vertical-align:middle;">
-                            <input type="checkbox" value="{{ $item['name'] }}" wire:model.live="selectedItems" class="file-checkbox" style="width:16px;height:16px;accent-color:var(--accent-light);cursor:pointer;border-radius:4px;">
+                            <input type="checkbox" value="{{ $item['name'] }}" wire:model.live="selectedItems" class="file-checkbox" style="width:16px;height:16px;accent-color:var(--accent-light);cursor:pointer;border-radius:4px;" x-on:click.stop>
                         </td>
-                        <td style="padding:12px 10px;vertical-align:middle;">
+                        <td style="padding:12px 10px;vertical-align:middle;" 
+                            @if($item['is_dir'])
+                                wire:dblclick="navigate('{{ ltrim($currentPath . '/' . $item['name'], '/') }}')"
+                            @elseif(!$isBinary)
+                                @if(!$isKnownText)
+                                    x-on:dblclick="if(confirm('Este archivo tiene una extensión desconocida. ¿Intentar abrir como texto plano?')) { @this.editFile('{{ $item['name'] }}') }"
+                                @else
+                                    wire:dblclick="editFile('{{ $item['name'] }}')"
+                                @endif
+                            @endif
+                        >
                             @if($item['is_dir'])
                                 <div wire:click="navigate('{{ ltrim($currentPath . '/' . $item['name'], '/') }}')" style="cursor:pointer;display:flex;align-items:center;gap:12px;color:var(--text-primary);font-weight:600;transition:color 0.2s;" onmouseover="this.style.color='var(--accent-light)'" onmouseout="this.style.color='var(--text-primary)'">
                                     <i class="fa-solid fa-folder" style="font-size:18px;color:#38bdf8;"></i>
@@ -239,13 +246,13 @@
 
         {{-- Floating Action Bar for Selected Items (Bulk Actions) --}}
         @if(!empty($selectedItems))
-        <div style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:90;display:flex;align-items:center;gap:16px;background:rgba(15, 23, 42, 0.95);border:1px solid var(--accent-light);box-shadow:0 10px 30px rgba(0,0,0,0.5);border-radius:14px;padding:12px 24px;backdrop-filter:blur(16px);animation:slideUp 0.3s ease-out;">
+        <div class="fm-float-bar">
             <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;">
-                <span style="width:20px;height:20px;border-radius:50%;background:var(--accent-light);color:black;display:flex;align-items:center;justify-content:center;font-size:11px;">{{ count($selectedItems) }}</span>
+                <span class="fm-float-count">{{ count($selectedItems) }}</span>
                 <span style="color:var(--text-primary);">seleccionados</span>
             </div>
             
-            <div style="width:1px;height:24px;background:var(--glass-border);"></div>
+            <div class="fm-float-divider"></div>
             
             <div style="display:flex;gap:8px;">
                 <button wire:click="prepareZip" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(251,191,36,0.1);color:var(--warning);border-radius:8px;padding:6px 12px;font-size:12px;">
@@ -262,7 +269,7 @@
                 </button>
             </div>
             
-            <div style="width:1px;height:24px;background:var(--glass-border);"></div>
+            <div class="fm-float-divider"></div>
             
             <button wire:click="$set('selectedItems', [])" class="btn btn-ghost btn-sm" style="color:var(--text-muted);font-size:12px;padding:6px 10px;">
                 Deseleccionar todo
@@ -275,13 +282,13 @@
     
     {{-- Delete Modal --}}
     @if($showDeleteModal)
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="width:100%;max-width:420px;padding:28px;border-radius:16px;border:1px solid var(--glass-border);background:rgba(15,23,42,0.95);text-align:center;">
-            <div style="width:52px;height:52px;border-radius:50%;background:rgba(239,68,68,0.15);border:2px solid rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+    <div class="fm-modal-backdrop">
+        <div class="glass-elevated fm-modal" style="text-align:center;">
+            <div class="fm-delete-icon">
                 <i class="fa-solid fa-trash-can" style="color:var(--danger);font-size:20px;"></i>
             </div>
-            <h3 style="font-size:18px;font-weight:700;margin:0 0 8px;">Confirmar Eliminación</h3>
-            <p style="color:var(--text-secondary);font-size:13px;margin-bottom:24px;">
+            <h3 class="fm-modal-title" style="justify-content:center;">Confirmar Eliminación</h3>
+            <p class="fm-delete-text">
                 @if($isDeletingMultiple)
                     ¿Estás seguro de que deseas eliminar <strong>{{ count($selectedItems) }}</strong> elementos de forma permanente?
                 @else
@@ -289,7 +296,7 @@
                 @endif
                 Esta acción no se puede deshacer.
             </p>
-            <div style="display:flex;gap:12px;justify-content:center;">
+            <div class="fm-modal-footer" style="justify-content:center;">
                 <button wire:click="$set('showDeleteModal', false)" class="btn btn-ghost" style="flex:1;justify-content:center;">Cancelar</button>
                 <button wire:click="executeDelete" class="btn btn-danger" style="flex:1;justify-content:center;">
                     <i class="fa-solid fa-trash"></i> Eliminar
@@ -301,49 +308,54 @@
 
     {{-- Create Folder Modal --}}
     @if($showCreateFolderModal)
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="width:100%;max-width:380px;padding:28px;border-radius:16px;border:1px solid var(--glass-border);background:rgba(15,23,42,0.95);">
-            @if(!empty($selectedItems) && str_ends_with($newFolderName, '.zip'))
-                <h3 style="font-size:18px;font-weight:700;margin:0 0 16px;display:flex;align-items:center;gap:10px;">
-                    <i class="fa-solid fa-file-zipper" style="color:var(--warning);"></i> 
-                    <span>Comprimir Selección</span>
-                </h3>
-                <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:8px;">Nombre del archivo Zip:</label>
-                <input type="text" wire:model="newFolderName" class="form-input" placeholder="ej. backup.zip" autofocus style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:white;">
-                @error('newFolderName') <div style="font-size:11px;color:#f87171;margin-top:6px;">{{ $message }}</div> @enderror
-                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:24px;">
-                    <button wire:click="closeCreateFolderModal" class="btn btn-ghost btn-sm" style="border-radius:8px;padding:8px 16px;">Cancelar</button>
-                    <button wire:click="zipSelected" class="btn btn-primary btn-sm" style="border-radius:8px;padding:8px 18px;background:var(--accent-light);color:black;border:none;font-weight:700;">Comprimir</button>
-                </div>
-            @else
-                <h3 style="font-size:18px;font-weight:700;margin:0 0 16px;display:flex;align-items:center;gap:10px;">
-                    <i class="fa-solid fa-folder-plus" style="color:var(--accent-light);"></i> 
-                    <span>Nueva Carpeta</span>
-                </h3>
-                <input type="text" wire:model="newFolderName" class="form-input" placeholder="Escribe el nombre de la carpeta..." autofocus style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:white;">
-                @error('newFolderName') <div style="font-size:11px;color:#f87171;margin-top:6px;">{{ $message }}</div> @enderror
-                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:24px;">
-                    <button wire:click="closeCreateFolderModal" class="btn btn-ghost btn-sm" style="border-radius:8px;padding:8px 16px;">Cancelar</button>
-                    <button wire:click="createFolder" class="btn btn-primary btn-sm" style="border-radius:8px;padding:8px 18px;background:var(--accent-light);color:black;border:none;font-weight:700;">Crear Carpeta</button>
-                </div>
-            @endif
+    <div class="fm-modal-backdrop">
+        <div class="glass-elevated fm-modal">
+            <h3 class="fm-modal-title">
+                <i class="fa-solid fa-folder-plus" style="color:var(--accent-light);"></i> 
+                <span>Nueva Carpeta</span>
+            </h3>
+            <input type="text" wire:model="newFolderName" class="form-input" placeholder="Escribe el nombre de la carpeta..." autofocus style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:white;">
+            @error('newFolderName') <div style="font-size:11px;color:#f87171;margin-top:6px;">{{ $message }}</div> @enderror
+                <div class="fm-modal-footer">
+                    <button wire:click="closeCreateFolderModal" class="btn btn-ghost btn-sm">Cancelar</button>
+                    <button wire:click="createFolder" class="btn btn-primary btn-sm">Crear Carpeta</button>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Zip Selection Modal --}}
+    @if($showZipModal)
+    <div class="fm-modal-backdrop">
+        <div class="glass-elevated fm-modal">
+            <h3 class="fm-modal-title">
+                <i class="fa-solid fa-file-zipper" style="color:var(--warning);"></i> 
+                <span>Comprimir Selección</span>
+            </h3>
+            <label class="fm-modal-label">Nombre del archivo Zip:</label>
+            <input type="text" wire:model="zipFileName" class="form-input" placeholder="ej. backup.zip" autofocus>
+            @error('zipFileName') <div class="form-error">{{ $message }}</div> @enderror
+            <div class="fm-modal-footer">
+                <button wire:click="closeZipModal" class="btn btn-ghost btn-sm">Cancelar</button>
+                <button wire:click="zipSelected" class="btn btn-primary btn-sm">Comprimir</button>
+            </div>
         </div>
     </div>
     @endif
 
     {{-- Create File Modal --}}
     @if($showCreateFileModal)
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="width:100%;max-width:380px;padding:28px;border-radius:16px;border:1px solid var(--glass-border);background:rgba(15,23,42,0.95);">
-            <h3 style="font-size:18px;font-weight:700;margin:0 0 16px;display:flex;align-items:center;gap:10px;">
+    <div class="fm-modal-backdrop">
+        <div class="glass-elevated fm-modal">
+            <h3 class="fm-modal-title">
                 <i class="fa-solid fa-file-circle-plus" style="color:var(--accent-light);"></i> 
                 <span>Nuevo Archivo</span>
             </h3>
-            <input type="text" wire:model="newFileName" class="form-input" placeholder="ej. index.php" autofocus style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:white;">
-            @error('newFileName') <div style="font-size:11px;color:#f87171;margin-top:6px;">{{ $message }}</div> @enderror
-            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:24px;">
-                <button wire:click="$set('showCreateFileModal', false)" class="btn btn-ghost btn-sm" style="border-radius:8px;padding:8px 16px;">Cancelar</button>
-                <button wire:click="createFile" class="btn btn-primary btn-sm" style="border-radius:8px;padding:8px 18px;background:var(--accent-light);color:black;border:none;font-weight:700;">Crear Archivo</button>
+            <input type="text" wire:model="newFileName" class="form-input" placeholder="ej. index.php" autofocus>
+            @error('newFileName') <div class="form-error">{{ $message }}</div> @enderror
+            <div class="fm-modal-footer">
+                <button wire:click="$set('showCreateFileModal', false)" class="btn btn-ghost btn-sm">Cancelar</button>
+                <button wire:click="createFile" class="btn btn-primary btn-sm">Crear Archivo</button>
             </div>
         </div>
     </div>
@@ -351,18 +363,18 @@
 
     {{-- Chmod Permissions Modal --}}
     @if($chmodPath)
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="width:100%;max-width:380px;padding:28px;border-radius:16px;border:1px solid var(--glass-border);background:rgba(15,23,42,0.95);">
-            <h3 style="font-size:18px;font-weight:700;margin:0 0 16px;display:flex;align-items:center;gap:10px;">
+    <div class="fm-modal-backdrop">
+        <div class="glass-elevated fm-modal">
+            <h3 class="fm-modal-title">
                 <i class="fa-solid fa-shield-halved" style="color:var(--accent-light);"></i> 
                 <span>Cambiar Permisos (Chmod)</span>
             </h3>
-            <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:8px;">Modo octal:</label>
-            <input type="text" wire:model="chmodOctal" class="form-input" placeholder="0755" autofocus style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:white;font-family:monospace;letter-spacing:2px;font-size:16px;text-align:center;">
-            @error('chmodOctal') <div style="font-size:11px;color:#f87171;margin-top:6px;">{{ $message }}</div> @enderror
-            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:24px;">
-                <button wire:click="$set('chmodPath', null)" class="btn btn-ghost btn-sm" style="border-radius:8px;padding:8px 16px;">Cancelar</button>
-                <button wire:click="saveChmod" class="btn btn-primary btn-sm" style="border-radius:8px;padding:8px 18px;background:var(--accent-light);color:black;border:none;font-weight:700;">Guardar</button>
+            <label class="fm-modal-label">Modo octal:</label>
+            <input type="text" wire:model="chmodOctal" class="form-input" placeholder="0755" autofocus style="font-family:monospace;letter-spacing:2px;font-size:16px;text-align:center;">
+            @error('chmodOctal') <div class="form-error">{{ $message }}</div> @enderror
+            <div class="fm-modal-footer">
+                <button wire:click="$set('chmodPath', null)" class="btn btn-ghost btn-sm">Cancelar</button>
+                <button wire:click="saveChmod" class="btn btn-primary btn-sm">Guardar</button>
             </div>
         </div>
     </div>
@@ -370,17 +382,17 @@
 
     {{-- Rename Modal --}}
     @if($renamingPath)
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="width:100%;max-width:380px;padding:28px;border-radius:16px;border:1px solid var(--glass-border);background:rgba(15,23,42,0.95);">
-            <h3 style="font-size:18px;font-weight:700;margin:0 0 16px;display:flex;align-items:center;gap:10px;">
+    <div class="fm-modal-backdrop">
+        <div class="glass-elevated fm-modal">
+            <h3 class="fm-modal-title">
                 <i class="fa-solid fa-pen-nib" style="color:var(--accent-light);"></i> 
                 <span>Renombrar Recurso</span>
             </h3>
-            <input type="text" wire:model="newName" class="form-input" placeholder="Nuevo nombre..." autofocus style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:white;">
-            @error('newName') <div style="font-size:11px;color:#f87171;margin-top:6px;">{{ $message }}</div> @enderror
-            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:24px;">
-                <button wire:click="$set('renamingPath', null)" class="btn btn-ghost btn-sm" style="border-radius:8px;padding:8px 16px;">Cancelar</button>
-                <button wire:click="renameItem" class="btn btn-primary btn-sm" style="border-radius:8px;padding:8px 18px;background:var(--accent-light);color:black;border:none;font-weight:700;">Renombrar</button>
+            <input type="text" wire:model="newName" class="form-input" placeholder="Nuevo nombre..." autofocus>
+            @error('newName') <div class="form-error">{{ $message }}</div> @enderror
+            <div class="fm-modal-footer">
+                <button wire:click="$set('renamingPath', null)" class="btn btn-ghost btn-sm">Cancelar</button>
+                <button wire:click="renameItem" class="btn btn-primary btn-sm">Renombrar</button>
             </div>
         </div>
     </div>
@@ -388,18 +400,18 @@
 
     {{-- Bulk Move Modal --}}
     @if($showBulkMoveModal)
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="width:100%;max-width:420px;padding:28px;border-radius:16px;border:1px solid var(--glass-border);background:rgba(15,23,42,0.95);">
-            <h3 style="font-size:18px;font-weight:700;margin:0 0 16px;display:flex;align-items:center;gap:10px;">
+    <div class="fm-modal-backdrop">
+        <div class="glass-elevated fm-modal fm-modal-lg">
+            <h3 class="fm-modal-title">
                 <i class="fa-solid fa-arrows-up-down-left-right" style="color:var(--accent-light);"></i> 
                 <span>Mover a la carpeta</span>
             </h3>
-            <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:8px;">Directorio de destino (ruta relativa a la raíz web):</label>
-            <input type="text" wire:model="bulkDestDirectory" class="form-input" placeholder="ej. html/tienda (vacío para la raíz)" autofocus style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:white;font-family:monospace;">
-            @error('bulkDestDirectory') <div style="font-size:11px;color:#f87171;margin-top:6px;">{{ $message }}</div> @enderror
-            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:24px;">
-                <button wire:click="$set('showBulkMoveModal', false)" class="btn btn-ghost btn-sm" style="border-radius:8px;padding:8px 16px;">Cancelar</button>
-                <button wire:click="moveSelected" class="btn btn-primary btn-sm" style="border-radius:8px;padding:8px 18px;background:var(--accent-light);color:black;border:none;font-weight:700;">Mover Elementos</button>
+            <label class="fm-modal-label">Directorio de destino (ruta relativa a la raíz web):</label>
+            <input type="text" wire:model="bulkDestDirectory" class="form-input" placeholder="ej. html/tienda (vacío para la raíz)" autofocus style="font-family:monospace;">
+            @error('bulkDestDirectory') <div class="form-error">{{ $message }}</div> @enderror
+            <div class="fm-modal-footer">
+                <button wire:click="$set('showBulkMoveModal', false)" class="btn btn-ghost btn-sm">Cancelar</button>
+                <button wire:click="moveSelected" class="btn btn-primary btn-sm">Mover Elementos</button>
             </div>
         </div>
     </div>
@@ -407,18 +419,18 @@
 
     {{-- Bulk Copy Modal --}}
     @if($showBulkCopyModal)
-    <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="width:100%;max-width:420px;padding:28px;border-radius:16px;border:1px solid var(--glass-border);background:rgba(15,23,42,0.95);">
-            <h3 style="font-size:18px;font-weight:700;margin:0 0 16px;display:flex;align-items:center;gap:10px;">
+    <div class="fm-modal-backdrop">
+        <div class="glass-elevated fm-modal fm-modal-lg">
+            <h3 class="fm-modal-title">
                 <i class="fa-solid fa-clone" style="color:var(--accent-light);"></i> 
                 <span>Copiar a la carpeta</span>
             </h3>
-            <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:8px;">Directorio de destino (ruta relativa a la raíz web):</label>
-            <input type="text" wire:model="bulkDestDirectory" class="form-input" placeholder="ej. html/copias (vacío para la raíz)" autofocus style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:white;font-family:monospace;">
-            @error('bulkDestDirectory') <div style="font-size:11px;color:#f87171;margin-top:6px;">{{ $message }}</div> @enderror
-            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:24px;">
-                <button wire:click="$set('showBulkCopyModal', false)" class="btn btn-ghost btn-sm" style="border-radius:8px;padding:8px 16px;">Cancelar</button>
-                <button wire:click="copySelected" class="btn btn-primary btn-sm" style="border-radius:8px;padding:8px 18px;background:var(--accent-light);color:black;border:none;font-weight:700;">Copiar Elementos</button>
+            <label class="fm-modal-label">Directorio de destino (ruta relativa a la raíz web):</label>
+            <input type="text" wire:model="bulkDestDirectory" class="form-input" placeholder="ej. html/copias (vacío para la raíz)" autofocus style="font-family:monospace;">
+            @error('bulkDestDirectory') <div class="form-error">{{ $message }}</div> @enderror
+            <div class="fm-modal-footer">
+                <button wire:click="$set('showBulkCopyModal', false)" class="btn btn-ghost btn-sm">Cancelar</button>
+                <button wire:click="copySelected" class="btn btn-primary btn-sm">Copiar Elementos</button>
             </div>
         </div>
     </div>
@@ -426,23 +438,23 @@
 
     {{-- Advanced Monaco Editor Overlay --}}
     @if($editingPath)
-    <div style="position:fixed;inset:0;z-index:300;background:rgba(8,11,20,0.99);display:flex;flex-direction:column;backdrop-filter:blur(12px);" id="monaco-full-editor">
+    <div class="fm-editor-overlay" id="monaco-full-editor">
         {{-- Editor Header --}}
-        <div style="background:rgba(255,255,255,0.02);padding:14px 28px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between;">
+        <div class="fm-editor-header">
             <div style="display:flex;align-items:center;gap:16px;">
-                <div style="width:40px;height:40px;background:rgba(99,102,241,0.15);border-radius:10px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(99,102,241,0.25);">
+                <div class="fm-editor-icon">
                     <i class="fa-solid fa-code" style="color:var(--accent-light);font-size:18px;"></i>
                 </div>
-                <div>
-                    <strong style="font-size:15px;color:var(--text-primary);font-family:monospace;letter-spacing:0.5px;">{{ basename($editingPath) }}</strong>
-                    <div style="font-size:11px;color:var(--text-muted);font-family:monospace;margin-top:2px;">/var/www/{{ ltrim($editingPath, '/') }}</div>
+                <div class="fm-editor-info">
+                    <strong>{{ basename($editingPath) }}</strong>
+                    <div>/var/www/{{ ltrim($editingPath, '/') }}</div>
                 </div>
             </div>
             
             {{-- Editor Status & Actions --}}
-            <div style="display:flex;align-items:center;gap:18px;">
+            <div class="fm-editor-actions">
                 {{-- Save status indicator --}}
-                <div id="editor-save-status" style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:8px;">
+                <div id="editor-save-status" class="fm-editor-status">
                     <i class="fa-solid fa-circle-check" style="color:#22c55e;"></i>
                     <span>Listo</span>
                 </div>
@@ -459,11 +471,11 @@
                     <option value="shell">Shell Script</option>
                 </select>
 
-                <button onclick="saveMonacoContent()" class="btn btn-primary" style="height:36px;background:var(--accent-light);border:none;color:black;font-weight:700;border-radius:8px;padding:0 18px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:transform 0.1s;" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
+                <button onclick="saveMonacoContent()" class="fm-editor-save" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
                     <i class="fa-solid fa-floppy-disk"></i> Guardar <span style="font-size:10px;opacity:0.6;background:rgba(0,0,0,0.15);padding:2px 6px;border-radius:4px;margin-left:4px;font-family:monospace;">Ctrl+S</span>
                 </button>
                 
-                <button wire:click="$set('editingPath', null)" class="btn btn-ghost" style="height:36px;background:rgba(255,255,255,0.05);border-radius:8px;padding:0 16px;color:white;border:1px solid var(--glass-border);">
+                <button wire:click="$set('editingPath', null)" class="btn btn-ghost fm-editor-close">
                     Cerrar
                 </button>
             </div>
@@ -482,9 +494,11 @@
         let editorIframeReady = false;
         let pendingEditorContent = null;
         let pendingEditorLang = null;
+        const FM_ALLOWED_ORIGIN = window.location.origin;
 
         // Escuchar mensajes del iframe
         window.addEventListener('message', function(event) {
+            if (event.origin !== FM_ALLOWED_ORIGIN) return;
             const data = event.data;
             if (data.action === 'ready') {
                 editorIframeReady = true;
@@ -533,7 +547,7 @@
                     action: 'init',
                     content: content,
                     language: language
-                }, '*');
+                }, FM_ALLOWED_ORIGIN);
                 pendingEditorContent = null;
                 pendingEditorLang = null;
             }
@@ -546,7 +560,7 @@
                 iframe.contentWindow.postMessage({
                     action: 'changeLanguage',
                     language: lang
-                }, '*');
+                }, FM_ALLOWED_ORIGIN);
             }
         }
 
@@ -567,7 +581,7 @@
                         }
                     };
                     window.addEventListener('message', onValueReceived);
-                    iframe.contentWindow.postMessage({ action: 'getValue' }, '*');
+                    iframe.contentWindow.postMessage({ action: 'getValue' }, FM_ALLOWED_ORIGIN);
                 }
             }
         }
@@ -593,27 +607,33 @@
                     saveMonacoContent();
                 }
             }
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('monaco-full-editor');
+                if (modal) {
+                    e.preventDefault();
+                    @this.set('editingPath', null);
+                }
+            }
         });
     </script>
 
     {{-- Upload Progress Modal --}}
-    <div x-show="isUploading" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);backdrop-filter:blur(5px);z-index:9999;align-items:center;justify-content:center;" x-bind:style="isUploading ? 'display:flex;' : 'display:none;'">
-        <div style="background:rgba(15, 23, 42, 0.95);border:1px solid var(--glass-border);border-radius:12px;padding:32px;width:100%;max-width:400px;text-align:center;">
+    <div x-show="isUploading" class="fm-upload-progress" x-bind:style="isUploading ? 'display:flex;' : 'display:none;'">
+        <div class="fm-upload-card">
             <i class="fa-solid fa-cloud-arrow-up" style="font-size:48px;color:var(--accent-light);margin-bottom:16px;"></i>
             <h3 style="font-size:18px;font-weight:700;margin-bottom:12px;">Subiendo Archivos...</h3>
-            <div style="width:100%;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;margin-bottom:12px;">
-                <div style="height:100%;background:var(--accent-light);border-radius:4px;transition:width 0.3s;" :style="`width: ${progress}%`"></div>
+            <div class="fm-upload-bar">
+                <div class="fm-upload-fill" :style="`width: ${progress}%`"></div>
             </div>
             <div style="font-size:14px;font-weight:600;color:var(--text-secondary);"><span x-text="progress"></span>% Completado</div>
             <p style="font-size:12px;color:var(--text-muted);margin-top:12px;">Por favor espera, procesando en segundo plano...</p>
-        </div>
         </div>
     </div>
 
     {{-- Unzip Progress Modal --}}
     @if($showUnzipModal)
-    <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);backdrop-filter:blur(5px);z-index:9999;display:flex;align-items:center;justify-content:center;">
-        <div style="background:rgba(15, 23, 42, 0.95);border:1px solid var(--glass-border);border-radius:12px;padding:32px;width:100%;max-width:500px;display:flex;flex-direction:column;"
+    <div class="fm-modal-backdrop" style="z-index:9999;">
+        <div class="glass-elevated fm-modal" style="max-width:500px;display:flex;flex-direction:column;"
              x-data="{ isExtracting: false }">
             
             <div style="text-align:center;margin-bottom:16px;">
@@ -638,7 +658,7 @@
                     <span wire:stream="unzip-percentage">0%</span> Completado
                 </div>
 
-                <div style="background:rgba(0,0,0,0.3);border:1px solid var(--glass-border);border-radius:8px;padding:12px;height:120px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;font-family:monospace;" id="unzip-log-container">
+                <div class="fm-unzip-log" id="unzip-log-container">
                     <div wire:stream="unzip-log">
                         <div class="text-xs text-gray-500 italic">Esperando inicio...</div>
                     </div>
@@ -674,6 +694,78 @@
     min-width: 0;
 }
 
+/* Sidebar */
+.fm-sidebar-header { padding: 24px 20px; border-bottom: 1px solid var(--glass-border); }
+.fm-sidebar-header h3 { font-size: 16px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 10px; }
+.fm-sidebar-content { flex: 1; overflow-y: auto; padding: 16px 12px; display: flex; flex-direction: column; gap: 10px; }
+.fm-sidebar-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 800; margin: 0 12px 10px; }
+.fm-storage-widget { margin-top: auto; background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 12px; padding: 16px; }
+.fm-storage-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+.fm-storage-fill { height: 100%; background: linear-gradient(90deg, var(--accent-light), #818cf8); border-radius: 3px; }
+
+/* Toolbar */
+.fm-toolbar { padding: 16px 24px; border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; gap: 20px; background: rgba(255,255,255,0.01); }
+.fm-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 14px; overflow-x: auto; white-space: nowrap; flex: 1; }
+.fm-toolbar-actions { display: flex; align-items: center; gap: 8px; }
+
+/* Alerts */
+.fm-alert { padding: 12px 24px; font-size: 13px; border-bottom: 1px solid; display: flex; align-items: center; gap: 10px; }
+.fm-alert-success { background: rgba(34,197,94,0.12); color: #4ade80; border-color: rgba(34,197,94,0.2); }
+.fm-alert-error { background: rgba(239,68,68,0.12); color: #f87171; border-color: rgba(239,68,68,0.2); }
+
+/* Table */
+.fm-table { width: 100%; margin: 0; border-collapse: collapse; font-size: 13px; }
+.fm-table thead { position: sticky; top: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); z-index: 10; border-bottom: 1px solid var(--glass-border); }
+.fm-table th { padding: 14px 10px; text-align: left; font-weight: 700; color: var(--text-muted); }
+.fm-table td { padding: 12px 10px; vertical-align: middle; color: var(--text-secondary); }
+.fm-table td.fm-name-col { padding: 12px 10px; }
+.fm-table td.fm-actions { text-align: right; padding-right: 24px; }
+.fm-table tr.fm-row { border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.2s; cursor: default; }
+.fm-table tr.fm-row:hover { background: rgba(255, 255, 255, 0.02) !important; }
+.fm-table tr.fm-selected { background: rgba(99, 102, 241, 0.05); }
+
+/* Action buttons */
+.fm-actions-bar { display: inline-flex; gap: 4px; }
+
+/* Floating action bar */
+.fm-float-bar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 90; display: flex; align-items: center; gap: 16px; background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent-light); box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 14px; padding: 12px 24px; backdrop-filter: blur(16px); animation: slideUp 0.3s ease-out; }
+.fm-float-count { width: 20px; height: 20px; border-radius: 50%; background: var(--accent-light); color: black; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+.fm-float-divider { width: 1px; height: 24px; background: var(--glass-border); }
+
+/* Modals */
+.fm-modal-backdrop { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.8); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content:center; animation: fmBackdropIn 180ms ease-out; }
+.fm-modal { width: 100%; max-width: 380px; padding: 28px; border-radius: 16px; border: 1px solid var(--glass-border); background: rgba(15,23,42,0.95); animation: fmModalIn 220ms ease-out; transform-origin: center; }
+.fm-modal-lg { max-width: 420px; }
+.fm-modal-title { font-size: 18px; font-weight: 700; margin: 0 0 16px; display: flex; align-items: center; gap: 10px; }
+.fm-modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+.fm-modal-label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 8px; }
+@keyframes fmBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fmModalIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+
+/* Delete modal */
+.fm-delete-icon { width: 52px; height: 52px; border-radius: 50%; background: rgba(239,68,68,0.15); border: 2px solid rgba(239,68,68,0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+.fm-delete-text { color: var(--text-secondary); font-size: 13px; margin-bottom: 24px; }
+
+/* Editor */
+.fm-editor-overlay { position: fixed; inset: 0; z-index: 300; background: rgba(8,11,20,0.99); display: flex; flex-direction: column; backdrop-filter: blur(12px); }
+.fm-editor-header { background: rgba(255,255,255,0.02); padding: 14px 28px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; }
+.fm-editor-icon { width: 40px; height: 40px; background: rgba(99,102,241,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(99,102,241,0.25); }
+.fm-editor-info strong { font-size: 15px; color: var(--text-primary); font-family: monospace; letter-spacing: 0.5px; }
+.fm-editor-info div { font-size: 11px; color: var(--text-muted); font-family: monospace; margin-top: 2px; }
+.fm-editor-actions { display: flex; align-items: center; gap: 18px; }
+.fm-editor-status { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+.fm-editor-save { height: 36px; background: var(--accent-light); border: none; color: black; font-weight: 700; border-radius: 8px; padding: 0 18px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: transform 0.1s; }
+.fm-editor-close { height: 36px; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 0 16px; color: white; border: 1px solid var(--glass-border); }
+
+/* Upload modal */
+.fm-upload-progress { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 9999; align-items: center; justify-content: center; }
+.fm-upload-card { background: rgba(15, 23, 42, 0.95); border: 1px solid var(--glass-border); border-radius: 12px; padding: 32px; width: 100%; max-width: 400px; text-align: center; }
+.fm-upload-bar { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+.fm-upload-fill { height: 100%; background: var(--accent-light); border-radius: 4px; transition: width 0.3s; }
+
+/* Unzip modal */
+.fm-unzip-log { background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 8px; padding: 12px; height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; font-family: monospace; }
+
 @media (max-width: 768px) {
     .fm-container {
         flex-direction: column;
@@ -689,16 +781,15 @@
     .fm-main {
         overflow: visible;
     }
-    /* Toolbar wrap */
-    .fm-main > div:first-child {
+    .fm-toolbar {
         flex-direction: column;
-        align-items: stretch !important;
+        align-items: stretch;
         gap: 12px;
     }
-    .fm-main > div:first-child > div:last-child {
+    .fm-toolbar-actions {
         flex-wrap: wrap;
     }
-    .fm-main > div:first-child .btn {
+    .fm-toolbar-actions .btn {
         flex: 1;
         justify-content: center;
     }
@@ -707,20 +798,5 @@
 @keyframes slideUp {
     from { transform: translate(-50%, 50px); opacity: 0; }
     to { transform: translate(-50%, 0); opacity: 1; }
-}
-.file-row:hover {
-    background: rgba(255, 255, 255, 0.02) !important;
-}
-.btn-sm {
-    padding: 6px 12px;
-    font-size: 12px;
-}
-.form-input {
-    border: 1px solid var(--glass-border);
-    background: rgba(0,0,0,0.2);
-    border-radius: 8px;
-    padding: 10px;
-    color: white;
-    width: 100%;
 }
 </style>

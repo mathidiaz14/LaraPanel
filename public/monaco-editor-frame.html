@@ -21,11 +21,13 @@
     <div id="container"></div>
     <script>
         let editor = null;
+        const ALLOWED_ORIGIN = window.location.origin;
 
         // Configurar Monaco
         require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs' } });
 
         window.addEventListener('message', function(event) {
+            if (event.origin !== ALLOWED_ORIGIN) return;
             const data = event.data;
             if (data.action === 'init') {
                 require(['vs/editor/editor.main'], function() {
@@ -51,7 +53,7 @@
 
                     // Comando Ctrl+S dentro del editor
                     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, function() {
-                        window.parent.postMessage({ action: 'save', content: editor.getValue() }, '*');
+                        window.parent.postMessage({ action: 'save', content: editor.getValue() }, ALLOWED_ORIGIN);
                     });
                 });
             } else if (data.action === 'changeLanguage') {
@@ -61,13 +63,13 @@
                 }
             } else if (data.action === 'getValue') {
                 if (editor) {
-                    window.parent.postMessage({ action: 'value', content: editor.getValue() }, '*');
+                    window.parent.postMessage({ action: 'value', content: editor.getValue() }, ALLOWED_ORIGIN);
                 }
             }
         });
 
         // Notificar que el iframe está listo
-        window.parent.postMessage({ action: 'ready' }, '*');
+        window.parent.postMessage({ action: 'ready' }, ALLOWED_ORIGIN);
     </script>
 </body>
 </html>

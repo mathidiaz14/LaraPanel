@@ -12,6 +12,7 @@ class FileManager extends Component
     use WithFileUploads;
 
     public string $currentPath = ''; // Relative to the user's webroot
+    public string $serverLabel = 'VPS';
     
     // File upload
     public $uploads = [];
@@ -29,6 +30,9 @@ class FileManager extends Component
     public bool $showCreateFileModal = false;
     public string $newFileName = '';
 
+    public bool $showZipModal = false;
+    public string $zipFileName = '';
+
     public ?string $renamingPath = null;
     public string $newName = '';
 
@@ -36,7 +40,6 @@ class FileManager extends Component
     public string $chmodOctal = '';
 
     public ?string $editingPath = null;
-    public string $editingContent = '';
 
     // Success/error alerts
     public string $successMessage = '';
@@ -55,12 +58,14 @@ class FileManager extends Component
         $this->currentPath = '';
         $this->selectedItems = [];
         $this->expandedPaths = [''];
+        $this->serverLabel = config('larapanel.server_label', 'VPS');
     }
 
     public function navigate(string $path): void
     {
         $this->currentPath = $path;
         $this->selectedItems = [];
+        $this->resetModals();
         $this->resetErrorAlerts();
     }
 
@@ -73,7 +78,28 @@ class FileManager extends Component
         array_pop($parts);
         $this->currentPath = implode('/', $parts);
         $this->selectedItems = [];
+        $this->resetModals();
         $this->resetErrorAlerts();
+    }
+
+    protected function resetModals(): void
+    {
+        $this->showCreateFolderModal = false;
+        $this->newFolderName = '';
+        $this->showCreateFileModal = false;
+        $this->newFileName = '';
+        $this->showZipModal = false;
+        $this->zipFileName = '';
+        $this->showBulkMoveModal = false;
+        $this->showBulkCopyModal = false;
+        $this->bulkDestDirectory = '';
+        $this->showDeleteModal = false;
+        $this->deletingItemName = '';
+        $this->isDeletingMultiple = false;
+        $this->renamingPath = null;
+        $this->newName = '';
+        $this->chmodPath = null;
+        $this->chmodOctal = '';
     }
 
     protected function resetErrorAlerts(): void
@@ -157,6 +183,7 @@ class FileManager extends Component
         $path = $this->currentPath . '/' . $name;
         try {
             $fileService->delete($path);
+            $this->selectedItems = array_values(array_diff($this->selectedItems, [$name]));
             $this->successMessage = "Recurso eliminado correctamente.";
         } catch (\Throwable $e) {
             $this->errorMessage = $e->getMessage();
@@ -224,9 +251,9 @@ class FileManager extends Component
     {
         $this->editingPath = $this->currentPath . '/' . $name;
         try {
-            $this->editingContent = $fileService->getFileContent($this->editingPath);
+            $content = $fileService->getFileContent($this->editingPath);
             $this->resetErrorAlerts();
-            $this->dispatch('open-editor', content: $this->editingContent, filename: $name);
+            $this->dispatch('open-editor', content: $content, filename: $name);
         } catch (\Throwable $e) {
             $this->errorMessage = $e->getMessage();
             $this->editingPath = null;
@@ -337,23 +364,50 @@ class FileManager extends Component
      */
     public function updatedUploads(FileService $fileService): void
     {
+        $allowedExtensions = [
+            'txt', 'log', 'md', 'csv', 'xml', 'json', 'yaml', 'yml',
+            'php', 'phtml', 'php5', 'php7', 'php8', 'inc',
+            'js', 'ts', 'jsx', 'tsx', 'css', 'scss', 'less',
+            'html', 'htm', 'shtml', 'xhtml',
+            'htaccess', 'htpasswd', 'env', 'ini', 'conf', 'cfg',
+            'sh', 'bash', 'zsh', 'py', 'rb', 'pl',
+            'sql', 'db', 'sqlite', 'sqlite3',
+            'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico', 'bmp', 'avif',
+            'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+            'zip', 'tar', 'gz', 'bz2', 'xz', 'rar', '7z',
+            'mp3', 'mp4', 'avi', 'mov', 'mkv', 'webm', 'ogg', 'wav',
+            'ttf', 'otf', 'woff', 'woff2', 'eot',
+        ];
+
         $this->validate([
-            'uploads.*' => 'file|max:2048000', // 2GB max file size
+            'uploads.*' => 'file|max:2048000',
         ]);
 
         try {
             foreach ($this->uploads as $upload) {
-                $filename = $upload->getClientOriginalName();
-                $filename = preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $filename);
-                // Subir como archivo temporal
+                $originalName = $upload->getClientOriginalName();
+                $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+
+                if (!in_array($extension, $allowedExtensions) && $extension !== '') {
+                    throw new \RuntimeException(
+                        "Extensión '.{$extension}' no permitida. Archivo: {$originalName}"
+                    );
+                }
+
+                $filename = preg_replace('/[^\w\-\.]/', '_', $originalName);
+                $filename = preg_replace('/_+/', '_', $filename);
+                $filename = trim($filename, '_.');
+
+                if ($filename === '' || $filename === '.') {
+                    throw new \RuntimeException("Nombre de archivo no válido: {$originalName}");
+                }
+
                 $tmpPath = $upload->storeAs('livewire-tmp', $filename);
                 $fullTmpPath = \Illuminate\Support\Facades\Storage::disk('local')->path($tmpPath);
                 
-                // Mover al destino real usando el resolvePath para evitar errores de permisos si el directorio webroot es de root
                 $destPath = $fileService->resolvePath($this->currentPath . '/' . $filename);
                 
                 if (PHP_OS_FAMILY !== 'Windows') {
-                    // Mover usando sudo cp y chown www-data
                     app(\App\Shell\SudoExecutor::class)->run(['cp', $fullTmpPath, $destPath]);
                     app(\App\Shell\SudoExecutor::class)->run(['chown', 'www-data:www-data', $destPath]);
                     unlink($fullTmpPath);
@@ -397,10 +451,10 @@ class FileManager extends Component
         }
 
         $this->validate([
-            'newFolderName' => 'required|string|min:1|max:64|regex:/^[a-zA-Z0-9_\-\.]+$/',
+            'zipFileName' => 'required|string|min:1|max:64|regex:/^[a-zA-Z0-9_\-\.]+$/',
         ]);
 
-        $zipName = $this->newFolderName;
+        $zipName = $this->zipFileName;
         if (!str_ends_with(strtolower($zipName), '.zip')) {
             $zipName .= '.zip';
         }
@@ -419,8 +473,8 @@ class FileManager extends Component
 
             $this->successMessage = "Comprimido como {$zipName} con éxito.";
             $this->selectedItems = [];
-            $this->showCreateFolderModal = false; // Usamos este modal para el prompt del zip
-            $this->newFolderName = '';
+            $this->showZipModal = false;
+            $this->zipFileName = '';
         } catch (\Throwable $e) {
             $this->errorMessage = $e->getMessage();
         }
@@ -430,14 +484,14 @@ class FileManager extends Component
     {
         if ($name !== null) {
             $this->selectedItems = [$name];
-            $this->newFolderName = $name . '.zip';
+            $this->zipFileName = $name . '.zip';
         } elseif (empty($this->selectedItems)) {
             return;
         } else {
-            $this->newFolderName = 'archivo_comprimido.zip';
+            $this->zipFileName = 'archivo_comprimido.zip';
         }
 
-        $this->showCreateFolderModal = true;
+        $this->showZipModal = true;
     }
 
     public function prepareBulkMove(): void
@@ -460,6 +514,12 @@ class FileManager extends Component
     {
         $this->showCreateFolderModal = false;
         $this->newFolderName = '';
+    }
+
+    public function closeZipModal(): void
+    {
+        $this->showZipModal = false;
+        $this->zipFileName = '';
     }
 
     /**
@@ -523,8 +583,9 @@ class FileManager extends Component
         }
     }
 
-    protected function buildTreeLevel(string $path, FileService $fileService)
+    protected function buildTreeLevel(string $path, FileService $fileService, int $depth = 0): array
     {
+        $maxDepth = 6;
         $tree = [];
         try {
             $items = $fileService->listDirectory($path);
@@ -542,8 +603,8 @@ class FileManager extends Component
                     'children' => []
                 ];
 
-                if ($node['isExpanded']) {
-                    $node['children'] = $this->buildTreeLevel($itemPath, $fileService);
+                if ($node['isExpanded'] && $depth < $maxDepth) {
+                    $node['children'] = $this->buildTreeLevel($itemPath, $fileService, $depth + 1);
                 }
 
                 $tree[] = $node;
@@ -563,7 +624,7 @@ class FileManager extends Component
             $items = $fileService->listDirectory($this->currentPath);
         }
 
-        $tree = $this->buildTreeLevel('', $fileService);
+        $tree = $this->buildTreeLevel('', $fileService, 0);
 
         // Generate breadcrumb links
         $breadcrumbs = [];
