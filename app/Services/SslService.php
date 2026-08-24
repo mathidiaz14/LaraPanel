@@ -49,8 +49,9 @@ class SslService
         if ($isWildcard) {
             $allDomains[] = '*.' . $domain->name;
         } else {
-            if ($includeWww && !str_starts_with($domain->name, 'www.')) {
-                $allDomains[] = 'www.' . $domain->name;
+            $wwwDomain = 'www.' . $domain->name;
+            if ($includeWww && !str_starts_with($domain->name, 'www.') && $this->resolvesInDns($wwwDomain)) {
+                $allDomains[] = $wwwDomain;
             }
         }
         $allDomains = array_unique(array_merge($allDomains, $sanDomains));
@@ -91,6 +92,14 @@ class SslService
         }
 
         return $cert->fresh();
+    }
+
+    /**
+     * Check whether a hostname resolves in DNS (A/AAAA/CNAME).
+     */
+    protected function resolvesInDns(string $hostname): bool
+    {
+        return @checkdnsrr($hostname, 'A') || @checkdnsrr($hostname, 'AAAA') || @checkdnsrr($hostname, 'CNAME');
     }
 
     /**
