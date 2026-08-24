@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Files;
 
+use App\Models\Setting;
 use App\Services\FileService;
 use App\Services\MonitoringService;
 use Livewire\Component;
@@ -13,6 +14,9 @@ class FileManager extends Component
 
     public string $currentPath = ''; // Relative to the user's webroot
     public string $serverLabel = 'VPS';
+
+    // Favorite directories (relative paths)
+    public array $favorites = [];
     
     // File upload
     public $uploads = [];
@@ -58,7 +62,43 @@ class FileManager extends Component
         $this->currentPath = '';
         $this->selectedItems = [];
         $this->expandedPaths = [''];
+        $this->favorites = $this->loadFavorites();
         $this->serverLabel = config('larapanel.server_label', 'VPS');
+    }
+
+    protected function loadFavorites(): array
+    {
+        try {
+            $decoded = json_decode((string) Setting::get('filemanager_favorites', '[]'), true);
+            return is_array($decoded)
+                ? array_values(array_unique(array_filter($decoded, fn ($p) => is_string($p) && trim($p) !== '')))
+                : [];
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    public function toggleFavorite(string $path, FileService $fileService): void
+    {
+        $path = trim(str_replace(['..', "\0"], '', $path), '/');
+
+        if (! in_array($path, $this->favorites)) {
+            try {
+                if (! is_dir($fileService->resolvePath($path))) {
+                    throw new \RuntimeException("El directorio '{$path}' no existe.");
+                }
+            } catch (\Throwable $e) {
+                $this->errorMessage = $e->getMessage();
+                return;
+            }
+            $this->favorites[] = $path;
+            $this->successMessage = "Directorio '{$path}' añadido a favoritos.";
+        } else {
+            $this->favorites = array_values(array_diff($this->favorites, [$path]));
+            $this->successMessage = "Directorio eliminado de favoritos.";
+        }
+
+        Setting::set('filemanager_favorites', json_encode(array_values($this->favorites)));
     }
 
     public function navigate(string $path): void
@@ -626,6 +666,21 @@ class FileManager extends Component
 
         $tree = $this->buildTreeLevel('', $fileService, 0);
 
+        // Favorite directories (with existence check for the sidebar)
+        $favoritesList = collect($this->favorites)->map(function ($path) use ($fileService) {
+            $exists = true;
+            try {
+                $exists = is_dir($fileService->resolvePath($path));
+            } catch (\Throwable) {
+                $exists = false;
+            }
+            return [
+                'path' => $path,
+                'name' => $path === '' ? 'var/www' : basename($path),
+                'exists' => $exists,
+            ];
+        })->values()->all();
+
         // Generate breadcrumb links
         $breadcrumbs = [];
         $accumulated = '';
@@ -656,6 +711,7 @@ class FileManager extends Component
             'breadcrumbs' => $breadcrumbs,
             'diskInfo' => $diskInfo,
             'tree' => $tree,
+            'favoritesList' => $favoritesList,
         ])->layout('layouts.app', [
             'title'      => 'Administrador de Archivos',
             'breadcrumb' => '<span>Hosting</span> / <strong>Administrador de Archivos</strong>',

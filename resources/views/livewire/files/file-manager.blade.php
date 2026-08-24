@@ -1,8 +1,25 @@
-<div class="fm-container" x-data="{ selectedAll: false, isUploading: false, progress: 0 }"
+<div class="fm-container" x-data="{ selectedAll: false, isUploading: false, progress: 0,
+        ctx: { open: false, x: 0, y: 0, item: null },
+        openCtx(e, item) {
+            this.ctx.item = item;
+            this.ctx.x = e.clientX;
+            this.ctx.y = e.clientY;
+            this.ctx.open = true;
+            this.$nextTick(() => {
+                const m = this.$refs.ctxmenu;
+                if (!m) return;
+                const r = m.getBoundingClientRect();
+                this.ctx.x = Math.max(6, Math.min(this.ctx.x, window.innerWidth - r.width - 10));
+                this.ctx.y = Math.max(6, Math.min(this.ctx.y, window.innerHeight - r.height - 10));
+            });
+        },
+        closeCtx() { this.ctx.open = false; }
+    }"
      x-on:livewire-upload-start="isUploading = true"
      x-on:livewire-upload-finish="isUploading = false"
      x-on:livewire-upload-error="isUploading = false"
-     x-on:livewire-upload-progress="progress = $event.detail.progress">
+     x-on:livewire-upload-progress="progress = $event.detail.progress"
+     @contextmenu="closeCtx()">
     
 
 
@@ -20,6 +37,27 @@
                 <i class="fa-solid fa-server" style="width:20px;font-size:14px;color:{{ $currentPath === '' ? 'var(--accent-light)' : 'var(--text-muted)' }};"></i> /var/www
             </button>
             
+            {{-- Favorite Directories --}}
+            <div class="fm-sidebar-label" style="margin-top:6px;">Favoritos</div>
+            <div style="display:flex;flex-direction:column;gap:2px;margin-bottom:10px;">
+                @forelse($favoritesList as $fav)
+                    <div style="display:flex;align-items:center;padding:5px 12px;border-radius:8px;background:{{ $currentPath === $fav['path'] ? 'rgba(99,102,241,0.15)' : 'transparent' }};transition:background 0.2s;{{ $fav['exists'] ? '' : 'opacity:0.45;' }}">
+                        <div wire:click="navigate('{{ addslashes($fav['path']) }}')" style="display:flex;align-items:center;flex:1;gap:8px;font-size:13px;font-weight:600;cursor:pointer;color:{{ $currentPath === $fav['path'] ? 'var(--accent-light)' : 'var(--text-secondary)' }};min-width:0;" title="{{ $fav['exists'] ? '/var/www/' . $fav['path'] : 'El directorio ya no existe' }}">
+                            <i class="fa-solid fa-star" style="font-size:10px;color:#fbbf24;"></i>
+                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $fav['name'] }}</span>
+                            @if(!$fav['exists'])<i class="fa-solid fa-triangle-exclamation" style="font-size:10px;color:#f87171;margin-left:2px;" title="El directorio ya no existe"></i>@endif
+                        </div>
+                        <button wire:click.stop="toggleFavorite('{{ addslashes($fav['path']) }}')" title="Quitar de favoritos" style="background:transparent;border:none;color:var(--text-muted);cursor:pointer;padding:2px 4px;border-radius:4px;opacity:0.5;transition:all 0.2s;" onmouseover="this.style.opacity='1';this.style.color='#f87171'" onmouseout="this.style.opacity='0.5';this.style.color='var(--text-muted)'">
+                            <i class="fa-solid fa-xmark" style="font-size:11px;"></i>
+                        </button>
+                    </div>
+                @empty
+                    <div style="font-size:11px;color:var(--text-muted);padding:0 12px 6px;font-style:italic;">
+                        Sin favoritos. Haz clic derecho sobre una carpeta para añadirla.
+                    </div>
+                @endforelse
+            </div>
+
             <div class="fm-sidebar-label">Directorios</div>
             
             <div style="display:flex;flex-direction:column;gap:2px;">
@@ -94,7 +132,7 @@
         @endif
 
         {{-- File List Container --}}
-        <div style="flex:1;overflow-y:auto;padding:0;position:relative;" class="table-responsive">
+        <div style="flex:1;overflow-y:auto;padding:0;position:relative;" class="table-responsive" @scroll="closeCtx()">
             {{-- Loading indicator --}}
             <div wire:loading.delay wire:target="navigate, navigateUp" style="position:absolute;inset:0;z-index:20;background:rgba(15,23,42,0.6);backdrop-filter:blur(2px);">
                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px;color:var(--accent-light);font-size:13px;font-weight:600;">
@@ -140,8 +178,22 @@
                         $isKnownText = in_array($ext, ['php', 'js', 'css', 'html', 'htm', 'txt', 'json', 'md', 'env', 'ini', 'conf', 'yaml', 'yml', 'sh', 'htaccess', '']);
                         $isBinary = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico', 'zip', 'tar', 'gz', 'rar', 'pdf', 'mp3', 'mp4', 'avi', 'mov', 'ttf', 'woff', 'woff2', 'eot', 'sqlite', 'sqlite3']);
                     @endphp
-                    <tr wire:key="file-row-{{ md5($item['name'] . '-' . $item['updated_at']) }}" 
+                    @php
+                        $itemFavPath = ltrim($currentPath . '/' . $item['name'], '/');
+                        $isItemFav = in_array($itemFavPath, $favorites);
+                    @endphp
+                    <tr wire:key="file-row-{{ md5($item['name'] . '-' . $item['updated_at']) }}"
                         class="fm-row {{ in_array($item['name'], $selectedItems) ? 'fm-selected' : '' }}"
+                        @contextmenu.prevent.stop="openCtx($event, @js([
+                            'name' => $item['name'],
+                            'isDir' => $item['is_dir'],
+                            'perms' => $item['permissions'],
+                            'isBinary' => $isBinary,
+                            'isKnownText' => $isKnownText,
+                            'path' => $itemFavPath,
+                            'isFav' => $isItemFav,
+                            'ext' => $ext,
+                        ]))"
                     >
                         <td style="padding:12px 20px;text-align:center;vertical-align:middle;">
                             <input type="checkbox" value="{{ $item['name'] }}" wire:model.live="selectedItems" class="file-checkbox" style="width:16px;height:16px;accent-color:var(--accent-light);cursor:pointer;border-radius:4px;" x-on:click.stop>
@@ -158,9 +210,14 @@
                             @endif
                         >
                             @if($item['is_dir'])
-                                <div wire:click="navigate('{{ ltrim($currentPath . '/' . $item['name'], '/') }}')" style="cursor:pointer;display:flex;align-items:center;gap:12px;color:var(--text-primary);font-weight:600;transition:color 0.2s;" onmouseover="this.style.color='var(--accent-light)'" onmouseout="this.style.color='var(--text-primary)'">
-                                    <i class="fa-solid fa-folder" style="font-size:18px;color:#38bdf8;"></i>
-                                    <span>{{ $item['name'] }}</span>
+                                <div style="display:flex;align-items:center;gap:12px;">
+                                    <div wire:click="navigate('{{ ltrim($currentPath . '/' . $item['name'], '/') }}')" style="cursor:pointer;display:flex;align-items:center;gap:12px;color:var(--text-primary);font-weight:600;transition:color 0.2s;" onmouseover="this.style.color='var(--accent-light)'" onmouseout="this.style.color='var(--text-primary)'">
+                                        <i class="fa-solid fa-folder" style="font-size:18px;color:#38bdf8;"></i>
+                                        <span>{{ $item['name'] }}</span>
+                                    </div>
+                                    <button wire:click.stop="toggleFavorite('{{ addslashes($itemFavPath) }}')" class="fm-star-btn {{ $isItemFav ? 'fm-fav' : '' }}" title="{{ $isItemFav ? 'Quitar de favoritos' : 'Añadir a favoritos' }}">
+                                        <i class="fa-{{ $isItemFav ? 'solid' : 'regular' }} fa-star" style="font-size:12px;"></i>
+                                    </button>
                                 </div>
                             @else
                                 <div style="display:flex;align-items:center;gap:12px;color:var(--text-primary);">
@@ -276,6 +333,60 @@
             </button>
         </div>
         @endif
+    </div>
+
+    {{-- Right-click Context Menu --}}
+    <div x-show="ctx.open" x-cloak x-ref="ctxmenu"
+         :style="`left:${ctx.x}px;top:${ctx.y}px`"
+         class="fm-ctx-menu glass-elevated"
+         @click.outside="closeCtx()"
+         @keyup.escape.window="closeCtx()">
+        <template x-if="ctx.item">
+            <div>
+                <div class="fm-ctx-header">
+                    <i class="fa-solid" :class="ctx.item.isDir ? 'fa-folder' : 'fa-file-lines'" style="font-size:12px;color:var(--accent-light);"></i>
+                    <span x-text="ctx.item.name"></span>
+                </div>
+
+                <button class="fm-ctx-item" x-show="ctx.item.isDir" @click="closeCtx(); $wire.navigate(ctx.item.path)">
+                    <i class="fa-solid fa-folder-open" style="width:18px;color:#38bdf8;"></i> Abrir
+                </button>
+                <button class="fm-ctx-item" x-show="ctx.item.isDir" @click="closeCtx(); $wire.toggleFavorite(ctx.item.path)">
+                    <i class="fa-star" style="width:18px;color:#fbbf24;" :class="ctx.item.isFav ? 'fa-solid' : 'fa-regular'"></i>
+                    <span x-text="ctx.item.isFav ? 'Quitar de favoritos' : 'Añadir a favoritos'"></span>
+                </button>
+                <button class="fm-ctx-item" x-show="!ctx.item.isDir && !ctx.item.isBinary" @click="
+                    if (ctx.item.isKnownText) { closeCtx(); $wire.editFile(ctx.item.name) }
+                    else if (confirm('Este archivo tiene una extensión desconocida. ¿Intentar abrir como texto plano?')) { closeCtx(); $wire.editFile(ctx.item.name) }
+                ">
+                    <i class="fa-solid fa-code" style="width:18px;color:var(--accent-light);"></i> Editar código
+                </button>
+                <button class="fm-ctx-item" x-show="!ctx.item.isDir" @click="closeCtx(); $wire.downloadItem(ctx.item.name)">
+                    <i class="fa-solid fa-download" style="width:18px;"></i> Descargar
+                </button>
+
+                <div class="fm-ctx-divider"></div>
+
+                <button class="fm-ctx-item" x-show="ctx.item.isDir" @click="closeCtx(); $wire.prepareZip(ctx.item.name)">
+                    <i class="fa-solid fa-file-zipper" style="width:18px;color:var(--warning);"></i> Comprimir en .zip
+                </button>
+                <button class="fm-ctx-item" x-show="!ctx.item.isDir && ctx.item.ext === 'zip'" @click="closeCtx(); $wire.startUnzip(ctx.item.name)">
+                    <i class="fa-solid fa-box-open" style="width:18px;color:var(--success);"></i> Extraer aquí
+                </button>
+                <button class="fm-ctx-item" @click="closeCtx(); $wire.openRenameModal(ctx.item.name)">
+                    <i class="fa-solid fa-pen-to-square" style="width:18px;"></i> Renombrar
+                </button>
+                <button class="fm-ctx-item" @click="closeCtx(); $wire.openChmodModal(ctx.item.name, ctx.item.perms)">
+                    <i class="fa-solid fa-shield-halved" style="width:18px;"></i> Cambiar permisos…
+                </button>
+
+                <div class="fm-ctx-divider"></div>
+
+                <button class="fm-ctx-item fm-ctx-danger" @click="closeCtx(); $wire.confirmDelete(ctx.item.name)">
+                    <i class="fa-solid fa-trash-can" style="width:18px;"></i> Eliminar
+                </button>
+            </div>
+        </template>
     </div>
 
     {{-- Modals (Create Folder, Create File, Chmod, Rename, Bulk Move, Bulk Copy, Delete) --}}
@@ -765,6 +876,24 @@
 
 /* Unzip modal */
 .fm-unzip-log { background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 8px; padding: 12px; height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; font-family: monospace; }
+
+/* Context menu (right click) */
+[x-cloak] { display: none !important; }
+.fm-ctx-menu { position: fixed; z-index: 1000; min-width: 230px; background: rgba(15, 23, 42, 0.97); border: 1px solid var(--glass-border); border-radius: 10px; padding: 6px; box-shadow: 0 12px 32px rgba(0,0,0,0.55); backdrop-filter: blur(14px); animation: fmCtxIn 120ms ease-out; transform-origin: top left; }
+@keyframes fmCtxIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+.fm-ctx-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px 8px; font-size: 11px; font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--glass-border); margin-bottom: 4px; }
+.fm-ctx-header span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; font-family: monospace; }
+.fm-ctx-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 12px; border: none; background: transparent; color: var(--text-primary); font-size: 13px; font-weight: 500; border-radius: 7px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.fm-ctx-item:hover { background: rgba(99, 102, 241, 0.18); color: white; }
+.fm-ctx-danger { color: #f87171; }
+.fm-ctx-danger:hover { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+.fm-ctx-divider { height: 1px; background: var(--glass-border); margin: 5px 8px; }
+
+/* Favorite star in file rows */
+.fm-star-btn { opacity: 0; transition: opacity 0.15s, color 0.15s, transform 0.15s; background: transparent; border: none; cursor: pointer; padding: 2px 5px; color: var(--text-muted); line-height: 1; }
+tr.fm-row:hover .fm-star-btn { opacity: 0.6; }
+.fm-star-btn:hover { opacity: 1 !important; color: #fbbf24; transform: scale(1.15); }
+.fm-star-btn.fm-fav { opacity: 1; color: #fbbf24; }
 
 @media (max-width: 768px) {
     .fm-container {
