@@ -34,7 +34,7 @@
                 {{ $domainsWithoutSsl->pluck('name')->join(', ') }}
             </div>
         </div>
-        <a href="{{ route('ssl.issue') }}" class="btn btn-ghost btn-sm" style="border-color:rgba(245,158,11,0.3);color:var(--warning);flex-shrink:0;">
+        <a href="{{ route('ssl.issue', ['domain' => $domainsWithoutSsl->first()?->id]) }}" class="btn btn-ghost btn-sm" style="border-color:rgba(245,158,11,0.3);color:var(--warning);flex-shrink:0;">
             Activar SSL
         </a>
     </div>

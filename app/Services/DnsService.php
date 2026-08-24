@@ -38,7 +38,9 @@ class DnsService
             $response = Http::withHeaders([
                 'X-API-Key' => $this->apiKey(),
                 'Content-Type' => 'application/json',
-            ])->{$method}($this->apiUrl() . $path, $data);
+            ])->timeout(10)
+              ->connectTimeout(5)
+              ->{$method}($this->apiUrl() . $path, $data);
 
             if ($response->failed()) {
                 throw new \RuntimeException("PowerDNS API error [{$response->status()}]: " . $response->body());
@@ -102,10 +104,13 @@ class DnsService
         $serverIp = config('larapanel.server.public_ip', '0.0.0.0');
 
         $defaults = [
-            ['name' => '@',   'type' => 'A',   'content' => $serverIp,             'ttl' => 3600, 'priority' => 0],
-            ['name' => 'www', 'type' => 'A',   'content' => $serverIp,             'ttl' => 3600, 'priority' => 0],
-            ['name' => 'mail','type' => 'A',   'content' => $serverIp,             'ttl' => 3600, 'priority' => 0],
-            ['name' => '@',   'type' => 'MX',  'content' => 'mail.' . $domain->name, 'ttl' => 3600, 'priority' => 10],
+            ['name' => '@',       'type' => 'A',   'content' => $serverIp,               'ttl' => 3600, 'priority' => 0],
+            ['name' => 'www',     'type' => 'A',   'content' => $serverIp,               'ttl' => 3600, 'priority' => 0],
+            ['name' => 'webmail', 'type' => 'A',   'content' => $serverIp,               'ttl' => 3600, 'priority' => 0],
+            ['name' => 'mail',    'type' => 'A',   'content' => $serverIp,               'ttl' => 3600, 'priority' => 0],
+            ['name' => '@',       'type' => 'MX',  'content' => 'mail.' . $domain->name, 'ttl' => 3600, 'priority' => 10],
+            ['name' => '@',       'type' => 'TXT', 'content' => 'v=spf1 mx a ip4:' . $serverIp . ' ~all', 'ttl' => 3600, 'priority' => 0],
+            ['name' => '_dmarc',  'type' => 'TXT', 'content' => 'v=DMARC1; p=none; rua=mailto:dmarc@' . $domain->name . '; ruf=mailto:dmarc@' . $domain->name . '; adkim=r; aspf=r', 'ttl' => 3600, 'priority' => 0],
         ];
 
         foreach ($defaults as $rec) {

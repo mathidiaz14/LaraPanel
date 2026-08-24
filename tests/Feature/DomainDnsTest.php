@@ -48,10 +48,54 @@ class DomainDnsTest extends TestCase
             'name'      => $domainName,
         ]);
 
-        // It should have seeded default records (A @, A www, A mail, MX @)
+        // It should have seeded default records (A @, A www, A webmail, A mail, MX @, SPF TXT, DMARC TXT)
         $zone = DnsZone::where('domain_id', $domain->id)->first();
         $this->assertNotNull($zone);
-        $this->assertGreaterThan(0, $zone->records()->count());
+
+        foreach ([
+            ['@', 'A'],
+            ['www', 'A'],
+            ['webmail', 'A'],
+            ['mail', 'A'],
+            ['@', 'MX'],
+            ['@', 'TXT'],
+            ['_dmarc', 'TXT'],
+        ] as [$name, $type]) {
+            $this->assertDatabaseHas('dns_records', [
+                'dns_zone_id' => $zone->id,
+                'name'        => $name,
+                'type'        => $type,
+            ]);
+        }
+    }
+
+    public function test_creating_main_domain_automatically_publishes_dkim_record()
+    {
+        $domainName = 'dkimdomain.com';
+
+        $domain = $this->domainService->create($this->user, [
+            'name'          => $domainName,
+            'type'          => 'main',
+            'parent_domain' => null,
+            'php_version'   => '8.3',
+            'webserver'     => 'nginx',
+            'document_root' => '/var/www/dkimdomain.com/public_html',
+        ]);
+
+        $this->assertDatabaseHas('dkim_keys', [
+            'domain_id' => $domain->id,
+            'selector'  => 'mail',
+            'is_active' => true,
+        ]);
+
+        $zone = DnsZone::where('domain_id', $domain->id)->first();
+        $this->assertNotNull($zone);
+
+        $this->assertDatabaseHas('dns_records', [
+            'dns_zone_id' => $zone->id,
+            'name'        => 'mail._domainkey',
+            'type'        => 'TXT',
+        ]);
     }
 
     public function test_creating_subdomain_does_not_create_dns_zone()

@@ -125,7 +125,7 @@
                     </td>
                     <td style="text-align:right;">
                         <div class="lp-row-actions">
-                            <a href="{{ route('ssl.index') }}" class="btn btn-ghost btn-sm" title="SSL">
+                            <a href="{{ $domain->ssl_enabled ? route('ssl.index') : route('ssl.issue', ['domain' => $domain->id]) }}" class="btn btn-ghost btn-sm" title="SSL">
                                 <i class="fa-solid fa-lock"></i>
                             </a>
                             @if($domain->status === 'active')
@@ -197,7 +197,7 @@
                     </td>
                     <td style="text-align:right;">
                         <div class="lp-row-actions">
-                            <a href="{{ route('ssl.index') }}" class="btn btn-ghost btn-sm" title="SSL">
+                            <a href="{{ $sub->ssl_enabled ? route('ssl.index') : route('ssl.issue', ['domain' => $sub->id]) }}" class="btn btn-ghost btn-sm" title="SSL">
                                 <i class="fa-solid fa-lock"></i>
                             </a>
                             @if($sub->status === 'active')

@@ -76,10 +76,26 @@ class DomainService
         ]);
 
         if ($type === 'main') {
+            $zone = null;
+
             try {
-                $this->dns->createZone($user, $domain);
+                // Crea la zona con todos los registros base: A @/www/webmail/mail, MX, SPF y DMARC
+                $zone = $this->dns->createZone($user, $domain);
             } catch (\Throwable $e) {
                 \Log::error("Failed to automatically create DNS zone for domain {$domain->name}: " . $e->getMessage());
+            }
+
+            // Genera y publica DKIM (TXT mail._domainkey) y activa la firma en Rspamd
+            try {
+                $dkimService = app(DkimService::class);
+                $dkimKey     = $dkimService->generateKeyPair($domain);
+
+                if ($zone) {
+                    $dkimService->deployToDns($dkimKey, $zone);
+                    $dkimService->configureRspamdSigning($domain, $dkimKey);
+                }
+            } catch (\Throwable $e) {
+                \Log::error("Failed to auto-configure DKIM for {$domain->name}: " . $e->getMessage());
             }
 
             // Auto-crear el subdominio de webmail para que aparezca en el panel y se le pueda asignar SSL

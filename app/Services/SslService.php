@@ -85,6 +85,15 @@ class SslService
                 'expires_at' => $cert->fresh()->expires_at?->toIso8601String(),
             ]);
 
+            // Wildcard: cubrir automáticamente todos los subdominios activos con este certificado
+            if ($isWildcard) {
+                try {
+                    $this->propagateWildcardToSubdomains($domain, $cert->fresh());
+                } catch (\Throwable $e) {
+                    Log::error("Failed to propagate wildcard SSL to subdomains of {$domain->name}: " . $e->getMessage());
+                }
+            }
+
         } catch (\Throwable $e) {
             $cert->update(['status' => 'failed', 'last_error' => $e->getMessage()]);
             AuditLog::record('ssl.letsencrypt.failed', $domain->name, ['error' => $e->getMessage()], severity: 'critical');
@@ -100,6 +109,75 @@ class SslService
     protected function resolvesInDns(string $hostname): bool
     {
         return @checkdnsrr($hostname, 'A') || @checkdnsrr($hostname, 'AAAA') || @checkdnsrr($hostname, 'CNAME');
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // Wildcard — Cover all subdomains
+    // ────────────────────────────────────────────────────────────────
+
+    /**
+     * Apply the wildcard certificate of $domain to all its active subdomains.
+     *
+     * Each subdomain gets an SslCertificate copy (auto_renew off, renewed by
+     * the parent wildcard), SSL enabled on the domain row and its Nginx vhost
+     * redeployed pointing to the SAME cert files as the parent domain.
+     *
+     * @return int Number of subdomains covered.
+     */
+    public function propagateWildcardToSubdomains(Domain $domain, SslCertificate $cert): int
+    {
+        $wildcardSan   = '*.' . $domain->name;
+        $parentCertDir = config('larapanel.paths.ssl_certs') . '/' . $domain->name;
+
+        $subdomains = Domain::where('user_id', $domain->user_id)
+            ->where('id', '!=', $domain->id)
+            ->where('is_active', true)
+            ->get()
+            ->filter(fn (Domain $d) => str_ends_with($d->name, '.' . $domain->name));
+
+        $covered = 0;
+
+        foreach ($subdomains as $sub) {
+            // No tocar certificados custom instalados manualmente
+            if ($sub->sslCertificate?->provider === 'custom') {
+                continue;
+            }
+
+            SslCertificate::updateOrCreate(
+                ['domain_id' => $sub->id],
+                [
+                    'provider'        => 'letsencrypt',
+                    'status'          => 'active',
+                    'certificate'     => $cert->certificate,
+                    'private_key'     => $cert->private_key,
+                    'chain'           => $cert->chain,
+                    'issued_at'       => $cert->issued_at,
+                    'expires_at'      => $cert->expires_at,
+                    'last_renewed_at' => $cert->last_renewed_at,
+                    'auto_renew'      => false,
+                    'san_domains'     => [$wildcardSan],
+                    'last_error'      => null,
+                ]
+            );
+
+            $sub->update([
+                'ssl_enabled'    => true,
+                'ssl_expires_at' => $cert->expires_at,
+                'ssl_provider'   => 'letsencrypt',
+            ]);
+
+            $this->deploySslNginxConfig($sub, $cert, certDirOverride: $parentCertDir, reload: false);
+
+            AuditLog::record('ssl.wildcard.propagated', $sub->name, ['wildcard' => $wildcardSan]);
+
+            $covered++;
+        }
+
+        if ($covered > 0 && app()->isProduction()) {
+            $this->sudo->reloadNginx();
+        }
+
+        return $covered;
     }
 
     /**
@@ -351,6 +429,26 @@ class SslService
         // Revert to plain HTTP config and reload webserver
         $this->domains->deployConfigs($domain);
 
+        // Si era un wildcard, revierte también los subdominios que usaban este cert
+        $wildcardSan = '*.' . $domain->name;
+        Domain::where('user_id', $domain->user_id)
+            ->where('id', '!=', $domain->id)
+            ->get()
+            ->filter(fn (Domain $d) => str_ends_with($d->name, '.' . $domain->name))
+            ->each(function (Domain $child) use ($wildcardSan, $domain) {
+                $childCert = $child->sslCertificate;
+                if ($childCert && in_array($wildcardSan, $childCert->san_domains ?? [], true)) {
+                    $childCert->update(['status' => 'revoked']);
+                    $child->update([
+                        'ssl_enabled'    => false,
+                        'ssl_expires_at' => null,
+                        'ssl_provider'   => null,
+                    ]);
+                    $this->domains->deployConfigs($child);
+                    AuditLog::record('ssl.revoked', $child->name, ['wildcard_parent' => $domain->name]);
+                }
+            });
+
         AuditLog::record('ssl.revoked', $domain->name);
     }
 
@@ -413,9 +511,9 @@ class SslService
     // Nginx SSL Deployment
     // ────────────────────────────────────────────────────────────────
 
-    protected function deploySslNginxConfig(Domain $domain, SslCertificate $cert): void
+    protected function deploySslNginxConfig(Domain $domain, SslCertificate $cert, ?string $certDirOverride = null, bool $reload = true): void
     {
-        $certDir  = config('larapanel.paths.ssl_certs') . '/' . $domain->name;
+        $certDir  = $certDirOverride ?? (config('larapanel.paths.ssl_certs') . '/' . $domain->name);
         $certFile = "{$certDir}/fullchain.pem";
         $keyFile  = "{$certDir}/privkey.pem";
 
@@ -428,7 +526,10 @@ class SslService
             file_put_contents("/tmp/lp_ssl_{$domain->name}", $config);
             $this->sudo->run(['cp', "/tmp/lp_ssl_{$domain->name}", "{$sitesAvail}/{$domain->name}"]);
             $this->sudo->run(['ln', '-sf', "{$sitesAvail}/{$domain->name}", "{$sitesEnabled}/{$domain->name}"]);
-            $this->sudo->reloadNginx();
+
+            if ($reload) {
+                $this->sudo->reloadNginx();
+            }
         }
     }
 

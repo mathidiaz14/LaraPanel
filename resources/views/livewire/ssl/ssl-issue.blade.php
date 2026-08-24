@@ -68,22 +68,32 @@
             </div>
 
             {{-- Options --}}
+            @php
+                $selectedDomain = $domainId ? $domains->firstWhere('id', $domainId) : null;
+                $canWildcard = $selectedDomain && $selectedDomain->type === 'main';
+            @endphp
             <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:20px;">
                 <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;cursor:pointer;">
-                    <input type="checkbox" wire:model="includeWww" style="accent-color:var(--accent);width:16px;height:16px;" {{ $isWildcard ? 'disabled' : '' }}>
+                    <input type="checkbox" wire:model="includeWww" style="accent-color:var(--accent);width:16px;height:16px;" {{ ($isWildcard || !$canWildcard) ? 'disabled' : '' }}>
                     <div>
-                        <div style="font-size:13px;font-weight:600;{{ $isWildcard ? 'color:var(--text-muted);' : '' }}">Incluir www.{{ $domainId ? ($domains->firstWhere('id',$domainId)?->name ?? 'dominio.com') : 'dominio.com' }}</div>
+                        <div style="font-size:13px;font-weight:600;{{ $isWildcard ? 'color:var(--text-muted);' : '' }}">Incluir www.{{ $domainId ? ($selectedDomain?->name ?? 'dominio.com') : 'dominio.com' }}</div>
                         <div style="font-size:11px;color:var(--text-muted);">Recomendado — cubre tanto dominio.com como www.dominio.com en el mismo cert.</div>
                     </div>
                 </label>
 
-                <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;cursor:pointer;">
-                    <input type="checkbox" wire:model.live="isWildcard" style="accent-color:var(--accent);width:16px;height:16px;">
+                <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;cursor:pointer;{{ !$canWildcard ? 'opacity:0.5;' : '' }}">
+                    <input type="checkbox" wire:model.live="isWildcard" style="accent-color:var(--accent);width:16px;height:16px;" {{ !$canWildcard ? 'disabled' : '' }}>
                     <div>
-                        <div style="font-size:13px;font-weight:600;">Certificado Wildcard (*.{{ $domainId ? ($domains->firstWhere('id',$domainId)?->name ?? 'dominio.com') : 'dominio.com' }})</div>
-                        <div style="font-size:11px;color:var(--text-muted);">Cubre el dominio principal y todos sus subdominios. Requiere validación local por DNS (PowerDNS).</div>
+                        <div style="font-size:13px;font-weight:600;">Certificado Wildcard (*.{{ $domainId ? ($selectedDomain?->name ?? 'dominio.com') : 'dominio.com' }}) — recomendado</div>
+                        <div style="font-size:11px;color:var(--text-muted);">Cubre el dominio principal y <strong>todos sus subdominios automáticamente</strong> (webmail, mail, etc.) con un solo certificado. Requiere validación local por DNS (PowerDNS).</div>
                     </div>
                 </label>
+
+                @if($selectedDomain && !$canWildcard)
+                <div style="font-size:11px;color:var(--text-warning,var(--warning));padding:0 4px;">
+                    <i class="fa-solid fa-circle-info"></i> El wildcard solo está disponible para dominios principales. Para "{{ $selectedDomain->name }}" emite un certificado individual (o emite el wildcard en su dominio padre).
+                </div>
+                @endif
             </div>
 
             {{-- Extra SANs --}}
@@ -123,6 +133,7 @@
                     @if($isWildcard)
                     <li>Se usará la validación por DNS (desafío DNS-01 en PowerDNS local) para demostrar la propiedad del dominio</li>
                     <li>Let's Encrypt emitirá un certificado Wildcard (*.{{ $domains->firstWhere('id',$domainId)?->name }}) válido por <strong>90 días</strong></li>
+                    <li><strong>Todos los subdominios activos</strong> quedarán protegidos con HTTPS usando este mismo certificado</li>
                     @else
                     <li>Se verificará que <strong>{{ $domains->firstWhere('id',$domainId)?->name }}</strong> apunta a este servidor</li>
                     <li>Let's Encrypt emitirá un certificado válido por <strong>90 días</strong></li>

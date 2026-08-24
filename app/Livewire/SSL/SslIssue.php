@@ -13,7 +13,7 @@ class SslIssue extends Component
 {
     public ?int    $domainId   = null;
     public bool    $includeWww = true;
-    public bool    $isWildcard = false;
+    public bool    $isWildcard = true;
     public array   $extraSans  = [];
     public string  $newSan     = '';
     public string  $errorMsg   = '';
@@ -27,12 +27,31 @@ class SslIssue extends Component
         'newSan'     => 'nullable|string|max:253',
     ];
 
+    public function mount(?int $domain = null): void
+    {
+        if ($domain) {
+            $d = Domain::where('id', $domain)->where('user_id', auth()->id())->first();
+            if ($d) {
+                $this->domainId   = $d->id;
+                $this->isWildcard = $d->type === 'main';
+            }
+        }
+    }
+
     public function getDomains()
     {
         return Domain::where('user_id', auth()->id())
             ->where('is_active', true)
             ->orderBy('name')
             ->get();
+    }
+
+    public function updatedDomainId($value): void
+    {
+        if (!$value) return;
+
+        $d = Domain::find($value);
+        $this->isWildcard = $d && $d->type === 'main';
     }
 
     public function addSan(): void
@@ -68,8 +87,22 @@ class SslIssue extends Component
                 isWildcard: $this->isWildcard,
             );
 
-            $this->success    = true;
-            $this->successMsg = "¡Certificado SSL emitido correctamente para {$domain->name}! Expira el {$cert->expires_at?->format('d/m/Y')}.";
+            $this->success = true;
+
+            if ($this->isWildcard) {
+                $covered = Domain::where('user_id', auth()->id())
+                    ->where('id', '!=', $domain->id)
+                    ->where('is_active', true)
+                    ->get()
+                    ->filter(fn (Domain $d) => str_ends_with($d->name, '.' . $domain->name))
+                    ->count();
+
+                $this->successMsg = "¡Certificado Wildcard emitido para {$domain->name}! Cubre el dominio y sus subdominios"
+                    . ($covered > 0 ? " ({$covered} subdominio(s) protegidos con HTTPS)" : '')
+                    . ". Expira el {$cert->expires_at?->format('d/m/Y')}.";
+            } else {
+                $this->successMsg = "¡Certificado SSL emitido correctamente para {$domain->name}! Expira el {$cert->expires_at?->format('d/m/Y')}.";
+            }
 
         } catch (\Throwable $e) {
             $this->errorMsg  = $e->getMessage();

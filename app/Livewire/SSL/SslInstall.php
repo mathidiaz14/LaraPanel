@@ -29,6 +29,16 @@ class SslInstall extends Component
         'caChain'     => 'nullable|string',
     ];
 
+    public function mount(?int $domain = null): void
+    {
+        if ($domain) {
+            $d = Domain::where('id', $domain)->where('user_id', auth()->id())->first();
+            if ($d) {
+                $this->domainId = $d->id;
+            }
+        }
+    }
+
     public function getDomains()
     {
         return Domain::where('user_id', auth()->id())
