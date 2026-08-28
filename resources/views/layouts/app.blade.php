@@ -38,12 +38,12 @@
 
 <body>
     @if(session()->has('impersonated_by'))
-        <div style="background:#f59e0b;color:#1e1e2e;padding:10px 20px;font-size:13px;display:flex;justify-content:space-between;align-items:center;z-index:99999;box-shadow:0 2px 10px rgba(0,0,0,0.3);position:sticky;top:0;font-weight:500;">
+        <div style="background:var(--warning);color:var(--bg-base);padding:var(--sp-2) var(--sp-6);font-size:var(--text-sm);display:flex;justify-content:space-between;align-items:center;z-index:99999;box-shadow:var(--shadow-md);position:sticky;top:0;font-weight:500;">
             <div style="display:flex;align-items:center;gap:8px;">
                 <i class="fa-solid fa-user-secret" style="font-size:16px;"></i>
                 <span>Estás en una sesión de impersonación como <strong>{{ auth()->user()->name }}</strong> ({{ auth()->user()->email }}).</span>
             </div>
-            <a href="{{ route('admin.impersonate.stop') }}" class="btn btn-primary btn-sm" style="background:#1e1e2e;color:#fff;border:none;padding:5px 12px;font-weight:600;border-radius:4px;text-decoration:none;font-size:12px;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s;">
+                <a href="{{ route('admin.impersonate.stop') }}" class="btn btn-primary btn-sm" style="background:var(--bg-surface);color:var(--text-primary);border:none;padding:var(--sp-1) var(--sp-3);font-weight:600;border-radius:var(--radius-sm);text-decoration:none;font-size:var(--text-sm);display:inline-flex;align-items:center;gap:var(--sp-2);transition:all 0.2s;">
                 <i class="fa-solid fa-right-from-bracket"></i> Volver a mi cuenta
             </a>
         </div>
@@ -67,7 +67,7 @@
                 {{-- Remote server banner indicator --}}
                 @if(App\Shell\ServerContext::isRemote())
                     <div
-                        style="background:rgba(137,180,250,0.1);border:1px solid rgba(137,180,250,0.25);border-radius:8px;padding:8px 12px;margin:12px;font-size:11px;color:#89b4fa;display:flex;align-items:center;gap:8px;">
+                        style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);border-radius:var(--radius-sm);padding:var(--sp-2) var(--sp-3);margin:var(--sp-3);font-size:var(--text-xs);color:var(--info);display:flex;align-items:center;gap:var(--sp-2);">
                         <i class="fa-solid fa-server fa-pulse"></i>
                         <div style="min-width:0;flex:1;">
                             <div style="font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
@@ -295,7 +295,7 @@
                         Configuración
                         @if(\App\Services\UpdateService::isUpdateAvailableCached())
                             <span title="Actualización de LaraPanel disponible"
-                                style="width:8px;height:8px;background:#fbbf24;border-radius:50%;box-shadow:0 0 10px #fbbf24;display:inline-block;margin-right:12px;animation:pulse 2s infinite;"></span>
+                                style="width:8px;height:8px;background:var(--warning);border-radius:var(--radius-pill);box-shadow:0 0 10px var(--warning);display:inline-block;margin-right:var(--sp-3);animation:pulse 2s infinite;"></span>
                         @endif
                     </a>
                     <a href="{{ route('admin.api-tokens') }}"

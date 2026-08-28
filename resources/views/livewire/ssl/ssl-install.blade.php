@@ -16,7 +16,7 @@
 
     {{-- Success --}}
     @if($success)
-    <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:28px;text-align:center;">
+    <div style="background:color-mix(in srgb, var(--success) 10%, transparent);border:1px solid color-mix(in srgb, var(--success) 30%, transparent);border-radius:var(--radius);padding:28px;text-align:center;">
         <i class="fa-solid fa-circle-check" style="font-size:42px;color:var(--success);display:block;margin-bottom:14px;"></i>
         <div style="font-size:16px;font-weight:700;margin-bottom:8px;">¡Certificado instalado!</div>
         <div style="font-size:13px;color:var(--text-secondary);margin-bottom:18px;">{{ $successMsg }}</div>
@@ -31,7 +31,7 @@
 
     {{-- Cert preview card --}}
     @if(!empty($certInfo))
-    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:16px;margin-bottom:20px;">
+    <div style="background:color-mix(in srgb, var(--accent) 8%, transparent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px;">
         <div style="font-size:12px;font-weight:600;color:var(--accent-light);margin-bottom:10px;">
             <i class="fa-solid fa-magnifying-glass"></i> Información del certificado detectada
         </div>
@@ -126,7 +126,7 @@ MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQC2...
         </div>
 
         {{-- Validation warning --}}
-        <div style="background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:12px 14px;margin-bottom:20px;font-size:12px;color:var(--text-secondary);">
+        <div style="background:color-mix(in srgb, var(--warning) 7%, transparent);border:1px solid color-mix(in srgb, var(--warning) 20%, transparent);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:20px;font-size:12px;color:var(--text-secondary);">
             <i class="fa-solid fa-triangle-exclamation" style="color:var(--warning);margin-right:6px;"></i>
             LaraPanel verificará que la llave privada corresponde al certificado y que el cert es válido para el dominio seleccionado antes de instalarlo.
         </div>

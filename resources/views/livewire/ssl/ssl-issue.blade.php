@@ -6,7 +6,7 @@
         <a href="{{ route('ssl.index') }}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-arrow-left"></i></a>
         <div>
             <h1 class="page-title">
-                <i class="fa-solid fa-certificate" style="color:#f0a500;"></i> Emitir con Let's Encrypt
+                <i class="fa-solid fa-certificate" style="color:var(--warning);"></i> Emitir con Let's Encrypt
             </h1>
             <p class="page-subtitle">
                 Certificado SSL gratuito y automático. Válido 90 días, con auto-renovación.
@@ -16,7 +16,7 @@
 
     {{-- Success --}}
     @if($success)
-    <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:28px;text-align:center;margin-bottom:20px;">
+    <div style="background:color-mix(in srgb, var(--success) 10%, transparent);border:1px solid color-mix(in srgb, var(--success) 30%, transparent);border-radius:var(--radius);padding:28px;text-align:center;margin-bottom:20px;">
         <i class="fa-solid fa-circle-check" style="font-size:42px;color:var(--success);display:block;margin-bottom:14px;"></i>
         <div style="font-size:16px;font-weight:700;margin-bottom:8px;">¡SSL Activado!</div>
         <div style="font-size:13px;color:var(--text-secondary);margin-bottom:18px;">{{ $successMsg }}</div>
@@ -73,7 +73,7 @@
                 $canWildcard = $selectedDomain && $selectedDomain->type === 'main';
             @endphp
             <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:20px;">
-                <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;cursor:pointer;">
+                <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--radius-sm);cursor:pointer;">
                     <input type="checkbox" wire:model="includeWww" style="accent-color:var(--accent);width:16px;height:16px;" {{ ($isWildcard || !$canWildcard) ? 'disabled' : '' }}>
                     <div>
                         <div style="font-size:13px;font-weight:600;{{ $isWildcard ? 'color:var(--text-muted);' : '' }}">Incluir www.{{ $domainId ? ($selectedDomain?->name ?? 'dominio.com') : 'dominio.com' }}</div>
@@ -81,7 +81,7 @@
                     </div>
                 </label>
 
-                <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;cursor:pointer;{{ !$canWildcard ? 'opacity:0.5;' : '' }}">
+                <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--radius-sm);cursor:pointer;{{ !$canWildcard ? 'opacity:0.5;' : '' }}">
                     <input type="checkbox" wire:model.live="isWildcard" style="accent-color:var(--accent);width:16px;height:16px;" {{ !$canWildcard ? 'disabled' : '' }}>
                     <div>
                         <div style="font-size:13px;font-weight:600;">Certificado Wildcard (*.{{ $domainId ? ($selectedDomain?->name ?? 'dominio.com') : 'dominio.com' }}) — recomendado</div>
@@ -112,9 +112,9 @@
                 @if(count($extraSans) > 0)
                 <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;">
                     @foreach($extraSans as $i => $san)
-                    <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);border-radius:20px;font-size:12px;">
+                    <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:color-mix(in srgb, var(--accent) 12%, transparent);border:1px solid color-mix(in srgb, var(--accent) 25%, transparent);border-radius:20px;font-size:12px;">
                         {{ $san }}
-                        <button wire:click="removeSan({{ $i }})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0;font-size:12px;">
+                        <button wire:click="removeSan({{ $i }})" class="btn btn-ghost btn-sm" style="padding:0;">
                             <i class="fa-solid fa-times"></i>
                         </button>
                     </span>
@@ -125,7 +125,7 @@
 
             {{-- What will happen --}}
             @if($domainId)
-            <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:10px;padding:14px;margin-bottom:20px;">
+            <div style="background:color-mix(in srgb, var(--success) 6%, transparent);border:1px solid color-mix(in srgb, var(--success) 15%, transparent);border-radius:10px;padding:14px;margin-bottom:20px;">
                 <div style="font-size:12px;font-weight:600;color:var(--success);margin-bottom:8px;">
                     <i class="fa-solid fa-list-check"></i> Lo que ocurrirá
                 </div>
@@ -146,7 +146,7 @@
 
             <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--glass-border);">
                 <a href="{{ route('ssl.index') }}" class="btn btn-ghost">Cancelar</a>
-                <button wire:click="issue" class="btn btn-primary" style="background:linear-gradient(135deg,#059669,#10b981);">
+                <button wire:click="issue" class="btn btn-primary" style="background:linear-gradient(135deg, color-mix(in srgb, var(--success) 80%, #000), var(--success));">
                     <i class="fa-solid fa-certificate"></i> Emitir certificado SSL
                 </button>
             </div>

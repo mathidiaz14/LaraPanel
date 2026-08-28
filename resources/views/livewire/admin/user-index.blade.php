@@ -1,21 +1,21 @@
 <div>
     @if(session()->has('message'))
-        <div class="alert alert-success" style="margin-bottom:20px;">
+        <div class="alert alert-success" style="margin-bottom:var(--sp-6);">
             <i class="fa-solid fa-check-circle"></i> {{ session('message') }}
         </div>
     @endif
     @if(session()->has('error'))
-        <div class="alert alert-danger" style="margin-bottom:20px;">
+        <div class="alert alert-danger" style="margin-bottom:var(--sp-6);">
             <i class="fa-solid fa-triangle-exclamation"></i> {{ session('error') }}
         </div>
     @endif
 
     @if(!$isEditing)
-        <div class="glass" style="padding:24px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
+        <div class="glass" style="padding:var(--sp-6);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-6);">
                 <div>
-                    <h2 style="font-size:18px;font-weight:700;"><i class="fa-solid fa-users" style="color:var(--accent-light);margin-right:8px;"></i> Cuentas de Usuario</h2>
-                    <p style="font-size:12px;color:var(--text-muted);">Administra clientes, revendedores y administradores.</p>
+                    <h2 style="font-size:var(--text-lg);font-weight:700;"><i class="fa-solid fa-users" style="color:var(--accent-light);margin-right:var(--sp-2);"></i> Cuentas de Usuario</h2>
+                    <p style="font-size:var(--text-sm);color:var(--text-muted);">Administra clientes, revendedores y administradores.</p>
                 </div>
                 <button wire:click="create" class="btn btn-primary"><i class="fa-solid fa-user-plus"></i> Nuevo Usuario</button>
             </div>
@@ -37,7 +37,7 @@
                         <tr>
                             <td>
                                 <div style="font-weight:600;">{{ $user->name }}</div>
-                                <div style="font-size:11px;color:var(--text-muted);">{{ $user->email }}</div>
+                                <div style="font-size:var(--text-xs);color:var(--text-muted);">{{ $user->email }}</div>
                             </td>
                             <td>
                                 @if($user->role === 'admin')
@@ -50,12 +50,12 @@
                             </td>
                             <td>
                                 @if($user->plan)
-                                    <span style="font-size:12px;">{{ $user->plan->name }}</span>
+                                    <span style="font-size:var(--text-sm);">{{ $user->plan->name }}</span>
                                 @else
-                                    <span style="font-size:12px;color:var(--text-muted);">Ninguno</span>
+                                    <span style="font-size:var(--text-sm);color:var(--text-muted);">Ninguno</span>
                                 @endif
                             </td>
-                            <td><span class="badge" style="background:rgba(255,255,255,0.1);">{{ $user->domains_count }}</span></td>
+                            <td><span class="badge badge-muted">{{ $user->domains_count }}</span></td>
                             <td>
                                 @if($user->is_active)
                                     <span class="badge badge-success">Activo</span>
@@ -65,7 +65,7 @@
                             </td>
                             <td>
                                 @if($user->id !== auth()->id())
-                                    <a href="{{ route('admin.impersonate.start', $user->id) }}" class="btn btn-ghost btn-sm" title="Iniciar sesión como {{ $user->name }}" style="color:var(--accent-light); margin-right: 4px;">
+                                    <a href="{{ route('admin.impersonate.start', $user->id) }}" class="btn btn-ghost btn-sm" title="Iniciar sesión como {{ $user->name }}" style="color:var(--accent-light); margin-right: var(--sp-1);">
                                         <i class="fa-solid fa-user-secret"></i>
                                     </a>
                                 @endif
@@ -84,28 +84,28 @@
             </div>
         </div>
     @else
-        <div class="glass" style="padding:24px;">
-            <h2 style="font-size:18px;font-weight:700;margin-bottom:24px;">{{ $userId ? 'Editar Usuario' : 'Crear Usuario' }}</h2>
+        <div class="glass" style="padding:var(--sp-6);">
+            <h2 style="font-size:var(--text-lg);font-weight:700;margin-bottom:var(--sp-6);">{{ $userId ? 'Editar Usuario' : 'Crear Usuario' }}</h2>
             
             <form wire:submit.prevent="save">
-                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:20px;margin-bottom:20px;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:var(--sp-6);margin-bottom:var(--sp-6);">
                     <div class="form-group">
                         <label class="form-label">Nombre Completo</label>
                         <input type="text" wire:model="name" class="form-input" required>
-                        @error('name') <span style="color:var(--danger);font-size:11px;">{{ $message }}</span> @enderror
+                        @error('name') <span style="color:var(--danger);font-size:var(--text-xs);">{{ $message }}</span> @enderror
                     </div>
                     <div class="form-group">
                         <label class="form-label">Correo Electrónico</label>
                         <input type="email" wire:model="email" class="form-input" required>
-                        @error('email') <span style="color:var(--danger);font-size:11px;">{{ $message }}</span> @enderror
+                        @error('email') <span style="color:var(--danger);font-size:var(--text-xs);">{{ $message }}</span> @enderror
                     </div>
                 </div>
 
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-6);margin-bottom:var(--sp-6);">
                     <div class="form-group">
                         <label class="form-label">Contraseña</label>
                         <input type="password" wire:model="password" class="form-input" placeholder="{{ $userId ? 'Dejar en blanco para no cambiar' : 'Requerida' }}">
-                        @error('password') <span style="color:var(--danger);font-size:11px;">{{ $message }}</span> @enderror
+                        @error('password') <span style="color:var(--danger);font-size:var(--text-xs);">{{ $message }}</span> @enderror
                     </div>
                     <div class="form-group">
                         <label class="form-label">Rol del Sistema</label>
@@ -121,7 +121,7 @@
                     </div>
                 </div>
 
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:30px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-6);margin-bottom:var(--sp-8);">
                     <div class="form-group">
                         <label class="form-label">Plan de Hosting Asignado</label>
                         <select wire:model="plan_id" class="form-input">
@@ -130,22 +130,22 @@
                                 <option value="{{ $plan->id }}">{{ $plan->name }} (${{ $plan->price }}/m)</option>
                             @endforeach
                         </select>
-                        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Define los límites de dominios y disco.</div>
+                        <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--sp-1);">Define los límites de dominios y disco.</div>
                     </div>
                     <div class="form-group" style="display:flex;flex-direction:column;justify-content:center;">
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding-top:16px;">
+                        <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;font-size:var(--text-sm);padding-top:var(--sp-4);">
                             <input type="checkbox" wire:model="is_active"> 
-                            <span class="{{ $is_active ? 'text-success' : 'text-danger' }}">
+                            <span class="badge {{ $is_active ? 'badge-success' : 'badge-danger' }}">
                                 {{ $is_active ? 'Cuenta Activa' : 'Cuenta Suspendida' }}
                             </span>
                         </label>
                         @if(!$is_active && $userId)
-                            <div style="font-size:11px;color:var(--danger);margin-top:4px;">Nota: Al suspender, se apagarán los vhosts de Nginx.</div>
+                            <div style="font-size:var(--text-xs);color:var(--danger);margin-top:var(--sp-1);">Nota: Al suspender, se apagarán los vhosts de Nginx.</div>
                         @endif
                     </div>
                 </div>
 
-                <div style="display:flex;justify-content:flex-end;gap:12px;">
+                <div style="display:flex;justify-content:flex-end;gap:var(--sp-3);">
                     <button type="button" wire:click="resetForm" class="btn btn-ghost">Cancelar</button>
                     <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Guardar Usuario</button>
                 </div>

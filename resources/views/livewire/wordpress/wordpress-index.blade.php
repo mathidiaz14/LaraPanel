@@ -1,12 +1,12 @@
 <div style="display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start;">
     {{-- Sidebar: Instalaciones y Dominios --}}
-    <div class="glass lp-panel" style="padding:16px;">
+    <div class="glass lp-panel" style="padding:var(--sp-4);">
         <h2 class="panel-title" style="margin-bottom:16px;"><i class="fa-brands fa-wordpress" style="color:var(--info);margin-right:8px;"></i> Dominios</h2>
         
         <div style="display:flex;flex-direction:column;gap:8px;">
             @foreach($domains as $domain)
             <button wire:click="selectDomain('{{ $domain['name'] }}')" 
-                style="width:100%;text-align:left;padding:12px;border-radius:8px;border:1px solid {{ ($selectedDomain === $domain['name']) ? 'rgba(99,102,241,0.5)' : 'var(--glass-border)' }};background:{{ ($selectedDomain === $domain['name']) ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)' }};cursor:pointer;transition:all 0.2s;display:flex;justify-content:space-between;align-items:center;">
+                style="width:100%;text-align:left;padding:12px;border-radius:var(--radius-sm);border:1px solid {{ ($selectedDomain === $domain['name']) ? 'rgba(99,102,241,0.5)' : 'var(--glass-border)' }};background:{{ ($selectedDomain === $domain['name']) ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)' }};cursor:pointer;transition:all 0.2s;display:flex;justify-content:space-between;align-items:center;">
                 <div>
                     <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">{{ $domain['name'] }}</div>
                     @if($domain['has_wp'])
@@ -47,15 +47,15 @@
                     </div>
                     
                     <div class="lp-three-col" style="margin-bottom:24px;">
-                        <div style="background:rgba(255,255,255,0.02);padding:16px;border-radius:8px;border:1px solid var(--glass-border);">
+                        <div style="background:var(--glass-bg);padding:var(--sp-4);border-radius:var(--radius-sm);border:1px solid var(--glass-border);">
                             <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Versión Core</div>
                             <div style="font-size:18px;font-weight:700;">6.5.2</div>
                         </div>
-                        <div style="background:rgba(255,255,255,0.02);padding:16px;border-radius:8px;border:1px solid var(--glass-border);">
+                        <div style="background:var(--glass-bg);padding:var(--sp-4);border-radius:var(--radius-sm);border:1px solid var(--glass-border);">
                             <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Estado DB</div>
-                            <div style="font-size:14px;font-weight:600;color:#27c93f;">Conectada</div>
+                            <div style="font-size:14px;font-weight:600;color:var(--success);">Conectada</div>
                         </div>
-                        <div style="background:rgba(255,255,255,0.02);padding:16px;border-radius:8px;border:1px solid var(--glass-border);">
+                        <div style="background:var(--glass-bg);padding:var(--sp-4);border-radius:var(--radius-sm);border:1px solid var(--glass-border);">
                             <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">Auto-Updates</div>
                             <div style="font-size:14px;font-weight:600;color:var(--warning);">Solo Menores</div>
                         </div>
@@ -80,11 +80,11 @@
                             {{ $installSuccess ? 'Instalación exitosa' : 'Ocurrió un error' }}
                         </div>
                         
-                        <pre style="background:rgba(0,0,0,0.5);border:1px solid var(--glass-border);border-radius:8px;padding:16px;font-family:monospace;font-size:11px;color:#cdd6f4;line-height:1.6;white-space:pre-wrap;margin-bottom:24px;">{{ $installOutput }}</pre>
+                        <pre style="background:rgba(0,0,0,0.5);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:var(--sp-4);font-family:monospace;font-size:11px;color:#cdd6f4;line-height:1.6;white-space:pre-wrap;margin-bottom:24px;">{{ $installOutput }}</pre>
                         
                         @if($installSuccess)
-                        <div style="background:rgba(39,201,63,0.1);border:1px solid rgba(39,201,63,0.3);padding:16px;border-radius:8px;">
-                            <h3 style="font-size:14px;font-weight:700;color:#27c93f;margin-bottom:12px;">Tus credenciales de administrador:</h3>
+                        <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);padding:var(--sp-4);border-radius:var(--radius-sm);">
+                            <h3 style="font-size:14px;font-weight:700;color:var(--success);margin-bottom:12px;">Tus credenciales de administrador:</h3>
                             <div style="display:flex;gap:16px;margin-bottom:8px;">
                                 <div style="width:80px;font-size:12px;color:var(--text-muted);">URL Admin:</div>
                                 <div style="font-size:12px;font-weight:600;"><a href="https://{{ $selectedDomain }}/wp-admin" target="_blank" style="color:var(--accent-light);">https://{{ $selectedDomain }}/wp-admin</a></div>

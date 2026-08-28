@@ -361,7 +361,7 @@
                 <button wire:click="prepareZip" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(251,191,36,0.1);color:var(--warning);border-radius:8px;padding:6px 12px;font-size:12px;">
                     <i class="fa-solid fa-file-zipper"></i> Comprimir
                 </button>
-                <button wire:click="prepareBulkMove" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(99,102,241,0.1);color:#a5b4fc;border-radius:8px;padding:6px 12px;font-size:12px;">
+                <button wire:click="prepareBulkMove" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(99,102,241,0.1);color:var(--accent-light);border-radius:var(--radius-sm);padding:6px 12px;font-size:12px;">
                     <i class="fa-solid fa-arrows-up-down-left-right"></i> Mover
                 </button>
                 <button wire:click="prepareBulkCopy" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(16,185,129,0.1);color:#6ee7b7;border-radius:8px;padding:6px 12px;font-size:12px;">
@@ -471,7 +471,7 @@
                 <i class="fa-solid fa-folder-plus" style="color:var(--accent-light);"></i> 
                 <span>Nueva Carpeta</span>
             </h3>
-            <input type="text" wire:model="newFolderName" class="form-input" placeholder="Escribe el nombre de la carpeta..." autofocus style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:white;">
+            <input type="text" wire:model="newFolderName" class="form-input" placeholder="Escribe el nombre de la carpeta..." autofocus style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:var(--text-primary);">
             @error('newFolderName') <div style="font-size:11px;color:#f87171;margin-top:6px;">{{ $message }}</div> @enderror
                 <div class="fm-modal-footer">
                     <button wire:click="closeCreateFolderModal" class="btn btn-ghost btn-sm">Cancelar</button>
@@ -617,7 +617,7 @@
                 </div>
 
                 {{-- Language selector --}}
-                <select id="editor-language-select" onchange="changeEditorLanguage(this.value)" style="background:rgba(0,0,0,0.4);border:1px solid var(--glass-border);color:white;border-radius:6px;padding:6px 12px;font-size:12px;outline:none;cursor:pointer;">
+                <select id="editor-language-select" onchange="changeEditorLanguage(this.value)" style="background:rgba(0,0,0,0.4);border:1px solid var(--glass-border);color:var(--text-primary);border-radius:6px;padding:6px 12px;font-size:12px;outline:none;cursor:pointer;">
                     <option value="plaintext">Texto Plano</option>
                     <option value="php">PHP</option>
                     <option value="javascript">JavaScript</option>

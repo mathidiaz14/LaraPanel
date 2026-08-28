@@ -17,7 +17,7 @@
         </div>
         @endif
 
-        <div class="glass" style="padding:28px;">
+        <div class="glass lp-panel">
             {{-- Domain Type --}}
             <div class="form-group">
                 <label class="form-label">Tipo de dominio</label>
@@ -30,7 +30,7 @@
                     ] as $val => [$icon, $label, $desc])
                     <label style="cursor:pointer;">
                         <input type="radio" wire:model.live="type" value="{{ $val }}" style="display:none;">
-                        <div style="padding:12px 8px;border-radius:8px;text-align:center;border:1px solid {{ $type === $val ? 'rgba(99,102,241,0.5)' : 'var(--glass-border)' }};background:{{ $type === $val ? 'rgba(99,102,241,0.12)' : 'var(--glass-bg)' }};transition:all 0.2s;">
+                        <div style="padding:12px 8px;border-radius:var(--radius-sm);text-align:center;border:1px solid {{ $type === $val ? 'color-mix(in srgb, var(--accent) 50%, transparent)' : 'var(--glass-border)' }};background:{{ $type === $val ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : 'var(--glass-bg)' }};transition:all 0.2s;">
                             <i class="fa-solid {{ $icon }}" style="font-size:18px;color:{{ $type === $val ? 'var(--accent-light)' : 'var(--text-muted)' }};margin-bottom:6px;display:block;"></i>
                             <div style="font-size:12px;font-weight:600;color:{{ $type === $val ? 'var(--text-primary)' : 'var(--text-secondary)' }};">{{ $label }}</div>
                             <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">{{ $desc }}</div>

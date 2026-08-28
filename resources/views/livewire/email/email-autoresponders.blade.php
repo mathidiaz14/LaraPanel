@@ -22,12 +22,12 @@
             <h2 style="font-size:14px;font-weight:700;margin-bottom:14px;">Seleccionar Buzón</h2>
             @if($accounts->isEmpty())
             <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px;">
-                No hay buzones activos. Crea uno primero en <a href="{{ route('email.index') }}" style="color:var(--accent-light);">Buzones</a>.
+                No hay buzones activos. Crea uno primero en <a href="{{ route('email.index') }}" class="btn btn-ghost btn-sm">Buzones</a>.
             </div>
             @else
             @foreach($accounts as $account)
             <button wire:click="selectAccount({{ $account->id }})"
-                style="width:100%;text-align:left;background:{{ $selectedAccountId === $account->id ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)' }};border:1px solid {{ $selectedAccountId === $account->id ? 'rgba(99,102,241,0.4)' : 'var(--glass-border)' }};border-radius:8px;padding:10px 12px;cursor:pointer;margin-bottom:6px;display:flex;align-items:center;gap:8px;transition:all 0.2s;">
+                style="width:100%;text-align:left;background:{{ $selectedAccountId === $account->id ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'var(--glass-bg)' }};border:1px solid {{ $selectedAccountId === $account->id ? 'color-mix(in srgb, var(--accent) 40%, transparent)' : 'var(--glass-border)' }};border-radius:var(--radius-sm);padding:10px 12px;cursor:pointer;margin-bottom:6px;display:flex;align-items:center;gap:8px;transition:all 0.2s;">
                 <i class="fa-solid fa-inbox" style="color:{{ $selectedAccountId === $account->id ? 'var(--accent-light)' : 'var(--text-muted)' }};"></i>
                 <div>
                     <div style="font-size:12px;font-weight:600;color:var(--text-primary);">{{ $account->email }}</div>
@@ -110,7 +110,7 @@
                 </h2>
                 <div style="display:flex;flex-direction:column;gap:10px;">
                     @foreach($autoresponders as $ar)
-                    <div style="background:rgba(255,255,255,0.04);border:1px solid {{ $ar->isCurrentlyActive() ? 'rgba(16,185,129,0.25)' : 'var(--glass-border)' }};border-radius:10px;padding:14px 16px;">
+                    <div style="background:var(--glass-bg);border:1px solid {{ $ar->isCurrentlyActive() ? 'color-mix(in srgb, var(--success) 25%, transparent)' : 'var(--glass-border)' }};border-radius:var(--radius-sm);padding:14px 16px;">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                             <div style="display:flex;align-items:center;gap:8px;">
                                 <span class="badge {{ $ar->isCurrentlyActive() ? 'badge-success' : 'badge-muted' }}" style="font-size:10px;">

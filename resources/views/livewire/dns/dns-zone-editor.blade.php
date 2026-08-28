@@ -110,7 +110,7 @@
                     @foreach($records as $record)
                     @if($editingId === $record->id)
                     {{-- Inline Edit Row --}}
-                    <tr style="background:rgba(99,102,241,0.06);">
+                    <tr style="background:color-mix(in srgb, var(--accent) 6%, transparent);">
                         <td><input type="text" wire:model="editName" class="form-input" style="font-size:11px;padding:4px 8px;font-family:monospace;"></td>
                         <td><span class="badge {{ $record->typeBadgeClass() }}">{{ $record->type }}</span></td>
                         <td><input type="text" wire:model="editContent" class="form-input" style="font-size:11px;padding:4px 8px;font-family:monospace;"></td>

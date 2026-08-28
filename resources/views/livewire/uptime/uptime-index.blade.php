@@ -1,9 +1,9 @@
 <div>
     {{-- Header --}}
-    <div class="header-banner" style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap;">
+    <div class="header-banner" style="margin-bottom: var(--sp-8); display: flex; justify-content: space-between; align-items: center; gap: var(--sp-6); flex-wrap: wrap;">
         <div>
             <h1 class="page-title" style="margin:0;">Monitor de Servicios (Uptime)</h1>
-            <p class="page-subtitle" style="margin: 8px 0 0 0;">Monitorea tus sitios web y contenedores Docker en tiempo real.</p>
+            <p class="page-subtitle" style="margin: var(--sp-2) 0 0 0;">Monitorea tus sitios web y contenedores Docker en tiempo real.</p>
         </div>
         <button wire:click="$set('showCreateModal', true)" class="btn btn-primary">
             <i class="fa-solid fa-plus"></i> Nuevo Monitor
@@ -12,10 +12,10 @@
 
     {{-- Alerts --}}
     @if($successMessage)
-        <div class="alert alert-success" style="margin-bottom:20px;">{{ $successMessage }}</div>
+        <div class="alert alert-success" style="margin-bottom:var(--sp-6);">{{ $successMessage }}</div>
     @endif
     @if($errorMessage)
-        <div class="alert alert-error" style="margin-bottom:20px;">{{ $errorMessage }}</div>
+        <div class="alert alert-error" style="margin-bottom:var(--sp-6);">{{ $errorMessage }}</div>
     @endif
 
     {{-- Monitor List --}}
@@ -55,10 +55,10 @@
                     $icon = 'hourglass-half';
                 }
             @endphp
-            <div class="glass" style="padding:16px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+            <div class="glass" style="padding:var(--sp-4) var(--sp-6);display:flex;align-items:center;gap:var(--sp-6);flex-wrap:wrap;">
                 
                 {{-- Status Icon --}}
-                <div style="min-width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:{{ $statusBg }};border:1px solid {{ $statusBorder }};" title="Estado: {{ strtoupper($monitor->status) }}">
+                <div style="min-width:48px;height:48px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;background:{{ $statusBg }};border:1px solid {{ $statusBorder }};" title="Estado: {{ strtoupper($monitor->status) }}">
                     <i class="fa-solid fa-{{ $icon }}" style="color:{{ $statusColor }};font-size:20px;"></i>
                 </div>
                 
@@ -89,21 +89,21 @@
                 
                 {{-- Actions --}}
                 <div style="display:flex;gap:8px;margin-left:auto;">
-                    <button wire:click="togglePause({{ $monitor->id }})" class="btn btn-ghost btn-sm" title="{{ $monitor->status === 'paused' ? 'Reanudar' : 'Pausar' }}" style="padding:6px 12px;">
+                    <button wire:click="togglePause({{ $monitor->id }})" class="btn btn-ghost btn-sm btn-icon" title="{{ $monitor->status === 'paused' ? 'Reanudar' : 'Pausar' }}">
                         @if($monitor->status === 'paused')
                             <i class="fa-solid fa-play"></i>
                         @else
                             <i class="fa-solid fa-pause"></i>
                         @endif
                     </button>
-                    <button wire:click="deleteMonitor({{ $monitor->id }})" onclick="return confirm('¿Seguro que deseas eliminar este monitor?')" class="btn btn-danger btn-sm" title="Eliminar" style="padding:6px 12px;">
+                    <button wire:click="deleteMonitor({{ $monitor->id }})" onclick="return confirm('¿Seguro que deseas eliminar este monitor?')" class="btn btn-danger btn-sm btn-icon" title="Eliminar">
                         <i class="fa-solid fa-trash"></i>
                     </button>
                 </div>
                 
                 {{-- Error Message (if down) --}}
                 @if($monitor->status === 'down' && $monitor->last_error)
-                <div style="width:100%;font-size:12px;color:#f87171;background:rgba(239,68,68,0.1);padding:10px 16px;border-radius:8px;border:1px solid rgba(239,68,68,0.2);margin-top:10px;">
+                <div style="width:100%;font-size:12px;color:var(--danger);background:rgba(239,68,68,0.1);padding:var(--sp-2) var(--sp-4);border-radius:var(--radius-sm);border:1px solid rgba(239,68,68,0.2);margin-top:var(--sp-2);">
                     <strong><i class="fa-solid fa-triangle-exclamation"></i> Error detectado:</strong> {{ $monitor->last_error }}
                 </div>
                 @endif
@@ -116,21 +116,21 @@
     {{-- Create Modal --}}
     @if($showCreateModal)
     <div style="position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;">
-        <div class="glass-elevated" style="width:100%;max-width:400px;padding:28px;border-radius:16px;border:1px solid var(--glass-border);background:rgba(15,23,42,0.95);">
+        <div class="glass-elevated" style="width:100%;max-width:400px;padding:var(--sp-8);border-radius:var(--radius-lg);border:1px solid var(--glass-border);background:var(--bg-elevated);">
             <h3 style="font-size:18px;font-weight:700;margin:0 0 20px;">Añadir Monitor</h3>
             
             <form wire:submit.prevent="createMonitor">
                 <div class="form-group" style="margin-bottom:15px;">
                     <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">Nombre (Ej: Mi Blog)</label>
-                    <input type="text" wire:model="name" class="form-input" required style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:white;">
+                    <input type="text" wire:model="name" class="form-input" required style="width:100%;padding:10px;background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--text-primary);">
                     @error('name') <span style="color:var(--danger);font-size:11px;">{{ $message }}</span> @enderror
                 </div>
                 
                 <div class="form-group" style="margin-bottom:15px;">
                     <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">Tipo de Servicio</label>
-                    <select wire:model.live="type" class="form-input" style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:white;">
-                        <option value="http" style="color:black;">Sitio Web (HTTP/HTTPS)</option>
-                        <option value="docker" style="color:black;">Contenedor Docker</option>
+                    <select wire:model.live="type" class="form-input" style="width:100%;padding:10px;background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--text-primary);">
+                        <option value="http" style="color:var(--text-primary);">Sitio Web (HTTP/HTTPS)</option>
+                        <option value="docker" style="color:var(--text-primary);">Contenedor Docker</option>
                     </select>
                 </div>
                 
@@ -138,13 +138,13 @@
                     <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">
                         @if($type === 'http') URL (Ej: https://miweb.com) @else Nombre del Contenedor (Ej: mysql_db) @endif
                     </label>
-                    <input type="text" wire:model="target" class="form-input" required style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:white;">
+                    <input type="text" wire:model="target" class="form-input" required style="width:100%;padding:10px;background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--text-primary);">
                     @error('target') <span style="color:var(--danger);font-size:11px;">{{ $message }}</span> @enderror
                 </div>
                 
                 <div class="form-group" style="margin-bottom:20px;">
                     <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;">Comprobar cada (Minutos)</label>
-                    <input type="number" wire:model="interval_minutes" class="form-input" required min="1" max="60" style="width:100%;padding:10px;background:rgba(0,0,0,0.2);border:1px solid var(--glass-border);border-radius:8px;color:white;">
+                    <input type="number" wire:model="interval_minutes" class="form-input" required min="1" max="60" style="width:100%;padding:10px;background:var(--bg-elevated);border:1px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--text-primary);">
                 </div>
                 
                 <div style="display:flex;gap:10px;">

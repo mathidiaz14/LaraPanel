@@ -76,7 +76,7 @@
                                 <i class="fa-solid fa-chevron-right" style="font-size:11px;transition:transform 0.2s;" :style="expanded ? 'transform:rotate(90deg)' : ''"></i>
                             </button>
                             @endif
-                            <div style="width:34px;height:34px;border-radius:8px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.2);display:flex;align-items:center;justify-content:center;{{ !$hasSubs ? 'margin-left:24px;' : '' }}">
+                            <div style="width:34px;height:34px;border-radius:var(--radius-sm);background:color-mix(in srgb, var(--accent) 12%, transparent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);display:flex;align-items:center;justify-content:center;{{ !$hasSubs ? 'margin-left:24px;' : '' }}">
                                 <i class="fa-solid fa-globe" style="color:var(--accent-light);font-size:14px;"></i>
                             </div>
                             <div>
@@ -155,10 +155,10 @@
                 </tr>
 
                 @foreach($subdomains as $sub)
-                <tr wire:key="domain-{{ $sub->id }}" x-show="expanded" style="background:rgba(255,255,255,0.015);display:none;" x-transition>
+                <tr wire:key="domain-{{ $sub->id }}" x-show="expanded" style="background:var(--glass-bg);display:none;" x-transition>
                     <td>
                         <div style="display:flex;align-items:center;gap:10px;padding-left:34px;">
-                            <div style="width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
+                            <div style="width:28px;height:28px;border-radius:var(--radius-sm);background:var(--glass-bg);border:1px solid var(--glass-hover);display:flex;align-items:center;justify-content:center;">
                                 <i class="fa-solid fa-diagram-project" style="color:var(--text-secondary);font-size:12px;"></i>
                             </div>
                             <div>
@@ -235,7 +235,7 @@
         <div class="lp-modal glass-elevated" style="max-width:480px;">
             <div class="lp-modal-body">
                 <div style="text-align:center;margin-bottom:24px;">
-                    <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,0.15);border:2px solid rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                    <div style="width:56px;height:56px;border-radius:50%;background:color-mix(in srgb, var(--danger) 15%, transparent);border:2px solid color-mix(in srgb, var(--danger) 30%, transparent);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
                         <i class="fa-solid fa-trash" style="color:var(--danger);font-size:22px;"></i>
                     </div>
                     <h2 style="font-size:18px;font-weight:700;margin-bottom:8px;">Eliminar dominio</h2>
@@ -245,7 +245,7 @@
                     </p>
                 </div>
 
-                <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:8px;cursor:pointer;margin-bottom:20px;">
+                <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:color-mix(in srgb, var(--danger) 6%, transparent);border:1px solid color-mix(in srgb, var(--danger) 20%, transparent);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:20px;">
                     <input type="checkbox" wire:model="deleteFiles" style="accent-color:var(--danger);">
                     <div>
                         <div style="font-size:13px;font-weight:600;color:var(--danger);">Eliminar archivos del servidor</div>

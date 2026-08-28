@@ -10,8 +10,8 @@
 
     {{-- Resumen Rápido (Top Widgets) --}}
     <div class="stats-row" style="margin-bottom:24px;">
-        <div class="glass-elevated" style="padding:20px;display:flex;align-items:center;gap:16px;">
-            <div style="width:48px;height:48px;border-radius:12px;background:rgba(99,102,241,0.1);color:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:24px;">
+        <div class="glass-elevated" style="padding:var(--sp-6);display:flex;align-items:center;gap:var(--sp-4);">
+            <div style="width:48px;height:48px;border-radius:var(--radius);background:rgba(79,70,229,0.1);color:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:24px;">
                 <i class="fa-solid fa-globe"></i>
             </div>
             <div>
@@ -20,8 +20,8 @@
             </div>
         </div>
 
-        <div class="glass-elevated" style="padding:20px;display:flex;align-items:center;gap:16px;">
-            <div style="width:48px;height:48px;border-radius:12px;background:rgba(39,201,63,0.1);color:var(--success);display:flex;align-items:center;justify-content:center;font-size:24px;">
+        <div class="glass-elevated" style="padding:var(--sp-6);display:flex;align-items:center;gap:var(--sp-4);">
+            <div style="width:48px;height:48px;border-radius:12px;background:rgba(16,185,129,0.1);color:var(--success);display:flex;align-items:center;justify-content:center;font-size:24px;">
                 <i class="fa-solid fa-clock-rotate-left"></i>
             </div>
             <div>
@@ -30,8 +30,8 @@
             </div>
         </div>
 
-        <div class="glass-elevated" style="padding:20px;display:flex;align-items:center;gap:16px;">
-            <div style="width:48px;height:48px;border-radius:12px;background:rgba(255,193,7,0.1);color:var(--warning);display:flex;align-items:center;justify-content:center;font-size:24px;">
+        <div class="glass-elevated" style="padding:var(--sp-6);display:flex;align-items:center;gap:var(--sp-4);">
+            <div style="width:48px;height:48px;border-radius:12px;background:rgba(245,158,11,0.1);color:var(--warning);display:flex;align-items:center;justify-content:center;font-size:24px;">
                 <i class="fa-brands fa-linux"></i>
             </div>
             <div style="min-width:0;">
@@ -40,8 +40,8 @@
             </div>
         </div>
 
-        <div class="glass-elevated" style="padding:20px;display:flex;align-items:center;gap:16px;">
-            <div style="width:48px;height:48px;border-radius:12px;background:rgba(16,185,129,0.1);color:#10b981;display:flex;align-items:center;justify-content:center;font-size:24px;">
+        <div class="glass-elevated" style="padding:var(--sp-6);display:flex;align-items:center;gap:var(--sp-4);">
+            <div style="width:48px;height:48px;border-radius:12px;background:rgba(16,185,129,0.1);color:var(--success);display:flex;align-items:center;justify-content:center;font-size:24px;">
                 <i class="fa-solid fa-server"></i>
             </div>
             <div style="min-width:0;">
@@ -50,8 +50,8 @@
             </div>
         </div>
 
-        <div class="glass-elevated" style="padding:20px;display:flex;align-items:center;gap:16px;">
-            <div style="width:48px;height:48px;border-radius:12px;background:rgba(239,68,68,0.1);color:#ef4444;display:flex;align-items:center;justify-content:center;font-size:24px;">
+        <div class="glass-elevated" style="padding:var(--sp-6);display:flex;align-items:center;gap:var(--sp-4);">
+            <div style="width:48px;height:48px;border-radius:12px;background:rgba(239,68,68,0.1);color:var(--danger);display:flex;align-items:center;justify-content:center;font-size:24px;">
                 <i class="fa-solid fa-microchip"></i>
             </div>
             <div style="min-width:0;">
@@ -64,7 +64,7 @@
 
     {{-- Estado de Recursos (Gráficas en Vivo) --}}
     @if(auth()->user()?->isAdmin() || config('larapanel.modules.monitoring'))
-    <h2 class="panel-title" style="margin-bottom:16px;border-bottom:1px solid var(--glass-border);padding-bottom:8px;">Uso de Recursos (En Vivo)</h2>
+    <h2 class="panel-title" style="margin-bottom:var(--sp-4);border-bottom:1px solid var(--glass-border);padding-bottom:var(--sp-2);">Uso de Recursos (En Vivo)</h2>
     <div class="lp-three-col" style="margin-bottom:24px;">
         
         {{-- CPU --}}
@@ -112,9 +112,9 @@
     </div>
 
     {{-- Historial de Recursos (Líneas) --}}
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;margin-top:32px;border-bottom:1px solid var(--glass-border);padding-bottom:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-4);margin-top:var(--sp-8);border-bottom:1px solid var(--glass-border);padding-bottom:var(--sp-2);">
         <h2 class="panel-title" style="margin:0;">Historial de Consumo</h2>
-        <select wire:model.live="timeRange" class="form-select form-select-sm" style="width: auto; background: var(--glass-bg); color: var(--text-primary); border: 1px solid var(--glass-border);">
+        <select wire:model.live="timeRange" class="form-input" style="width:auto;">
             <option value="1h">Última Hora</option>
             <option value="24h">Últimas 24 Horas</option>
             <option value="7d">Últimos 7 Días</option>
@@ -127,7 +127,7 @@
 
     {{-- Top Procesos (RAM) --}}
     @if(auth()->user()?->isAdmin() && !empty($topProcs))
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;margin-top:32px;border-bottom:1px solid var(--glass-border);padding-bottom:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--sp-4);margin-top:var(--sp-8);border-bottom:1px solid var(--glass-border);padding-bottom:var(--sp-2);">
         <h2 class="panel-title" style="margin:0;"><i class="fa-solid fa-memory" style="color:var(--accent-light);margin-right:8px;"></i>Top Procesos por RAM</h2>
         <a href="{{ route('processes.index') }}" class="btn btn-ghost btn-sm">
             Ver todos <i class="fa-solid fa-arrow-right"></i>
@@ -169,7 +169,7 @@
     <h2 class="panel-title" style="margin-bottom:16px;border-bottom:1px solid var(--glass-border);padding-bottom:8px;">Estado de Servicios</h2>
     <div class="stats-row">
         @foreach($services as $name => $status)
-            <div style="background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);padding:16px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;">
+            <div style="background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);padding:var(--sp-4);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:space-between;">
                 <div style="font-size:14px;font-weight:600;color:var(--text-primary);text-transform:capitalize;">{{ $name }}</div>
                 @if($status)
                     <div style="color:var(--success);font-size:12px;display:flex;align-items:center;gap:4px;font-weight:600;"><i class="fa-solid fa-circle" style="font-size:8px;"></i> Online</div>

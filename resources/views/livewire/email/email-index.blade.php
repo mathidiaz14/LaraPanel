@@ -105,13 +105,13 @@
                 @foreach($emailsByDomain as $domainId => $domainEmails)
                 @php $domainName = $domainEmails->first()?->domain?->name ?? 'Sin dominio'; @endphp
 
-                <div x-data="{ open: true }" style="margin-bottom: 12px; border: 1px solid var(--glass-border); border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.15);">
+                <div x-data="{ open: true }" style="margin-bottom: 12px; border: 1px solid var(--glass-border); border-radius:var(--radius-sm); overflow: hidden; background: rgba(0,0,0,0.15);">
                     {{-- Domain header --}}
-                    <div @click="open = !open" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(255,255,255,0.02);cursor:pointer;user-select:none;">
+                    <div @click="open = !open" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--glass-bg);cursor:pointer;user-select:none;">
                         <div style="display:flex;align-items:center;gap:8px;">
                             <i class="fa-solid fa-at" style="color:var(--accent-light);font-size:14px;"></i>
                             <span style="font-size:14px;font-weight:700;color:var(--accent-light);">{{ $domainName }}</span>
-                            <span style="font-size:11px;color:var(--text-muted);background:rgba(99,102,241,0.1);padding:2px 8px;border-radius:20px;">{{ $domainEmails->count() }} cuenta(s)</span>
+                            <span style="font-size:11px;color:var(--text-muted);background:color-mix(in srgb, var(--accent) 10%, transparent);padding:2px 8px;border-radius:20px;">{{ $domainEmails->count() }} cuenta(s)</span>
                         </div>
                         <div>
                             <i class="fa-solid fa-chevron-down" x-show="!open" style="color:var(--text-muted);font-size:12px;"></i>
@@ -140,7 +140,7 @@
                                         <div style="display:flex;align-items:center;gap:8px;">
                                             <span style="font-size:11px;font-weight:500;white-space:nowrap;">{{ $email->usedFormatted() }} / {{ $email->quotaFormatted() }}</span>
                                             @php $percent = $email->quota_bytes > 0 ? ($email->used_bytes / $email->quota_bytes) * 100 : 0; @endphp
-                                            <div style="width:40px;height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;flex-shrink:0;">
+                                            <div style="width:40px;height:5px;background:var(--glass-border);border-radius:3px;overflow:hidden;flex-shrink:0;">
                                                 <div style="width:{{ min(100, $percent) }}%;height:100%;background:{{ $percent > 85 ? 'var(--danger)' : 'var(--accent-light)' }};"></div>
                                             </div>
                                         </div>
@@ -161,7 +161,7 @@
                                         <div class="lp-row-actions">
                                             {{-- Webmail auto-login --}}
                                             <button wire:click="openWebmail({{ $email->id }})" class="btn btn-ghost btn-sm" title="Abrir Webmail">
-                                                <i class="fa-solid fa-envelope-open-text" style="color:#10b981;"></i>
+                                                <i class="fa-solid fa-envelope-open-text" style="color:var(--success);"></i>
                                             </button>
                                             {{-- Backup --}}
                                             <a href="{{ route('email.backup', $email->id) }}" class="btn btn-ghost btn-sm" title="Descargar Respaldo" target="_blank">
@@ -340,7 +340,7 @@
                         @error('zipFile') <div class="form-error">{{ $message }}</div> @enderror
                         {{-- Upload Progress Bar --}}
                         <div x-show="uploadActive" x-transition style="margin-top:10px;">
-                            <div style="width:100%;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;">
+                            <div style="width:100%;height:8px;background:var(--glass-hover);border-radius:4px;overflow:hidden;">
                                 <div style="height:100%;background:var(--accent-light);border-radius:4px;transition:width 0.3s;" :style="`width: ${uploadProgress}%`"></div>
                             </div>
                             <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text-muted);">

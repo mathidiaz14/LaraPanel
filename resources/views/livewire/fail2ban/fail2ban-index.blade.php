@@ -132,12 +132,12 @@
                             <code style="font-size:12px;color:var(--text-primary);">{{ $entry['ip'] }}</code>
                             <div style="display:flex;align-items:center;gap:8px;">
                                 @if(isset($entry['country']))
-                                <span style="font-size:10px;background:rgba(255,255,255,0.06);border-radius:4px;padding:1px 6px;color:var(--text-muted);">{{ $entry['country'] }}</span>
+                                <span style="font-size:10px;background:var(--glass-border);border-radius:4px;padding:1px 6px;color:var(--text-muted);">{{ $entry['country'] }}</span>
                                 @endif
                                 <span style="font-size:11px;color:var(--danger);font-weight:700;">{{ number_format($entry['count']) }} intentos</span>
                             </div>
                         </div>
-                        <div style="height:4px;border-radius:2px;background:rgba(255,255,255,0.06);overflow:hidden;">
+                        <div style="height:4px;border-radius:2px;background:var(--glass-border);overflow:hidden;">
                             <div style="height:100%;width:{{ $pct }}%;background:var(--danger);border-radius:2px;opacity:{{ 1 - ($i * 0.15) }};"></div>
                         </div>
                     </div>
@@ -164,7 +164,7 @@
             <h2 class="panel-title" style="margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Jails Activos</h2>
             @foreach($status['jails'] as $jail)
             <button wire:click="selectJail('{{ $jail }}')"
-                style="width:100%;text-align:left;background:{{ $selectedJail === $jail ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)' }};border:1px solid {{ $selectedJail === $jail ? 'rgba(99,102,241,0.4)' : 'var(--glass-border)' }};border-radius:8px;padding:9px 12px;cursor:pointer;margin-bottom:5px;display:flex;align-items:center;gap:8px;transition:all 0.15s;">
+                style="width:100%;text-align:left;background:{{ $selectedJail === $jail ? 'rgba(79,70,229,0.15)' : 'rgba(255,255,255,0.03)' }};border:1px solid {{ $selectedJail === $jail ? 'rgba(79,70,229,0.4)' : 'var(--glass-border)' }};border-radius:var(--radius-sm);padding:9px 12px;cursor:pointer;margin-bottom:5px;display:flex;align-items:center;gap:8px;transition:all 0.15s;">
                 <i class="fa-solid fa-bars-staggered" style="color:{{ $selectedJail === $jail ? 'var(--accent-light)' : 'var(--text-muted)' }};font-size:12px;"></i>
                 <span style="font-size:12px;font-weight:600;font-family:monospace;color:var(--text-primary);">{{ $jail }}</span>
             </button>
@@ -187,19 +187,19 @@
                 </div>
 
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
-                    <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px;text-align:center;">
+                    <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);padding:var(--sp-3);text-align:center;">
                         <div style="font-size:22px;font-weight:800;color:var(--danger);">{{ $jailStatus['currently_banned'] }}</div>
                         <div style="font-size:10px;color:var(--text-muted);">Baneadas Ahora</div>
                     </div>
-                    <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:12px;text-align:center;">
+                    <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);border-radius:var(--radius-sm);padding:var(--sp-3);text-align:center;">
                         <div style="font-size:22px;font-weight:800;color:var(--warning);">{{ $jailStatus['currently_failed'] }}</div>
                         <div style="font-size:10px;color:var(--text-muted);">Fallos Activos</div>
                     </div>
-                    <div style="background:rgba(0,0,0,0.15);border-radius:8px;padding:12px;text-align:center;">
+                    <div style="background:var(--bg-elevated);border-radius:var(--radius-sm);padding:var(--sp-3);text-align:center;">
                         <div style="font-size:22px;font-weight:800;color:var(--text-primary);">{{ number_format($jailStatus['total_banned']) }}</div>
                         <div style="font-size:10px;color:var(--text-muted);">Total Baneadas</div>
                     </div>
-                    <div style="background:rgba(0,0,0,0.15);border-radius:8px;padding:12px;text-align:center;">
+                    <div style="background:var(--bg-elevated);border-radius:var(--radius-sm);padding:var(--sp-3);text-align:center;">
                         <div style="font-size:22px;font-weight:800;color:var(--text-primary);">{{ number_format($jailStatus['total_failed']) }}</div>
                         <div style="font-size:10px;color:var(--text-muted);">Total Fallos</div>
                     </div>
@@ -210,7 +210,7 @@
                 <h3 style="font-size:13px;font-weight:700;margin-bottom:10px;">IPs Baneadas en este Jail</h3>
                 <div style="display:flex;flex-wrap:wrap;gap:6px;">
                     @foreach($jailStatus['banned_ips'] as $ip)
-                    <div style="display:flex;align-items:center;gap:4px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:6px;padding:4px 8px;">
+                    <div style="display:flex;align-items:center;gap:4px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:var(--radius-sm);padding:4px 8px;">
                         <code style="font-size:12px;color:var(--danger);">{{ $ip }}</code>
                         <button wire:click="confirmUnban('{{ $selectedJail }}','{{ $ip }}')" style="background:none;border:none;cursor:pointer;padding:2px;color:var(--success);font-size:12px;" title="Desbanear">
                             <i class="fa-solid fa-circle-xmark"></i>
@@ -232,7 +232,7 @@
                     <i class="fa-solid fa-terminal" style="margin-right:6px;"></i>
                     fail2ban-client status {{ $selectedJail }}
                 </h3>
-                <pre style="background:rgba(0,0,0,0.4);border-radius:6px;padding:12px;font-family:monospace;font-size:11px;color:#a6e3a1;line-height:1.6;white-space:pre-wrap;margin:0;">{{ $jailStatus['raw_output'] ?? '' }}</pre>
+                <pre style="background:var(--bg-base);border-radius:var(--radius-sm);padding:12px;font-family:monospace;font-size:11px;color:var(--success);line-height:1.6;white-space:pre-wrap;margin:0;">{{ $jailStatus['raw_output'] ?? '' }}</pre>
             </div>
 
         </div>
@@ -256,7 +256,7 @@
                 <i class="fa-solid fa-rotate"></i> Actualizar
             </button>
         </div>
-        <pre style="background:rgba(0,0,0,0.5);border:1px solid var(--glass-border);border-radius:8px;padding:16px;font-family:monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;max-height:550px;overflow-y:auto;margin:0;">@foreach(array_filter(explode("\n", $logTail)) as $line)@php
+        <pre style="background:var(--bg-base);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:16px;font-family:monospace;font-size:11px;line-height:1.8;white-space:pre-wrap;max-height:550px;overflow-y:auto;margin:0;">@foreach(array_filter(explode("\n", $logTail)) as $line)@php
             $color = str_contains($line,'Ban') ? '#f38ba8' : (str_contains($line,'Unban') ? '#a6e3a1' : (str_contains($line,'Found') ? '#fab387' : '#cdd6f4'));
         @endphp<span style="color:{{ $color }};">{{ $line }}</span>
 @endforeach</pre>

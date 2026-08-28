@@ -38,9 +38,9 @@
                 $domAccounts = \App\Models\EmailAccount::where('domain_id', $domain->id)->count();
             @endphp
             <button wire:click="selectDomain({{ $domain->id }})"
-                style="width:100%;text-align:left;background:{{ $selectedDomainId === $domain->id ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)' }};border:1px solid {{ $selectedDomainId === $domain->id ? 'rgba(99,102,241,0.4)' : 'var(--glass-border)' }};border-radius:8px;padding:9px 12px;cursor:pointer;margin-bottom:5px;display:flex;align-items:center;justify-content:space-between;transition:all 0.2s;">
+                style="width:100%;text-align:left;background:{{ $selectedDomainId === $domain->id ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'var(--glass-bg)' }};border:1px solid {{ $selectedDomainId === $domain->id ? 'color-mix(in srgb, var(--accent) 40%, transparent)' : 'var(--glass-border)' }};border-radius:var(--radius-sm);padding:9px 12px;cursor:pointer;margin-bottom:5px;display:flex;align-items:center;justify-content:space-between;transition:all 0.2s;">
                 <span style="font-size:12px;font-weight:600;color:var(--text-primary);">{{ $domain->name }}</span>
-                <span style="font-size:10px;background:rgba(255,255,255,0.08);border-radius:10px;padding:1px 7px;color:var(--text-muted);">{{ $domAccounts }}</span>
+                <span style="font-size:10px;background:var(--glass-border);border-radius:10px;padding:1px 7px;color:var(--text-muted);">{{ $domAccounts }}</span>
             </button>
             @endforeach
         </div>
@@ -59,11 +59,11 @@
                     </button>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
-                    <div style="text-align:center;background:rgba(0,0,0,0.15);border-radius:8px;padding:12px;">
+                    <div style="text-align:center;background:rgba(0,0,0,0.15);border-radius:var(--radius-sm);padding:12px;">
                         <div style="font-size:20px;font-weight:700;color:var(--text-primary);">{{ $accounts->count() }}</div>
                         <div style="font-size:11px;color:var(--text-muted);">Buzones</div>
                     </div>
-                    <div style="text-align:center;background:rgba(0,0,0,0.15);border-radius:8px;padding:12px;">
+                    <div style="text-align:center;background:rgba(0,0,0,0.15);border-radius:var(--radius-sm);padding:12px;">
                         @php
                             $usedFmt = $totalUsed < 1073741824
                                 ? round($totalUsed / 1048576, 1) . ' MB'
@@ -72,7 +72,7 @@
                         <div style="font-size:20px;font-weight:700;color:var(--accent-light);">{{ $usedFmt }}</div>
                         <div style="font-size:11px;color:var(--text-muted);">Espacio Usado</div>
                     </div>
-                    <div style="text-align:center;background:rgba(0,0,0,0.15);border-radius:8px;padding:12px;">
+                    <div style="text-align:center;background:rgba(0,0,0,0.15);border-radius:var(--radius-sm);padding:12px;">
                         @php
                             $quotaFmt = $totalQuota > 0
                                 ? ($totalQuota < 1073741824 ? round($totalQuota/1048576,1).' MB' : round($totalQuota/1073741824,2).' GB')
@@ -83,7 +83,7 @@
                     </div>
                 </div>
                 @if($totalQuota > 0)
-                <div style="height:8px;border-radius:4px;background:rgba(255,255,255,0.06);overflow:hidden;">
+                <div style="height:8px;border-radius:4px;background:var(--glass-hover);overflow:hidden;">
                     <div style="height:100%;width:{{ min($usedPercent, 100) }}%;background:{{ $usedPercent > 85 ? 'var(--danger)' : ($usedPercent > 60 ? 'var(--warning)' : 'var(--success)') }};border-radius:4px;transition:width 0.5s;"></div>
                 </div>
                 <div style="text-align:right;font-size:11px;color:var(--text-muted);margin-top:4px;">{{ $usedPercent }}% utilizado</div>
@@ -129,7 +129,7 @@
                                 </td>
                                 <td style="min-width:100px;">
                                     <div style="display:flex;align-items:center;gap:6px;">
-                                        <div style="flex:1;height:5px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;">
+                                        <div style="flex:1;height:5px;border-radius:3px;background:var(--glass-border);overflow:hidden;">
                                             <div style="height:100%;width:{{ $pct }}%;background:{{ $pct > 85 ? 'var(--danger)' : ($pct > 60 ? 'var(--warning)' : 'var(--success)') }};border-radius:3px;"></div>
                                         </div>
                                         <span style="font-size:10px;color:var(--text-muted);white-space:nowrap;">{{ $pct }}%</span>
@@ -151,7 +151,7 @@
         @elseif($selectedDomainId && $accounts->isEmpty())
         <div class="glass" style="padding:40px;text-align:center;">
             <i class="fa-solid fa-inbox" style="font-size:36px;opacity:0.2;margin-bottom:12px;display:block;"></i>
-            <p style="color:var(--text-secondary);">No hay buzones en este dominio. <a href="{{ route('email.index') }}" style="color:var(--accent-light);">Crear uno</a>.</p>
+                <p style="color:var(--text-secondary);">No hay buzones en este dominio. <a href="{{ route('email.index') }}" class="btn btn-ghost btn-sm">Crear uno</a>.</p>
         </div>
         @else
         <div class="glass" style="padding:60px;text-align:center;">

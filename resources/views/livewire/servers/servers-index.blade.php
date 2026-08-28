@@ -1,12 +1,12 @@
 <div>
     {{-- Messages --}}
     @if($successMessage)
-        <div style="background:rgba(166,227,161,0.1);border:1px solid rgba(166,227,161,0.3);color:#a6e3a1;padding:12px 16px;border-radius:8px;margin-bottom:20px;font-size:13px;">
-            <i class="fa-solid fa-circle-check" style="margin-right:8px;"></i> {{ $successMessage }}
+        <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:var(--success);padding:var(--sp-3) var(--sp-4);border-radius:var(--radius-sm);margin-bottom:var(--sp-6);font-size:13px;">
+            <i class="fa-solid fa-circle-check" style="margin-right:var(--sp-2);"></i> {{ $successMessage }}
         </div>
     @endif
     @if($errorMessage)
-        <div style="background:rgba(243,139,168,0.1);border:1px solid rgba(243,139,168,0.3);color:#f38ba8;padding:12px 16px;border-radius:8px;margin-bottom:20px;font-size:13px;">
+        <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:var(--danger);padding:var(--sp-3) var(--sp-4);border-radius:var(--radius-sm);margin-bottom:var(--sp-6);font-size:13px;">
             <i class="fa-solid fa-triangle-exclamation" style="margin-right:8px;"></i> {{ $errorMessage }}
         </div>
     @endif
@@ -15,10 +15,10 @@
 
         {{-- Left column: Server list --}}
         <div>
-            <div class="glass" style="padding:16px;margin-bottom:16px;">
+            <div class="glass" style="padding:var(--sp-4);margin-bottom:16px;">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                     <h3 style="font-size:14px;font-weight:700;color:var(--text-primary);">
-                        <i class="fa-solid fa-server" style="color:#89b4fa;margin-right:6px;"></i> Servidores
+                        <i class="fa-solid fa-server" style="color:var(--accent-light);margin-right:var(--sp-1);"></i> Servidores
                     </h3>
                     <button wire:click="$set('activeTab', 'add-server')" class="btn btn-primary btn-sm" style="padding:4px 8px;font-size:11px;">
                         <i class="fa-solid fa-plus"></i> Añadir
@@ -32,7 +32,7 @@
                             $statusColor = $srv->isOnline() ? '#a6e3a1' : ($srv->status === 'offline' ? '#f38ba8' : '#f9e2af');
                         @endphp
                         <div wire:click="selectServer({{ $srv->id }})"
-                             style="display:flex;align-items:center;justify-content:between;padding:10px 12px;border-radius:8px;border:1px solid {{ $isSelected ? 'rgba(137,180,250,0.4)' : 'var(--glass-border)' }};background:{{ $isSelected ? 'rgba(137,180,250,0.06)' : 'rgba(255,255,255,0.02)' }};cursor:pointer;transition:all 0.2s;text-align:left;">
+                             style="display:flex;align-items:center;justify-content:space-between;padding:var(--sp-2) var(--sp-3);border-radius:var(--radius-sm);border:1px solid {{ $isSelected ? 'rgba(79,70,229,0.4)' : 'var(--glass-border)' }};background:{{ $isSelected ? 'rgba(79,70,229,0.06)' : 'rgba(255,255,255,0.02)' }};cursor:pointer;transition:all 0.2s;text-align:left;">
                             
                             <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
                                 <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:{{ $statusColor }};box-shadow:0 0 8px {{ $statusColor }}88;flex-shrink:0;"></span>
@@ -66,7 +66,7 @@
                 {{-- Form: Add Server --}}
                 <div class="glass" style="padding:24px;">
                     <h3 style="font-size:16px;font-weight:700;margin-bottom:20px;color:var(--text-primary);">
-                        <i class="fa-solid fa-circle-plus" style="color:#a6e3a1;margin-right:8px;"></i>
+                        <i class="fa-solid fa-circle-plus" style="color:var(--success);margin-right:var(--sp-2);"></i>
                         Añadir Servidor Remoto
                     </h3>
 
@@ -114,11 +114,11 @@
                                 </div>
                                 <textarea wire:model="sshPrivateKey" class="form-input" rows="8" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;..." style="font-family:monospace;font-size:11px;line-height:1.4;"></textarea>
                                 @if($generatedPublicKey)
-                                    <div style="margin-top:12px;background:rgba(137,180,250,0.06);border:1px solid rgba(137,180,250,0.15);border-radius:8px;padding:12px 16px;">
-                                        <div style="font-size:11px;font-weight:700;color:#89b4fa;margin-bottom:6px;">
+                                    <div style="margin-top:var(--sp-3);background:rgba(79,70,229,0.06);border:1px solid rgba(79,70,229,0.15);border-radius:var(--radius-sm);padding:var(--sp-3) var(--sp-4);">
+                                        <div style="font-size:11px;font-weight:700;color:var(--accent-light);margin-bottom:var(--sp-1);">
                                             <i class="fa-solid fa-eye"></i> Clave Pública (agrega esta línea en <code>~/.ssh/authorized_keys</code> en el servidor remoto):
                                         </div>
-                                        <textarea readonly onclick="this.select()" class="form-input" rows="3" style="font-family:monospace;font-size:10px;background:rgba(0,0,0,0.25);border-color:rgba(137,180,250,0.25);color:#cdd6f4;">{{ $generatedPublicKey }}</textarea>
+                                        <textarea readonly onclick="this.select()" class="form-input" rows="3" style="font-family:monospace;font-size:10px;background:var(--bg-elevated);border-color:rgba(79,70,229,0.25);color:var(--text-primary);">{{ $generatedPublicKey }}</textarea>
                                     </div>
                                 @endif
                             </div>
@@ -145,10 +145,10 @@
             @else
                 {{-- Server Info & Subtabs --}}
                 @if($selectedServer)
-                    <div class="glass" style="padding:20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
+                    <div class="glass" style="padding:var(--sp-6);margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
                         <div>
                             <h2 style="font-size:18px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:10px;">
-                                <i class="fa-solid fa-server" style="color:#89b4fa;"></i>
+                                <i class="fa-solid fa-server" style="color:var(--accent-light);"></i>
                                 {{ $selectedServer->name }}
                                 <span class="badge {{ $selectedServer->statusBadgeClass() }}" style="font-size:10px;padding:2px 8px;">
                                     <i class="fa-solid {{ $selectedServer->statusIcon() }}" style="margin-right:4px;"></i>
@@ -192,17 +192,17 @@
 
                             <div class="lp-three-col" style="margin-bottom:24px;">
                                 {{-- CPU --}}
-                                <div class="glass" style="padding:16px;text-align:center;">
+                                <div class="glass" style="padding:var(--sp-4);text-align:center;">
                                     <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Uso de CPU</div>
                                     <div style="font-size:28px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">
                                         {{ $cpuPercent }}%
                                     </div>
-                                    <div style="width:100%;height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;">
+                                    <div style="width:100%;height:8px;background:var(--glass-bg);border-radius:4px;overflow:hidden;">
                                         <div style="width:{{ $cpuPercent }}%;height:100%;background:var(--accent-light);border-radius:4px;transition:width 0.4s;"></div>
                                     </div>
                                 </div>
                                 {{-- RAM --}}
-                                <div class="glass" style="padding:16px;text-align:center;">
+                                <div class="glass" style="padding:var(--sp-4);text-align:center;">
                                     <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Memoria RAM</div>
                                     <div style="font-size:28px;font-weight:700;color:var(--text-primary);margin-bottom:2px;">
                                         {{ $ram['percent'] }}%
@@ -210,12 +210,12 @@
                                     <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">
                                         {{ $ram['used'] }} GB / {{ $ram['total'] }} GB
                                     </div>
-                                    <div style="width:100%;height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;">
+                                    <div style="width:100%;height:8px;background:var(--glass-bg);border-radius:4px;overflow:hidden;">
                                         <div style="width:{{ $ram['percent'] }}%;height:100%;background:var(--success);border-radius:4px;transition:width 0.4s;"></div>
                                     </div>
                                 </div>
                                 {{-- Disk --}}
-                                <div class="glass" style="padding:16px;text-align:center;">
+                                <div class="glass" style="padding:var(--sp-4);text-align:center;">
                                     <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Almacenamiento (/)</div>
                                     <div style="font-size:28px;font-weight:700;color:var(--text-primary);margin-bottom:2px;">
                                         {{ $disk['percent'] }}%
@@ -223,14 +223,14 @@
                                     <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">
                                         {{ $disk['used'] }} GB / {{ $disk['total'] }} GB
                                     </div>
-                                    <div style="width:100%;height:8px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden;">
+                                    <div style="width:100%;height:8px;background:var(--glass-bg);border-radius:4px;overflow:hidden;">
                                         <div style="width:{{ $disk['percent'] }}%;height:100%;background:var(--warning);border-radius:4px;transition:width 0.4s;"></div>
                                     </div>
                                 </div>
                             </div>
 
                             {{-- Detailed System Info --}}
-                            <div class="glass" style="padding:20px;">
+                            <div class="glass" style="padding:var(--sp-6);">
                                 <h3 style="font-size:14px;font-weight:700;margin-bottom:16px;color:var(--text-primary);">
                                     <i class="fa-solid fa-circle-info"></i> Detalles del Sistema
                                 </h3>
@@ -255,8 +255,8 @@
                                 </div>
                             </div>
                         @else
-                            <div class="glass" style="padding:48px;text-align:center;">
-                                <i class="fa-solid fa-circle-exclamation" style="font-size:48px;color:#f38ba8;margin-bottom:16px;"></i>
+                            <div class="glass" style="padding:var(--sp-16);text-align:center;">
+                                <i class="fa-solid fa-circle-exclamation" style="font-size:48px;color:var(--danger);margin-bottom:var(--sp-4);"></i>
                                 <h3 style="font-size:16px;font-weight:700;color:var(--text-primary);">Servidor inaccesible</h3>
                                 <p style="font-size:13px;color:var(--text-muted);max-width:400px;margin:8px auto 20px;">
                                     El panel central no puede establecer conexión SSH con este servidor remoto. Verifica las credenciales, el firewall o la IP.
@@ -270,7 +270,7 @@
 
                     {{-- SUBTAB Content: Remote Terminal --}}
                     @if($activeTab === 'terminal')
-                        <div class="glass" style="padding:20px;">
+                        <div class="glass" style="padding:var(--sp-6);">
                             <h3 style="font-size:14px;font-weight:700;margin-bottom:8px;color:var(--text-primary);">
                                 <i class="fa-solid fa-terminal"></i> Ejecución Rápida de Comandos (SSH)
                             </h3>
@@ -287,7 +287,7 @@
                             </form>
 
                             @if($terminalOutput)
-                                <pre style="background:rgba(0,0,0,0.85);border:1px solid var(--glass-border);border-radius:8px;padding:16px;font-family:monospace;font-size:11px;color:#a6e3a1;line-height:1.6;white-space:pre-wrap;max-height:350px;overflow-y:auto;text-align:left;">{{ $terminalOutput }}</pre>
+                                <pre style="background:rgba(0,0,0,0.85);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:var(--sp-4);font-family:monospace;font-size:11px;color:var(--success);line-height:1.6;white-space:pre-wrap;max-height:350px;overflow-y:auto;text-align:left;">{{ $terminalOutput }}</pre>
                             @endif
                         </div>
                     @endif

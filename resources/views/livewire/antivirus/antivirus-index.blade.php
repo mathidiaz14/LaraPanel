@@ -28,13 +28,13 @@
     {{-- ── ClamAV Not Installed Warning ────────────────────────────────────── --}}
     @if(!$isInstalled)
         <div class="glass lp-panel" style="padding:48px;text-align:center;">
-            <i class="fa-solid fa-shield-virus" style="font-size:52px;color:#f38ba8;margin-bottom:20px;opacity:0.6;display:block;"></i>
+            <i class="fa-solid fa-shield-virus" style="font-size:52px;color:var(--danger);margin-bottom:20px;opacity:0.6;display:block;"></i>
             <h3 class="panel-title" style="font-size:20px;margin-bottom:10px;">ClamAV no está instalado</h3>
             <p style="color:var(--text-secondary);font-size:14px;max-width:520px;margin:0 auto 24px;">
                 El motor de antivirus ClamAV no se detectó en este sistema. Instálalo para usar el módulo de escaneo.
             </p>
-            <div class="glass" style="padding:16px 24px;display:inline-block;text-align:left;border-radius:10px;background:rgba(0,0,0,0.3);">
-                <code style="font-family:monospace;font-size:13px;color:#a6e3a1;">
+            <div class="glass" style="padding:var(--sp-4) var(--sp-6);display:inline-block;text-align:left;border-radius:var(--radius);background:var(--bg-elevated);">
+                <code style="font-family:monospace;font-size:13px;color:var(--success);">
                     sudo apt-get install -y clamav clamav-daemon<br>
                     sudo freshclam
                 </code>
@@ -54,7 +54,7 @@
                 {{-- Scan Form --}}
                 <div class="glass lp-panel" style="margin-bottom:20px;">
                     <h3 class="panel-title" style="margin-bottom:20px;">
-                        <i class="fa-solid fa-virus-slash" style="color:#a6e3a1;margin-right:8px;"></i>
+                        <i class="fa-solid fa-virus-slash" style="color:var(--success);margin-right:8px;"></i>
                         Escanear Directorio
                     </h3>
 
@@ -86,9 +86,9 @@
                         </div>
 
                         {{-- Quarantine toggle --}}
-                        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(243,139,168,0.05);border:1px solid rgba(243,139,168,0.15);border-radius:8px;margin-bottom:20px;">
+                        <div style="display:flex;align-items:center;gap:10px;padding:var(--sp-3) var(--sp-4);background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.15);border-radius:var(--radius-sm);margin-bottom:20px;">
                             <input type="checkbox" wire:model="withQuarantine" id="quarantine-toggle"
-                                style="width:16px;height:16px;accent-color:#f38ba8;cursor:pointer;">
+                                style="width:16px;height:16px;accent-color:var(--danger);cursor:pointer;">
                             <label for="quarantine-toggle" style="cursor:pointer;font-size:13px;color:var(--text-primary);">
                                 <strong>Mover infectados a cuarentena automáticamente</strong>
                                 <span style="display:block;font-size:11px;color:var(--text-muted);margin-top:2px;">
@@ -112,9 +112,9 @@
 
                 {{-- Background scan in progress --}}
                 @if($isScanning)
-                    <div class="glass lp-panel" style="margin-bottom:20px;border-color:rgba(137,180,250,0.25);background:rgba(137,180,250,0.05);">
+                    <div class="glass lp-panel" style="margin-bottom:20px;border-color:rgba(59,130,246,0.25);background:rgba(59,130,246,0.05);">
                         <div style="display:flex;align-items:center;gap:12px;">
-                            <i class="fa-solid fa-spinner fa-spin" style="color:#89b4fa;font-size:22px;"></i>
+                            <i class="fa-solid fa-spinner fa-spin" style="color:var(--info);font-size:22px;"></i>
                             <div>
                                 <div class="panel-title" style="font-size:14px;margin-bottom:2px;">Escaneo en progreso...</div>
                                 <div style="font-size:11px;color:var(--text-muted);">
@@ -122,7 +122,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div style="height:6px;background:rgba(255,255,255,0.06);border-radius:4px;margin-top:14px;overflow:hidden;">
+                        <div style="height:6px;background:var(--glass-border);border-radius:4px;margin-top:14px;overflow:hidden;">
                             <div class="scan-progress-bar"></div>
                         </div>
                     </div>
@@ -148,19 +148,19 @@
                                 <div style="font-size:11px;color:var(--text-muted);">{{ $scanPath }}</div>
                             </div>
                         <div class="stats-row" style="margin-bottom:0;">
-                            <div style="text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--glass-border);">
+                            <div style="text-align:center;padding:12px;background:var(--glass-bg);border-radius:var(--radius-sm);border:1px solid var(--glass-border);">
                                 <div style="font-size:22px;font-weight:700;color:var(--text-primary);">{{ number_format($lastScanResult['files_scanned']) }}</div>
                                 <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Archivos escaneados</div>
                             </div>
-                            <div style="text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid {{ $lastScanResult['infected_count'] > 0 ? 'rgba(243,139,168,0.3)' : 'var(--glass-border)' }};">
+                            <div style="text-align:center;padding:12px;background:var(--glass-bg);border-radius:var(--radius-sm);border:1px solid {{ $lastScanResult['infected_count'] > 0 ? 'rgba(243,139,168,0.3)' : 'var(--glass-border)' }};">
                                 <div style="font-size:22px;font-weight:700;color:{{ $lastScanResult['infected_count'] > 0 ? '#f38ba8' : 'var(--text-primary)' }};">{{ $lastScanResult['infected_count'] }}</div>
                                 <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Infectados</div>
                             </div>
-                            <div style="text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--glass-border);">
+                            <div style="text-align:center;padding:12px;background:var(--glass-bg);border-radius:var(--radius-sm);border:1px solid var(--glass-border);">
                                 <div style="font-size:22px;font-weight:700;color:var(--text-primary);">{{ $lastScanResult['error_count'] }}</div>
                                 <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Errores</div>
                             </div>
-                            <div style="text-align:center;padding:12px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid var(--glass-border);">
+                            <div style="text-align:center;padding:12px;background:var(--glass-bg);border-radius:var(--radius-sm);border:1px solid var(--glass-border);">
                                 <div style="font-size:22px;font-weight:700;color:var(--text-primary);">{{ $lastScanResult['duration_seconds'] }}s</div>
                                 <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Duración</div>
                             </div>
@@ -174,7 +174,7 @@
                         <h4 class="panel-title" style="font-size:13px;margin-bottom:12px;">
                             <i class="fa-solid fa-terminal"></i> Salida del Escaneo
                         </h4>
-                        <pre style="background:rgba(0,0,0,0.85);border:1px solid var(--glass-border);border-radius:8px;padding:16px;font-family:monospace;font-size:11px;color:#a6e3a1;line-height:1.6;white-space:pre-wrap;max-height:350px;overflow-y:auto;text-align:left;">{{ $scanOutput }}</pre>
+                        <pre style="background:var(--bg-base);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:16px;font-family:monospace;font-size:11px;color:var(--success);line-height:1.6;white-space:pre-wrap;max-height:350px;overflow-y:auto;text-align:left;">{{ $scanOutput }}</pre>
                     </div>
                 @endif
             </div>
@@ -195,7 +195,7 @@
                         <div style="display:flex;flex-direction:column;gap:8px;max-height:580px;overflow-y:auto;">
                             @foreach($scanHistory as $hist)
                                 <button wire:click="viewScanDetail({{ $hist['id'] }})"
-                                    style="width:100%;text-align:left;padding:10px 12px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);cursor:pointer;transition:background 0.2s;">
+                                    style="width:100%;text-align:left;padding:var(--sp-2) var(--sp-3);border-radius:var(--radius-sm);border:1px solid var(--glass-border);background:var(--glass-bg);cursor:pointer;transition:background 0.2s;">
                                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
                                         <span style="font-family:monospace;font-size:11px;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;">
                                             {{ $hist['path'] }}
@@ -227,7 +227,7 @@
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
                 <div>
                     <h3 class="panel-title" style="margin:0;">
-                        <i class="fa-solid fa-box-archive" style="color:#f38ba8;margin-right:8px;"></i>
+                        <i class="fa-solid fa-box-archive" style="color:var(--danger);margin-right:8px;"></i>
                         Archivos en Cuarentena
                     </h3>
                     <p style="font-size:12px;color:var(--text-muted);margin-top:4px;">
@@ -241,7 +241,7 @@
 
             @if(empty($quarantineFiles))
                 <div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
-                    <i class="fa-solid fa-shield-check" style="font-size:48px;opacity:0.2;margin-bottom:16px;display:block;color:#a6e3a1;"></i>
+                    <i class="fa-solid fa-shield-check" style="font-size:48px;opacity:0.2;margin-bottom:16px;display:block;color:var(--success);"></i>
                     <div style="font-size:15px;font-weight:600;margin-bottom:6px;">Cuarentena vacía</div>
                     <div style="font-size:13px;">No hay archivos aislados. El sistema está limpio.</div>
                 </div>
@@ -276,13 +276,13 @@
                                         @if($qf['exists'])
                                             <span class="badge badge-warning" style="font-size:9px;">En cuarentena</span>
                                         @else
-                                            <span class="badge badge-secondary" style="font-size:9px;">No en disco</span>
+                                            <span class="badge badge-muted" style="font-size:9px;">No en disco</span>
                                         @endif
                                     </td>
                                     <td style="text-align:right;white-space:nowrap;">
                                         <button wire:click="restoreQuarantineFile({{ $qf['id'] }})"
                                             class="btn btn-ghost btn-sm"
-                                            style="color:#89b4fa;"
+                                            style="color:var(--info);"
                                             onclick="return confirm('¿Restaurar este archivo a su ubicación original? Solo haz esto si estás seguro de que es un falso positivo.')"
                                             title="Restaurar">
                                             <i class="fa-solid fa-rotate-left"></i>
@@ -313,35 +313,35 @@
             {{-- Status card --}}
             <div class="glass lp-panel">
                 <h3 class="panel-title" style="margin-bottom:20px;">
-                    <i class="fa-solid fa-circle-info" style="color:#89b4fa;margin-right:8px;"></i>
+                    <i class="fa-solid fa-circle-info" style="color:var(--info);margin-right:8px;"></i>
                     Estado del Motor
                 </h3>
 
                 <div style="display:flex;flex-direction:column;gap:12px;">
                     {{-- Version --}}
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 16px;background:rgba(255,255,255,0.02);border-radius:8px;border:1px solid var(--glass-border);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:var(--sp-3) var(--sp-4);background:var(--glass-bg);border-radius:var(--radius-sm);border:1px solid var(--glass-border);">
                         <div>
                             <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Versión instalada</div>
                             <div style="font-size:12px;font-family:monospace;color:var(--text-primary);">{{ $clamVersion }}</div>
                         </div>
-                        <i class="fa-solid fa-shield-virus" style="color:#89b4fa;font-size:20px;opacity:0.6;"></i>
+                        <i class="fa-solid fa-shield-virus" style="color:var(--info);font-size:20px;opacity:0.6;"></i>
                     </div>
 
                     {{-- DB Version --}}
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 16px;background:rgba(255,255,255,0.02);border-radius:8px;border:1px solid var(--glass-border);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:var(--sp-3) var(--sp-4);background:var(--glass-bg);border-radius:var(--radius-sm);border:1px solid var(--glass-border);">
                         <div>
                             <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Base de datos de firmas</div>
                             <div style="font-size:13px;font-weight:600;color:var(--text-primary);">v{{ $defsInfo['db_version'] ?? 'N/A' }}</div>
                             <div style="font-size:11px;color:var(--text-muted);">{{ $defsInfo['db_date'] ?? 'Fecha desconocida' }}</div>
                         </div>
-                        <i class="fa-solid fa-database" style="color:#cba6f7;font-size:20px;opacity:0.6;"></i>
+                        <i class="fa-solid fa-database" style="color:var(--accent-light);font-size:20px;opacity:0.6;"></i>
                     </div>
 
                     {{-- Daemon status --}}
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(255,255,255,0.02);border-radius:8px;border:1px solid var(--glass-border);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:var(--sp-3) var(--sp-4);background:var(--glass-bg);border-radius:var(--radius-sm);border:1px solid var(--glass-border);">
                         <div>
                             <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">clamav-daemon</div>
-                            <span class="badge {{ $daemonStatus === 'active' ? 'badge-success' : 'badge-secondary' }}">
+                            <span class="badge {{ $daemonStatus === 'active' ? 'badge-success' : 'badge-muted' }}">
                                 {{ $daemonStatus }}
                             </span>
                         </div>
@@ -353,7 +353,7 @@
             {{-- Update card --}}
             <div class="glass lp-panel">
                 <h3 class="panel-title" style="margin-bottom:8px;">
-                    <i class="fa-solid fa-cloud-arrow-down" style="color:#a6e3a1;margin-right:8px;"></i>
+                    <i class="fa-solid fa-cloud-arrow-down" style="color:var(--success);margin-right:8px;"></i>
                     Actualizar Definiciones
                 </h3>
                 <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px;">
@@ -371,13 +371,13 @@
                 </button>
 
                 @if($updateOutput)
-                    <pre style="background:rgba(0,0,0,0.85);border:1px solid var(--glass-border);border-radius:8px;padding:14px;font-family:monospace;font-size:11px;color:#cdd6f4;line-height:1.6;white-space:pre-wrap;max-height:280px;overflow-y:auto;text-align:left;">{{ $updateOutput }}</pre>
+                    <pre style="background:var(--bg-base);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:14px;font-family:monospace;font-size:11px;color:var(--text-primary);line-height:1.6;white-space:pre-wrap;max-height:280px;overflow-y:auto;text-align:left;">{{ $updateOutput }}</pre>
                 @endif
 
-                <div style="margin-top:16px;padding:12px;background:rgba(137,180,250,0.05);border:1px solid rgba(137,180,250,0.15);border-radius:8px;font-size:11px;color:var(--text-muted);">
-                    <i class="fa-solid fa-circle-info" style="color:#89b4fa;margin-right:6px;"></i>
+                <div style="margin-top:16px;padding:12px;background:rgba(59,130,246,0.05);border:1px solid rgba(59,130,246,0.15);border-radius:var(--radius-sm);font-size:11px;color:var(--text-muted);">
+                    <i class="fa-solid fa-circle-info" style="color:var(--info);margin-right:6px;"></i>
                     Para automatizar las actualizaciones, agrega al cron:<br>
-                    <code style="font-family:monospace;color:#89b4fa;display:block;margin-top:6px;">0 3 * * * /usr/bin/freshclam --quiet</code>
+                    <code style="font-family:monospace;color:var(--info);display:block;margin-top:6px;">0 3 * * * /usr/bin/freshclam --quiet</code>
                 </div>
             </div>
 

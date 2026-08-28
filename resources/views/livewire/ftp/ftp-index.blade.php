@@ -167,7 +167,7 @@
                                         <i class="fa-solid fa-network-wired" style="color:var(--accent-light);"></i>
                                     </button>
                                     <button wire:click="openPathEdit({{ $ftp->id }})" class="btn btn-ghost btn-sm" title="Editar Directorio Raíz">
-                                        <i class="fa-solid fa-folder-open" style="color:#10b981;"></i>
+                                        <i class="fa-solid fa-folder-open" style="color:var(--success);"></i>
                                     </button>
                                     <button wire:click="confirmChangePassword({{ $ftp->id }})" class="btn btn-ghost btn-sm" title="Cambiar Contraseña">
                                         <i class="fa-solid fa-key" style="color:var(--warning);"></i>
@@ -197,7 +197,7 @@
                     <i class="fa-solid fa-network-wired" style="color:var(--accent-light);margin-right:8px;"></i>
                     Restricciones: <span style="color:var(--accent-light);">{{ $ftpForIp?->username }}</span>
                 </h3>
-                <button wire:click="$set('editIpId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">
+                <button wire:click="$set('editIpId', null)" class="lp-modal-close">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -231,10 +231,10 @@
         <div class="lp-modal glass-elevated" style="max-width:480px;">
             <div class="lp-modal-header">
                 <h3 class="panel-title" style="margin:0;">
-                    <i class="fa-solid fa-folder-open" style="color:#10b981;margin-right:8px;"></i>
+                    <i class="fa-solid fa-folder-open" style="color:var(--success);margin-right:8px;"></i>
                     Editar Directorio Raíz: <span style="color:var(--accent-light);">{{ $ftpForPath?->username }}</span>
                 </h3>
-                <button wire:click="$set('editPathId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">
+                <button wire:click="$set('editPathId', null)" class="lp-modal-close">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -278,7 +278,7 @@
                     <i class="fa-solid fa-key" style="color:var(--warning);margin-right:8px;"></i>
                     Cambiar Contraseña FTP
                 </h3>
-                <button wire:click="$set('changingPasswordId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">
+                <button wire:click="$set('changingPasswordId', null)" class="lp-modal-close">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>

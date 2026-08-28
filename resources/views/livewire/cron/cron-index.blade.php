@@ -163,7 +163,7 @@
                     <i class="fa-solid fa-terminal" style="color:var(--accent-light);margin-right:8px;"></i>
                     Registro de Salida
                 </h3>
-                <button wire:click="$set('viewOutputId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">
+                <button wire:click="$set('viewOutputId', null)" class="lp-modal-close">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -195,7 +195,7 @@
                     <i class="fa-solid fa-clock-rotate-left" style="color:var(--accent-light);margin-right:8px;"></i>
                     Historial: {{ $jobWithHistory?->label }}
                 </h3>
-                <button wire:click="$set('viewHistoryId', null)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">
+                <button wire:click="$set('viewHistoryId', null)" class="lp-modal-close">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>

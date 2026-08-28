@@ -70,12 +70,12 @@
 
         {{-- Alerts --}}
         @if(session()->has('message'))
-            <div style="padding:10px 20px;background:rgba(39,201,63,0.1);color:var(--success);font-size:13px;border-bottom:1px solid rgba(39,201,63,0.2);">
+                <div style="padding:10px 20px;background:rgba(16,185,129,0.1);color:var(--success);font-size:13px;border-bottom:1px solid rgba(16,185,129,0.2);">
                 <i class="fa-solid fa-check-circle"></i> {{ session('message') }}
             </div>
         @endif
         @if(session()->has('error'))
-            <div style="padding:10px 20px;background:rgba(255,95,86,0.1);color:var(--danger);font-size:13px;border-bottom:1px solid rgba(255,95,86,0.2);">
+                <div style="padding:10px 20px;background:rgba(239,68,68,0.1);color:var(--danger);font-size:13px;border-bottom:1px solid rgba(239,68,68,0.2);">
                 <i class="fa-solid fa-circle-exclamation"></i> {{ session('error') }}
             </div>
         @endif

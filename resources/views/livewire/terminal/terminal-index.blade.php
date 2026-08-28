@@ -8,7 +8,7 @@
             <p class="page-subtitle">Ejecución segura de comandos sin WebSocket, con historial, tareas y herramientas rápidas.</p>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
-            <select wire:model.live="selectedServerId" class="form-control form-control-sm" style="min-width:210px;">
+            <select wire:model.live="selectedServerId" class="form-input" style="min-width:210px;">
                 <option value="">Servidor local</option>
                 @foreach($servers as $server)
                     <option value="{{ $server->id }}">{{ $server->is_local ? 'Local' : $server->name }} · {{ $server->hostname }}</option>
@@ -19,26 +19,26 @@
     </div>
 
     @if($errorMessage)
-        <div style="margin-bottom:14px;padding:11px 14px;border:1px solid rgba(243,139,168,.35);border-radius:8px;color:#f38ba8;background:rgba(243,139,168,.08);font-size:12px;">
+        <div style="margin-bottom:14px;padding:11px 14px;border:1px solid rgba(239,68,68,.35);border-radius:var(--radius-sm);color:var(--danger);background:rgba(239,68,68,.08);font-size:12px;">
             <i class="fa-solid fa-triangle-exclamation"></i> {{ $errorMessage }}
         </div>
     @endif
     @if($notice)
-        <div style="margin-bottom:14px;padding:11px 14px;border:1px solid rgba(249,226,175,.35);border-radius:8px;color:#f9e2af;background:rgba(249,226,175,.08);font-size:12px;display:flex;justify-content:space-between;gap:12px;align-items:center;">
+        <div style="margin-bottom:14px;padding:11px 14px;border:1px solid rgba(245,158,11,.35);border-radius:var(--radius-sm);color:var(--warning);background:rgba(245,158,11,.08);font-size:12px;display:flex;justify-content:space-between;gap:12px;align-items:center;">
             <span><i class="fa-solid fa-shield-halved"></i> {{ $notice }}</span>
             @if($pendingCommand)
-                <button wire:click="confirmCommand" class="btn btn-warning btn-sm">Confirmar</button>
+                <button wire:click="confirmCommand" class="btn btn-secondary btn-sm">Confirmar</button>
             @endif
         </div>
     @endif
 
     <div style="display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start;">
-        <section class="glass lp-panel" style="padding:0;overflow:hidden;border-color:rgba(99,102,241,.3);">
-            <div style="background:rgba(0,0,0,.45);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--glass-border);gap:12px;flex-wrap:wrap;">
+        <section class="glass lp-panel" style="padding:0;overflow:hidden;border-color:rgba(79,70,229,.3);">
+            <div style="background:var(--bg-base);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--glass-border);gap:12px;flex-wrap:wrap;">
                 <div style="display:flex;gap:6px;align-items:center;">
-                    <span style="width:11px;height:11px;border-radius:50%;background:#ff5f56;"></span>
-                    <span style="width:11px;height:11px;border-radius:50%;background:#ffbd2e;"></span>
-                    <span style="width:11px;height:11px;border-radius:50%;background:#27c93f;"></span>
+                    <span style="width:11px;height:11px;border-radius:50%;background:var(--danger);"></span>
+                    <span style="width:11px;height:11px;border-radius:50%;background:var(--warning);"></span>
+                    <span style="width:11px;height:11px;border-radius:50%;background:var(--success);"></span>
                     <span style="margin-left:8px;font-family:monospace;font-size:11px;color:var(--text-muted);">{{ $cwd }}</span>
                 </div>
                 <div style="display:flex;gap:10px;align-items:center;font-size:11px;color:var(--text-muted);">
@@ -51,7 +51,7 @@
                     @endif
                 </div>
             </div>
-            <div id="terminal-container" wire:ignore style="height:360px;box-sizing:border-box;padding:12px 12px 24px;background:#090b10;"></div>
+            <div id="terminal-container" wire:ignore style="height:360px;box-sizing:border-box;padding:12px 12px 24px;background:var(--bg-base);"></div>
             <div style="padding:8px 14px;display:flex;gap:14px;font-size:11px;color:var(--text-muted);">
                 <span><kbd>Tab</kbd> autocompletar</span><span><kbd>↑ ↓</kbd> historial</span><span><kbd>Ctrl+L</kbd> limpiar</span><span><kbd>Ctrl+C</kbd> cancelar línea</span>
                 @if($exitCode !== null)<span style="margin-left:auto;color:{{ $exitCode === 0 ? '#a6e3a1' : '#f38ba8' }};">Salida: {{ $exitCode }} · {{ $durationMs ?? 0 }} ms</span>@endif
@@ -61,24 +61,24 @@
         </section>
 
         <aside style="display:flex;flex-direction:column;gap:16px;">
-            <section class="glass" style="padding:15px;">
-                <h3 style="font-size:13px;margin:0 0 12px;color:var(--text-primary);"><i class="fa-solid fa-bolt" style="color:#f9e2af;"></i> Comandos rápidos</h3>
+            <section class="glass" style="padding:var(--sp-4);">
+                <h3 style="font-size:13px;margin:0 0 12px;color:var(--text-primary);"><i class="fa-solid fa-bolt" style="color:var(--warning);"></i> Comandos rápidos</h3>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
                     @foreach($quickCommands as $quick)
                         <button wire:click="runQuickCommand('{{ addslashes($quick['command']) }}')" class="btn btn-ghost btn-sm" style="font-size:10px;text-align:left;padding:8px;">
-                            <i class="fa-solid {{ $quick['icon'] }}" style="width:15px;color:#89b4fa;"></i> {{ $quick['label'] }}
+                            <i class="fa-solid {{ $quick['icon'] }}" style="width:15px;color:var(--info);"></i> {{ $quick['label'] }}
                         </button>
                     @endforeach
                 </div>
             </section>
 
-            <section class="glass" style="padding:15px;">
-                <h3 style="font-size:13px;margin:0 0 12px;color:var(--text-primary);"><i class="fa-solid fa-screwdriver-wrench" style="color:#a6e3a1;"></i> Mantenimiento</h3>
+            <section class="glass" style="padding:var(--sp-4);">
+                <h3 style="font-size:13px;margin:0 0 12px;color:var(--text-primary);"><i class="fa-solid fa-screwdriver-wrench" style="color:var(--success);"></i> Mantenimiento</h3>
                 <div style="display:flex;flex-direction:column;gap:7px;">
                     <button wire:click="runMaintenance('optimize')" class="btn btn-ghost btn-sm" style="text-align:left;">Optimizar Laravel</button>
                     <button wire:click="runMaintenance('clear-cache')" class="btn btn-ghost btn-sm" style="text-align:left;">Limpiar cachés</button>
                     <button wire:click="runMaintenance('git-status')" class="btn btn-ghost btn-sm" style="text-align:left;">Estado del proyecto</button>
-                    <button wire:click="runMaintenance('git-pull')" class="btn btn-ghost btn-sm" style="text-align:left;color:#f9e2af;">Actualizar proyecto</button>
+                    <button wire:click="runMaintenance('git-pull')" class="btn btn-ghost btn-sm" style="text-align:left;color:var(--warning);">Actualizar proyecto</button>
                 </div>
             </section>
 

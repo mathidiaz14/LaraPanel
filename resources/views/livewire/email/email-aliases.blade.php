@@ -51,14 +51,14 @@
                     <label class="form-label">Alias (parte antes de @)</label>
                     @php $selectedDomainName = $domains->firstWhere('id', $domainId)?->name ?? 'dominio.com'; @endphp
                     <div style="display:flex;align-items:center;gap:0;">
-                        <input type="text" wire:model="sourcePrefix" class="form-input" placeholder="info" style="border-radius:8px 0 0 8px;flex:1;">
-                        <div style="background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);border-left:none;padding:0 12px;height:40px;display:flex;align-items:center;font-size:12px;color:var(--text-secondary);border-radius:0 8px 8px 0;white-space:nowrap;">
+                        <input type="text" wire:model="sourcePrefix" class="form-input" placeholder="info" style="border-radius:var(--radius-sm) 0 0 8px;flex:1;">
+                        <div style="background:var(--glass-hover);border:1px solid var(--glass-border);border-left:none;padding:0 12px;height:40px;display:flex;align-items:center;font-size:12px;color:var(--text-secondary);border-radius:0 8px 8px 0;white-space:nowrap;">
                             @{{ $selectedDomainName }}
                         </div>
                     </div>
                 </div>
                 @else
-                <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--text-secondary);">
+                <div style="background:color-mix(in srgb, var(--accent) 8%, transparent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--text-secondary);">
                     <i class="fa-solid fa-star" style="color:var(--accent-light);"></i>
                     El alias catch-all capturará <strong>todos los correos</strong> enviados a cualquier dirección de <strong>{{ $domains->firstWhere('id', $domainId)?->name ?? 'este dominio' }}</strong> que no tengan buzón propio.
                 </div>
@@ -98,11 +98,11 @@
             @else
             <div style="display:flex;flex-direction:column;gap:10px;">
                 @foreach($aliases as $alias)
-                <div style="background:rgba(255,255,255,0.04);border:1px solid {{ $alias->is_catchall ? 'rgba(99,102,241,0.3)' : 'var(--glass-border)' }};border-radius:10px;padding:14px 16px;">
+                <div style="background:rgba(255,255,255,0.04);border:1px solid {{ $alias->is_catchall ? 'color-mix(in srgb, var(--accent) 30%, transparent)' : 'var(--glass-border)' }};border-radius:var(--radius-sm);padding:14px 16px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
                         <div style="display:flex;align-items:center;gap:8px;">
                             @if($alias->is_catchall)
-                            <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;color:var(--accent-light);">CATCH-ALL</span>
+                            <span style="background:color-mix(in srgb, var(--accent) 15%, transparent);border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:700;color:var(--accent-light);">CATCH-ALL</span>
                             @endif
                             <code style="font-size:13px;font-weight:600;color:var(--text-primary);">{{ $alias->source }}</code>
                         </div>

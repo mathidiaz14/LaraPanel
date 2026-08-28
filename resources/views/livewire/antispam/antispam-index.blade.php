@@ -74,7 +74,7 @@
                     <span style="text-transform:capitalize;">{{ $action }}</span>
                     <span style="color:var(--text-muted);">{{ number_format($count) }} ({{ $pct }}%)</span>
                 </div>
-                <div style="height:6px;border-radius:3px;background:rgba(255,255,255,0.06);overflow:hidden;">
+                <div style="height:6px;border-radius:var(--radius-sm);background:var(--glass-border);overflow:hidden;">
                     <div style="height:100%;width:{{ $pct }}%;background:{{ $color }};border-radius:3px;transition:width 0.5s;"></div>
                 </div>
             </div>
@@ -234,13 +234,13 @@
             <h2 class="panel-title" style="margin-bottom:14px;">Resultado del Análisis</h2>
             @if($testResult)
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-                <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:12px;text-align:center;">
+                <div style="background:var(--bg-elevated);border-radius:var(--radius-sm);padding:var(--sp-3);text-align:center;">
                     <div style="font-size:26px;font-weight:800;color:{{ ($testResult['score'] ?? 0) > 8 ? 'var(--danger)' : (($testResult['score'] ?? 0) > 4 ? 'var(--warning)' : 'var(--success)') }};">
                         {{ number_format($testResult['score'] ?? 0, 2) }}
                     </div>
                     <div style="font-size:11px;color:var(--text-muted);">Spam Score</div>
                 </div>
-                <div style="background:rgba(0,0,0,0.2);border-radius:8px;padding:12px;text-align:center;">
+                <div style="background:var(--bg-elevated);border-radius:var(--radius-sm);padding:var(--sp-3);text-align:center;">
                     <span class="badge {{ ($testResult['is_spam'] ?? false) ? 'badge-danger' : 'badge-success' }}" style="font-size:14px;padding:8px 12px;">
                         {{ ($testResult['is_spam'] ?? false) ? '🚫 SPAM' : '✅ LIMPIO' }}
                     </span>
@@ -261,7 +261,7 @@
             @endif
 
             @if(isset($testResult['message']))
-            <div style="margin-top:12px;font-size:11px;color:var(--text-muted);background:rgba(0,0,0,0.2);padding:8px;border-radius:6px;">{{ $testResult['message'] }}</div>
+                    <div style="margin-top:12px;font-size:11px;color:var(--text-muted);background:var(--bg-elevated);padding:var(--sp-2);border-radius:var(--radius-sm);">{{ $testResult['message'] }}</div>
             @endif
             @else
             <div style="text-align:center;padding:60px 20px;color:var(--text-muted);">

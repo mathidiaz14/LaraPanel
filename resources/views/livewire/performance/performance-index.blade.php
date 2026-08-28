@@ -97,7 +97,7 @@
                 <li>Picos anómalos de tráfico</li>
                 <li>Intentos de brute-force en login</li>
             </ul>
-            <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:12px;margin-top:16px;font-size:12px;color:var(--text-secondary);">
+            <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:var(--radius-sm);padding:12px;margin-top:16px;font-size:12px;color:var(--text-secondary);">
                 <i class="fa-solid fa-triangle-exclamation" style="color:var(--warning);margin-right:6px;"></i>
                 Los usuarios legítimos con muchas pestañas abiertas pueden recibir errores 503 temporales.
             </div>
@@ -158,7 +158,7 @@
                 Módulo <code>ngx_http_geoip2_module</code> no instalado. Ejecuta <code>apt install libnginx-mod-http-geoip2</code>.
             </div>
             @elseif(!$geoDbAvailable)
-            <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;">
+            <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;font-size:12px;">
                 <i class="fa-solid fa-triangle-exclamation" style="color:var(--warning);margin-right:6px;"></i>
                 Base de datos GeoLite2 no encontrada. Configura <code>MAXMIND_LICENSE_KEY</code> en .env y haz click en "Actualizar DB".
             </div>
@@ -288,7 +288,7 @@
             <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
                 <i class="fa-solid fa-file-code"></i> {{ $goAccessReportPath }}
             </div>
-            <div style="border-radius:8px;overflow:hidden;border:1px solid var(--glass-border);">
+            <div style="border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--glass-border);">
                 <iframe src="{{ route('admin.performance.goaccess', $domain->name) }}"
                         sandbox=""
                         style="width:100%;height:1200px;border:0;"></iframe>

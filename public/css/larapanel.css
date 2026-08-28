@@ -5,6 +5,7 @@
 ═══════════════════════════════════════════════════ */
 
 :root {
+    /* ── Surfaces (dark theme = design-system "dark mode") ── */
     --bg-base:        #0a0e1a;
     --bg-surface:     #0f1628;
     --bg-elevated:    #141c35;
@@ -12,23 +13,50 @@
     --glass-border:   rgba(255,255,255,0.08);
     --glass-hover:    rgba(255,255,255,0.07);
 
-    --accent:         #6366f1;
-    --accent-light:   #818cf8;
-    --accent-glow:    rgba(99,102,241,0.25);
+    /* ── Primary / Accent (indigo-600 per design system) ── */
+    --accent:         #4F46E5;
+    --accent-hover:   #4338CA;   /* primary-700: hover/active */
+    --accent-light:   #a5b4fc;   /* lighter tint for text on dark */
+    --accent-glow:    rgba(79,70,229,0.25);
+
+    /* ── Semantic / status ── */
     --success:        #10b981;
     --warning:        #f59e0b;
     --danger:         #ef4444;
     --info:           #3b82f6;
 
+    /* ── Text ── */
     --text-primary:   #f1f5f9;
     --text-secondary: #94a3b8;
-    --text-muted:     #475569;
+    --text-muted:     #64748b;   /* raised to pass AA on dark surfaces */
 
+    /* ── Layout ── */
     --sidebar-width:  260px;
     --topbar-height:  64px;
-    --radius:         12px;
+
+    /* ── Radius scale (8 / 12 / 16) ── */
     --radius-sm:      8px;
-    --radius-lg:      18px;
+    --radius:         12px;
+    --radius-lg:      16px;
+    --radius-pill:    999px;
+
+    /* ── Spacing scale (4px base) ── */
+    --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+    --sp-6: 24px; --sp-8: 32px; --sp-12: 48px; --sp-16: 64px;
+
+    /* ── Elevation (shadow only on hover/floating, per design system) ── */
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.30);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.45);
+    --ring:      0 0 0 3px rgba(79,70,229,0.45);
+
+    /* ── Typography scale (Major Third, body 15px) ── */
+    --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Roboto Mono', ui-monospace, monospace;
+    --text-2xl: 28px; --text-xl: 22px; --text-lg: 18px;
+    --text-base: 15px; --text-sm: 13px; --text-xs: 11px;
+
+    /* ── Motion ── */
     --ease-out:          cubic-bezier(0.23, 1, 0.32, 1);
     --ease-in-out:      cubic-bezier(0.77, 0, 0.175, 1);
     --ease-drawer:      cubic-bezier(0.32, 0.72, 0, 1);
@@ -41,13 +69,29 @@
 
 html { scroll-behavior: smooth; }
 
+/* Global focus ring (accessibility: visible on keyboard nav) */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible,
+.wire:focus-visible {
+    outline: none;
+    box-shadow: var(--ring);
+    border-radius: var(--radius-sm);
+}
+
 body {
     font-family: 'Inter', sans-serif;
+    font-size: var(--text-base);
     background: var(--bg-base);
     color: var(--text-primary);
     min-height: 100vh;
     line-height: 1.6;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
 }
 
 body::before {
@@ -269,15 +313,19 @@ body::before {
 .badge-muted   { background: rgba(71,85,105,0.3);   color: var(--text-secondary); }
 
 /* ── Buttons ───────────────────────────────────── */
-.btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 500; cursor: pointer; border: none; text-decoration: none; transition: transform var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast); user-select: none; }
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13.5px; font-weight: 500; cursor: pointer; border: none; text-decoration: none; transition: transform var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast); user-select: none; }
 .btn:active { transform: scale(0.97); }
-.btn-primary { background: var(--accent); color: #fff; box-shadow: 0 0 20px var(--accent-glow); }
-.btn-primary:hover { background: var(--accent-light); transform: translateY(-1px); }
+.btn:disabled, .btn[disabled] { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .btn-primary:active { transform: scale(0.97) translateY(0); }
+.btn-primary:focus-visible { outline: none; box-shadow: var(--ring); }
 .btn-ghost   { background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-secondary); }
 .btn-ghost:hover { background: var(--glass-hover); color: var(--text-primary); }
+.btn-ghost:focus-visible { outline: none; box-shadow: var(--ring); }
 .btn-danger  { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: var(--danger); }
 .btn-danger:hover { background: rgba(239,68,68,0.25); }
+.btn-danger:focus-visible { outline: none; box-shadow: var(--ring); }
 .btn-sm { padding: 5px 10px; font-size: 12px; }
 
 /* ── Layout Utilities ──────────────────────────── */

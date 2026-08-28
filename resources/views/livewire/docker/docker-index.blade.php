@@ -20,7 +20,7 @@
 
     @if(!$daemonRunning)
         <div class="glass lp-panel" style="text-align:center;padding:40px;">
-            <i class="fa-brands fa-docker" style="font-size:48px;color:#2496ed;margin-bottom:16px;opacity:0.5;"></i>
+            <i class="fa-brands fa-docker" style="font-size:48px;color:var(--info);margin-bottom:16px;opacity:0.5;"></i>
             <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--text-primary);">Docker no está corriendo</h3>
             <p style="color:var(--text-secondary);font-size:13px;max-width:500px;margin:0 auto;">
                 El daemon de Docker no está activo o el usuario del panel no tiene permisos para acceder al socket de Docker (<code>/var/run/docker.sock</code>).
@@ -43,7 +43,7 @@
                         @forelse($groupedContainers as $prefix => $group)
                             {{-- Group header --}}
                             <div style="display:flex;align-items:center;gap:8px;margin-top:8px;margin-bottom:4px;padding:0 4px;">
-                                <i class="fa-brands fa-docker" style="font-size:11px;color:#2496ed;opacity:0.8;"></i>
+                                <i class="fa-brands fa-docker" style="font-size:11px;color:var(--info);opacity:0.8;"></i>
                                 <span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">
                                     {{ $prefix }}
                                 </span>
@@ -64,7 +64,7 @@
                                         : $c['name'];
                                 @endphp
                                 <button wire:click="selectContainer('{{ $c['name'] }}')"
-                                    style="width:100%;text-align:left;padding:10px 12px;border-radius:8px;border:1px solid {{ $borderColor }};background:{{ $bgColor }};cursor:pointer;transition:all 0.2s;margin-bottom:4px;">
+                                    style="width:100%;text-align:left;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid {{ $borderColor }};background:{{ $bgColor }};cursor:pointer;transition:all 0.2s;margin-bottom:4px;">
                                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
                                         <div style="display:flex;align-items:center;gap:6px;">
                                             <div style="width:6px;height:6px;border-radius:50%;background:{{ $isRunning ? '#22c55e' : ($isPaused ? '#f59e0b' : '#6b7280') }};flex-shrink:0;"></div>
@@ -72,7 +72,7 @@
                                                 {{ $suffix }}
                                             </span>
                                         </div>
-                                        <span class="badge {{ $isRunning ? 'badge-success' : ($isPaused ? 'badge-warning' : 'badge-secondary') }}" style="font-size:9px;padding:2px 5px;">
+                                        <span class="badge {{ $isRunning ? 'badge-success' : ($isPaused ? 'badge-warning' : 'badge-muted') }}" style="font-size:9px;padding:2px 5px;">
                                             {{ $c['state'] }}
                                         </span>
                                     </div>
@@ -107,7 +107,7 @@
                             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
                                 <div>
                                     <h2 class="panel-title" style="font-size:20px;margin-bottom:4px;">
-                                        <i class="fa-solid fa-box" style="color:#2496ed;margin-right:8px;"></i>
+                                        <i class="fa-solid fa-box" style="color:var(--info);margin-right:8px;"></i>
                                         {{ $selectedContainer['name'] }}
                                     </h2>
                                     <div style="font-size:12px;color:var(--text-muted);font-family:monospace;">
@@ -117,11 +117,11 @@
 
                                 <div style="display:flex;gap:8px;">
                                     @if(str_contains(strtolower($selectedContainer['state']), 'running'))
-                                        <button wire:click="stopContainer('{{ $selectedContainer['name'] }}')" class="btn btn-warning btn-sm" title="Detener">
+                                        <button wire:click="stopContainer('{{ $selectedContainer['name'] }}')" class="btn btn-secondary btn-sm" title="Detener">
                                             <i class="fa-solid fa-stop"></i> Detener
                                         </button>
                                     @else
-                                        <button wire:click="startContainer('{{ $selectedContainer['name'] }}')" class="btn btn-success btn-sm" title="Iniciar">
+                                        <button wire:click="startContainer('{{ $selectedContainer['name'] }}')" class="btn btn-secondary btn-sm" title="Iniciar">
                                             <i class="fa-solid fa-play"></i> Iniciar
                                         </button>
                                     @endif
@@ -145,25 +145,25 @@
                             </div>
 
                             <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:16px;margin-bottom:24px;">
-                                <div class="glass" style="padding:16px;background:rgba(255,255,255,0.01);">
+                                <div class="glass" style="padding:16px;background:var(--glass-bg);">
                                     <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Estado actual</div>
                                     <div style="font-size:16px;font-weight:600;color:var(--text-primary);">
                                         {{ ucfirst($selectedContainer['state']) }}
                                     </div>
                                 </div>
-                                <div class="glass" style="padding:16px;background:rgba(255,255,255,0.01);">
+                                <div class="glass" style="padding:16px;background:var(--glass-bg);">
                                     <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Detalle de estado</div>
                                     <div style="font-size:13px;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                                         {{ $selectedContainer['status'] }}
                                     </div>
                                 </div>
-                                <div class="glass" style="padding:16px;background:rgba(255,255,255,0.01);">
+                                <div class="glass" style="padding:16px;background:var(--glass-bg);">
                                     <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Puertos Mapeados</div>
                                     <div style="font-size:12px;font-family:monospace;color:var(--text-primary);">
                                         {{ $selectedContainer['ports'] ?: '—' }}
                                     </div>
                                 </div>
-                                <div class="glass" style="padding:16px;background:rgba(255,255,255,0.01);">
+                                <div class="glass" style="padding:16px;background:var(--glass-bg);">
                                     <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Fecha Creación</div>
                                     <div style="font-size:12px;color:var(--text-primary);">
                                         {{ $selectedContainer['created'] }}
@@ -180,7 +180,7 @@
                                     <div style="display:flex;align-items:center;gap:12px;">
                                         <div style="display:flex;align-items:center;gap:6px;">
                                             <span style="font-size:11px;color:var(--text-muted);">Líneas:</span>
-                                            <select wire:model.live="logLines" class="form-input" style="padding:4px;font-size:11px;width:70px;background:rgba(0,0,0,0.3);">
+                                            <select wire:model.live="logLines" class="form-input" style="padding:4px;font-size:11px;width:70px;background:var(--bg-base);">
                                                 <option value="50">50</option>
                                                 <option value="100">100</option>
                                                 <option value="250">250</option>
@@ -190,7 +190,7 @@
                                         <button wire:click="refreshLogs" class="btn btn-ghost btn-sm"><i class="fa-solid fa-rotate"></i> Refrescar</button>
                                     </div>
                                 </div>
-                                <pre style="background:rgba(0,0,0,0.8);border:1px solid var(--glass-border);border-radius:8px;padding:16px;font-family:monospace;font-size:11px;color:#89b4fa;line-height:1.6;white-space:pre-wrap;max-height:400px;overflow-y:auto;text-align:left;">{{ $containerLogs ?: 'No hay logs de salida o el contenedor no ha generado output.' }}</pre>
+                                <pre style="background:rgba(0,0,0,0.8);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:16px;font-family:monospace;font-size:11px;color:var(--info);line-height:1.6;white-space:pre-wrap;max-height:400px;overflow-y:auto;text-align:left;">{{ $containerLogs ?: 'No hay logs de salida o el contenedor no ha generado output.' }}</pre>
                             </div>
                         @endif
                     @else
@@ -227,7 +227,7 @@
 
                     @if($pullOutput)
                         <div style="margin-top:16px;">
-                            <pre style="background:rgba(0,0,0,0.5);border:1px solid var(--glass-border);border-radius:8px;padding:16px;font-family:monospace;font-size:11px;color:#cdd6f4;line-height:1.6;white-space:pre-wrap;max-height:200px;overflow-y:auto;">{{ $pullOutput }}</pre>
+                            <pre style="background:rgba(0,0,0,0.5);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:16px;font-family:monospace;font-size:11px;color:var(--text-primary);line-height:1.6;white-space:pre-wrap;max-height:200px;overflow-y:auto;">{{ $pullOutput }}</pre>
                         </div>
                     @endif
                 </div>
@@ -257,7 +257,7 @@
                                 @foreach($images as $img)
                                     <tr>
                                         <td style="font-weight:600;color:var(--text-primary);">{{ $img['repo'] }}</td>
-                                        <td><span class="badge badge-secondary" style="font-size:10px;">{{ $img['tag'] }}</span></td>
+                                        <td><span class="badge badge-muted" style="font-size:10px;">{{ $img['tag'] }}</span></td>
                                         <td style="font-family:monospace;font-size:11px;">{{ substr($img['id'], 0, 12) }}</td>
                                         <td>{{ $img['size'] }}</td>
                                         <td style="font-size:11px;color:var(--text-muted);">{{ $img['created'] }}</td>
@@ -298,7 +298,7 @@
 
                         <div style="margin-bottom:20px;">
                             <label class="form-label">Contenido docker-compose.yml</label>
-                            <textarea wire:model="composeContent" class="form-input" rows="12" style="font-family:monospace;font-size:12px;line-height:1.6;background:rgba(0,0,0,0.3);color:#a6e3a1;"></textarea>
+                            <textarea wire:model="composeContent" class="form-input" rows="12" style="font-family:monospace;font-size:12px;line-height:1.6;background:var(--bg-base);color:var(--success);"></textarea>
                             @error('composeContent') <span style="color:var(--danger);font-size:11px;display:block;margin-top:4px;">{{ $message }}</span> @enderror
                         </div>
 
@@ -320,7 +320,7 @@
                 @if($composeOutput)
                     <div class="glass lp-panel">
                         <h4 class="panel-title"><i class="fa-solid fa-terminal"></i> Salida de Comandos</h4>
-                        <pre style="background:rgba(0,0,0,0.8);border:1px solid var(--glass-border);border-radius:8px;padding:16px;font-family:monospace;font-size:11px;color:#cdd6f4;line-height:1.6;white-space:pre-wrap;max-height:300px;overflow-y:auto;text-align:left;">{{ $composeOutput }}</pre>
+                        <pre style="background:rgba(0,0,0,0.8);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:16px;font-family:monospace;font-size:11px;color:var(--text-primary);line-height:1.6;white-space:pre-wrap;max-height:300px;overflow-y:auto;text-align:left;">{{ $composeOutput }}</pre>
                     </div>
                 @endif
             </div>
@@ -328,7 +328,7 @@
         @elseif($activeTab === 'deploy')
             <div class="glass lp-panel" style="max-width:800px;margin:0 auto;">
                 <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;">
-                    <div style="width:48px;height:48px;border-radius:12px;background:rgba(99,102,241,0.1);display:flex;align-items:center;justify-content:center;">
+                    <div style="width:48px;height:48px;border-radius:var(--radius);background:rgba(79,70,229,0.1);display:flex;align-items:center;justify-content:center;">
                         <i class="fa-solid fa-rocket" style="font-size:24px;color:var(--accent-light);"></i>
                     </div>
                     <div>
@@ -364,7 +364,7 @@
                         </div>
                     </div>
 
-                    <div class="form-group" style="background:rgba(0,0,0,0.1);padding:16px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);margin-top:8px;">
+                    <div class="form-group" style="background:var(--bg-elevated);padding:16px;border-radius:var(--radius-sm);border:1px solid var(--glass-border);margin-top:8px;">
                         <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Puerto Interno del Contenedor (expuesto al host)</label>
                         <div style="display:flex;align-items:center;gap:12px;">
                             <div style="position:relative;flex:1;max-width:150px;">
@@ -390,7 +390,7 @@
                 @if($deployOutput)
                     <div style="margin-top:24px;">
                         <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Resultado de la Operación</label>
-                        <pre style="background:rgba(0,0,0,0.3);padding:16px;border-radius:8px;border:1px solid var(--glass-border);font-family:monospace;font-size:12px;color:#a8b2d1;white-space:pre-wrap;max-height:400px;overflow-y:auto;">{{ $deployOutput }}</pre>
+                        <pre style="background:var(--bg-base);padding:16px;border-radius:var(--radius-sm);border:1px solid var(--glass-border);font-family:monospace;font-size:12px;color:var(--text-secondary);white-space:pre-wrap;max-height:400px;overflow-y:auto;">{{ $deployOutput }}</pre>
                     </div>
                 @endif
             </div>
@@ -409,11 +409,11 @@
                 <div class="lp-two-col">
                     @foreach($marketplaceTemplates as $key => $tpl)
                         <div class="glass lp-panel" style="display:flex;flex-direction:column;justify-content:space-between;transition:all 0.2s;" 
-                             onmouseover="this.style.transform='translateY(-4px)';this.style.borderColor='rgba(99,102,241,0.4)';" 
-                             onmouseout="this.style.transform='none';this.style.borderColor='var(--glass-border)';">
+                              onmouseover="this.style.transform='translateY(-4px)';this.style.borderColor='rgba(79,70,229,0.4)';" 
+                              onmouseout="this.style.transform='none';this.style.borderColor='var(--glass-border)';">
                             <div>
                                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-                                    <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--accent-light);flex-shrink:0;">
+                                    <div style="width:40px;height:40px;border-radius:var(--radius);background:var(--glass-bg);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--accent-light);flex-shrink:0;">
                                         <i class="{{ $tpl['icon'] }}"></i>
                                     </div>
                                     <h3 style="font-size:15px;font-weight:700;color:var(--text-primary);margin:0;">{{ $tpl['name'] }}</h3>
@@ -447,8 +447,8 @@
 
             <div class="lp-modal-body" style="display:flex;flex-direction:column;">
                 {{-- Output Area --}}
-                <div style="flex:1;overflow-y:auto;background:rgba(0,0,0,0.6);border:1px solid var(--glass-border);border-radius:8px;padding:16px;margin-bottom:16px;max-height:50vh;" id="terminal-output-container">
-                <pre style="margin:0;font-family:monospace;font-size:13px;color:#a8b2d1;white-space:pre-wrap;word-break:break-all;">{{ $terminalOutput }}</pre>
+                <div style="flex:1;overflow-y:auto;background:var(--bg-base);border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:16px;margin-bottom:16px;max-height:50vh;" id="terminal-output-container">
+                <pre style="margin:0;font-family:monospace;font-size:13px;color:var(--text-secondary);white-space:pre-wrap;word-break:break-all;">{{ $terminalOutput }}</pre>
             </div>
 
             {{-- Input Area --}}

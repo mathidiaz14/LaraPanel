@@ -106,7 +106,7 @@
                             <td>
                                 <div style="display:flex;align-items:center;gap:8px;">
                                     <div style="width:60px;height:5px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;flex-shrink:0;">
-                                        <div style="width:{{ min(100, $p['cpu']) }}%;height:100%;background:{{ $p['cpu'] > 80 ? 'var(--danger)' : ($p['cpu'] > 40 ? 'var(--warning)' : '#6366f1') }};"></div>
+                                        <div style="width:{{ min(100, $p['cpu']) }}%;height:100%;background:{{ $p['cpu'] > 80 ? 'var(--danger)' : ($p['cpu'] > 40 ? 'var(--warning)' : 'var(--accent)') }};"></div>
                                     </div>
                                     <span style="font-size:12px;min-width:38px;">{{ number_format($p['cpu'], 1) }}%</span>
                                 </div>
@@ -114,7 +114,7 @@
                             <td style="min-width:130px;">
                                 <div style="display:flex;align-items:center;gap:8px;">
                                     <div style="width:60px;height:5px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;flex-shrink:0;">
-                                        <div style="width:{{ round(($p['rss_bytes'] / $maxRss) * 100) }}%;height:100%;background:#27c93f;"></div>
+                                        <div style="width:{{ round(($p['rss_bytes'] / $maxRss) * 100) }}%;height:100%;background:var(--success);"></div>
                                     </div>
                                     <span style="font-size:12px;white-space:nowrap;" title="{{ $p['mem_pct'] }}% de la RAM total">
                                         {{ \App\Services\MonitoringService::formatBytes($p['rss_bytes']) }}

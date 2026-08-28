@@ -19,7 +19,7 @@
     @endif
 
     {{-- DNS Provider Notice --}}
-    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+    <div style="background:color-mix(in srgb, var(--accent) 8%, transparent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);border-radius:var(--radius-sm);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
         <i class="fa-solid fa-circle-info" style="color:var(--accent-light);font-size:18px;flex-shrink:0;"></i>
         <div style="font-size:12px;color:var(--text-secondary);">
             <strong style="color:var(--text-primary);">PowerDNS Authoritative Server</strong> gestiona estas zonas.
@@ -30,7 +30,7 @@
     @if($zones->isEmpty())
     {{-- Empty state --}}
     <div class="glass lp-panel" style="text-align:center;padding:60px;">
-        <div style="width:72px;height:72px;border-radius:20px;background:rgba(99,102,241,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+        <div style="width:72px;height:72px;border-radius:var(--radius-pill);background:color-mix(in srgb, var(--accent) 10%, transparent);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
             <i class="fa-solid fa-server" style="font-size:28px;color:var(--accent-light);"></i>
         </div>
         <h2 style="font-size:17px;font-weight:700;margin-bottom:8px;">Sin Zonas DNS Configuradas</h2>
@@ -58,7 +58,7 @@
                     <tr wire:key="zone-{{ $zone->id }}">
                         <td>
                             <div style="display:flex;align-items:center;gap:10px;">
-                                <div style="width:34px;height:34px;border-radius:8px;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.2);display:flex;align-items:center;justify-content:center;">
+                                <div style="width:34px;height:34px;border-radius:var(--radius-sm);background:color-mix(in srgb, var(--accent) 12%, transparent);border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);display:flex;align-items:center;justify-content:center;">
                                     <i class="fa-solid fa-globe" style="color:var(--accent-light);font-size:14px;"></i>
                                 </div>
                                 <div>
@@ -78,7 +78,7 @@
                         <td>
                             <div style="display:flex;gap:4px;flex-wrap:wrap;max-width:320px;">
                                 @foreach($zone->recordsCountByType() as $type => $count)
-                                <span style="background:rgba(255,255,255,0.06);border:1px solid var(--glass-border);border-radius:4px;padding:1px 6px;font-size:10px;font-family:monospace;color:var(--text-primary);">
+                                <span style="background:var(--glass-hover);border:1px solid var(--glass-border);border-radius:4px;padding:1px 6px;font-size:10px;font-family:monospace;color:var(--text-primary);">
                                     {{ $type }}:{{ $count }}
                                 </span>
                                 @endforeach
@@ -122,7 +122,7 @@
                     <i class="fa-solid fa-globe" style="color:var(--accent-light);margin-right:8px;"></i>
                     Nueva Zona DNS
                 </h3>
-                <button wire:click="$set('showCreate', false)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;">
+                    <button wire:click="$set('showCreate', false)" class="lp-modal-close">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -145,7 +145,7 @@
                 </div>
                 @endif
 
-                <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;padding:12px;margin-bottom:20px;font-size:12px;color:var(--text-secondary);">
+                <div style="background:color-mix(in srgb, var(--success) 8%, transparent);border:1px solid color-mix(in srgb, var(--success) 20%, transparent);border-radius:var(--radius-sm);padding:12px;margin-bottom:20px;font-size:12px;color:var(--text-secondary);">
                     <i class="fa-solid fa-magic-wand-sparkles" style="color:var(--success);margin-right:6px;"></i>
                     LaraPanel creará automáticamente registros: <strong>A</strong> (www + @), <strong>MX</strong> apuntando a mail.dominio.com.
                 </div>

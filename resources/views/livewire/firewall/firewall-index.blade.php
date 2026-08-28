@@ -68,7 +68,7 @@
 
     {{-- UFW Warning Banner --}}
     @if(!$ufwEnabled)
-    <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+    <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:var(--radius);padding:var(--sp-3) var(--sp-4);margin-bottom:20px;display:flex;align-items:center;gap:12px;">
         <i class="fa-solid fa-triangle-exclamation" style="color:var(--danger);font-size:20px;flex-shrink:0;"></i>
         <div>
             <strong style="color:var(--danger);">Firewall Desactivado</strong>
@@ -161,7 +161,7 @@
             </div>
 
             {{-- Action preview --}}
-            <div style="background:rgba(0,0,0,0.2);border-radius:6px;padding:8px;margin-bottom:12px;font-size:11px;font-family:monospace;color:var(--accent-light);">
+            <div style="background:var(--bg-elevated);border-radius:var(--radius-sm);padding:8px;margin-bottom:12px;font-size:11px;font-family:monospace;color:var(--accent-light);">
                 $ ufw {{ $ruleAction }} {{ $ruleDirection !== 'any' ? $ruleDirection : '' }}
                 {{ $ruleSourceIp ? 'from '.$ruleSourceIp.' to any' : '' }}
                 {{ $rulePort ? 'port '.$rulePort : '' }}
@@ -212,7 +212,7 @@
                                 <div style="font-size:10px;color:var(--text-muted);">{{ $rule->notes }}</div>
                                 @endif
                                 @if($rule->is_preset)
-                                <span style="font-size:9px;background:rgba(99,102,241,0.15);color:var(--accent-light);border-radius:4px;padding:1px 5px;">PRESET</span>
+                                <span style="font-size:9px;background:rgba(79,70,229,0.15);color:var(--accent-light);border-radius:4px;padding:1px 5px;">PRESET</span>
                                 @endif
                             </td>
                             <td>
@@ -302,7 +302,7 @@
                     $already = \App\Models\FirewallRule::where('user_id', auth()->id())->where('port', $preset['port'])->where('protocol', $preset['protocol'])->exists();
                 @endphp
                 <button wire:click="togglePreset('{{ $key }}')"
-                    style="text-align:left;padding:12px 14px;border-radius:10px;border:1px solid {{ $selected ? 'rgba(99,102,241,0.5)' : 'var(--glass-border)' }};background:{{ $selected ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.03)' }};cursor:{{ $already ? 'default' : 'pointer' }};transition:all 0.15s;opacity:{{ $already ? '0.5' : '1' }};">
+                    style="text-align:left;padding:12px 14px;border-radius:var(--radius);border:1px solid {{ $selected ? 'rgba(79,70,229,0.5)' : 'var(--glass-border)' }};background:{{ $selected ? 'rgba(79,70,229,0.12)' : 'rgba(255,255,255,0.03)' }};cursor:{{ $already ? 'default' : 'pointer' }};transition:all 0.15s;opacity:{{ $already ? '0.5' : '1' }};">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
                         <strong style="font-size:13px;color:var(--text-primary);">{{ $preset['name'] }}</strong>
                         <div style="display:flex;gap:4px;align-items:center;">

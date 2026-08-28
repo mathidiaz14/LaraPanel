@@ -1,22 +1,22 @@
 <div class="dropdown-wrapper" style="position:relative;display:inline-block;" x-data="{ open: false }" @click.away="open = false">
     <button @click="open = !open" 
             class="btn btn-ghost btn-sm" 
-            style="display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid {{ $isRemote ? 'rgba(137,180,250,0.3)' : 'var(--glass-border)' }};background:{{ $isRemote ? 'rgba(137,180,250,0.08)' : 'rgba(255,255,255,0.02)' }};border-radius:8px;color:var(--text-primary);font-size:12px;font-weight:600;cursor:pointer;">
+            style="display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid {{ $isRemote ? 'rgba(79,70,229,0.3)' : 'var(--glass-border)' }};background:{{ $isRemote ? 'rgba(79,70,229,0.08)' : 'rgba(255,255,255,0.02)' }};border-radius:var(--radius-sm);color:var(--text-primary);font-size:12px;font-weight:600;cursor:pointer;">
         <span>{{ $currentLabel }}</span>
         <i class="fa-solid fa-chevron-down" style="font-size:10px;opacity:0.6;transition:transform 0.2s;" :style="open ? 'transform:rotate(180deg)' : ''"></i>
     </button>
 
-    <div x-show="open" 
+        <div x-show="open"
          x-transition:enter="transition ease-out duration-100"
          x-transition:enter-start="opacity-0 transform scale-95"
          x-transition:enter-end="opacity-100 transform scale-100"
          x-transition:leave="transition ease-in duration-75"
          x-transition:leave-start="opacity-100 transform scale-100"
          x-transition:leave-end="opacity-0 transform scale-95"
-         style="position:absolute;right:0;top:100%;margin-top:6px;width:240px;background:rgba(30,30,46,0.95);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--glass-border);border-radius:8px;box-shadow:0 10px 25px -5px rgba(0, 0, 0, 0.5);z-index:100;padding:6px;display:none;" 
+         style="position:absolute;right:0;top:100%;margin-top:var(--sp-1);width:240px;background:var(--bg-elevated);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--glass-border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:100;padding:var(--sp-1);display:none;"
          :style="{ display: open ? 'block' : 'none' }">
         
-        <div style="font-size:10px;color:var(--text-muted);font-weight:700;padding:6px 8px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid rgba(255,255,255,0.05);margin-bottom:4px;">
+        <div style="font-size:10px;color:var(--text-muted);font-weight:700;padding:var(--sp-1) var(--sp-2);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--glass-bg);margin-bottom:var(--sp-1);">
             Seleccionar Servidor
         </div>
 
@@ -39,14 +39,14 @@
                     </span>
                 </div>
                 @if($isCurrent)
-                    <i class="fa-solid fa-check" style="font-size:10px;color:#a6e3a1;margin-left:6px;flex-shrink:0;"></i>
+                    <i class="fa-solid fa-check" style="font-size:10px;color:var(--success);margin-left:var(--sp-1);flex-shrink:0;"></i>
                 @endif
             </button>
         @endforeach
 
-        <div style="border-top:1px solid rgba(255,255,255,0.05);margin-top:4px;padding-top:4px;">
+        <div style="border-top:1px solid var(--glass-bg);margin-top:var(--sp-1);padding-top:var(--sp-1);">
             <a href="{{ route('servers.index') }}" 
-               style="display:block;text-align:center;padding:6px;font-size:11px;color:#89b4fa;text-decoration:none;font-weight:600;border-radius:4px;transition:background 0.2s;"
+                style="display:block;text-align:center;padding:var(--sp-1);font-size:11px;color:var(--accent-light);text-decoration:none;font-weight:600;border-radius:var(--radius-sm);transition:background 0.2s;"
                @click="open = false">
                 <i class="fa-solid fa-gear" style="margin-right:4px;"></i> Gestionar Servidores
             </a>

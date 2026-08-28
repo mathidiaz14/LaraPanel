@@ -4,7 +4,7 @@
 @section('content')
 <div class="glass-elevated auth-card">
     <div class="auth-logo">
-        <div class="logo-icon" style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;box-shadow:0 0 30px rgba(99,102,241,0.35);margin:0 auto 14px;">
+        <div class="logo-icon" style="width:52px;height:52px;border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:var(--text-xl);font-weight:700;color:#fff;box-shadow:0 0 30px var(--accent-glow);margin:0 auto var(--sp-3);">
             <i class="fa-solid fa-lock-open"></i>
         </div>
         <div class="auth-title">Nueva Contraseña</div>
@@ -13,7 +13,7 @@
 
     @if ($errors->any())
         <div class="alert alert-danger">
-            <i class="fa-solid fa-circle-exclamation" style="margin-right:6px"></i>
+            <i class="fa-solid fa-circle-exclamation" style="margin-right:var(--sp-2)"></i>
             {{ $errors->first() }}
         </div>
     @endif
@@ -41,15 +41,15 @@
                    placeholder="••••••••" required autocomplete="new-password">
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:11px;margin-bottom:18px;">
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:var(--sp-3);margin-bottom:var(--sp-4);">
             <i class="fa-solid fa-shield-check"></i>
             Restablecer Contraseña
         </button>
     </form>
 
-    <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--glass-border);text-align:center;">
-        <p style="font-size:12px;color:var(--text-muted);">
-            <i class="fa-solid fa-shield-halved" style="color:var(--success);margin-right:4px;"></i>
+    <div style="margin-top:var(--sp-6);padding-top:var(--sp-6);border-top:1px solid var(--glass-border);text-align:center;">
+        <p style="font-size:var(--text-sm);color:var(--text-muted);">
+            <i class="fa-solid fa-shield-halved" style="color:var(--success);margin-right:var(--sp-1);"></i>
             Conexión cifrada · LaraPanel v{{ config('larapanel.version') }}
         </p>
     </div>

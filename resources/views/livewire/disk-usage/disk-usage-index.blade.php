@@ -31,8 +31,8 @@
                 <span style="font-size:13px;font-weight:700;font-family:monospace;">{{ $part['mount'] }}</span>
                 <span style="font-size:12px;color:var(--text-muted);">{{ $part['device'] }}</span>
             </div>
-            <div style="height:6px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;margin-bottom:8px;">
-                <div style="width:{{ min(100, $part['percent']) }}%;height:100%;border-radius:3px;background:{{ $part['percent'] > 90 ? 'var(--danger)' : ($part['percent'] > 75 ? 'var(--warning)' : '#27c93f') }};transition:width 0.5s;"></div>
+            <div style="height:6px;background:var(--glass-bg);border-radius:3px;overflow:hidden;margin-bottom:8px;">
+                <div style="width:{{ min(100, $part['percent']) }}%;height:100%;border-radius:3px;background:{{ $part['percent'] > 90 ? 'var(--danger)' : ($part['percent'] > 75 ? 'var(--warning)' : 'var(--success)') }};transition:width 0.5s;"></div>
             </div>
             <div style="font-size:11px;color:var(--text-muted);">
                 {{ \App\Services\MonitoringService::formatBytes($part['used']) }} de {{ \App\Services\MonitoringService::formatBytes($part['size']) }}
@@ -113,8 +113,8 @@
                             </td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:10px;">
-                                    <div style="flex:1;height:6px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden;">
-                                        <div style="width:{{ min(100, $item['pct']) }}%;height:100%;border-radius:3px;background:linear-gradient(90deg,#6366f1,#a78bfa);transition:width 0.5s;"></div>
+                                    <div style="flex:1;height:6px;background:var(--glass-bg);border-radius:3px;overflow:hidden;">
+                                        <div style="width:{{ min(100, $item['pct']) }}%;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--accent-light));transition:width 0.5s;"></div>
                                     </div>
                                     <span style="font-size:12px;white-space:nowrap;min-width:64px;text-align:right;">{{ \App\Services\MonitoringService::formatBytes($item['bytes']) }}</span>
                                 </div>

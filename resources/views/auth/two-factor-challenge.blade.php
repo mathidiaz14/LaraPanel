@@ -4,7 +4,7 @@
 @section('content')
 <div class="glass-elevated auth-card" x-data="{ recovery: false }">
     <div class="auth-logo">
-        <div class="logo-icon" style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;box-shadow:0 0 30px rgba(99,102,241,0.35);margin:0 auto 14px;">
+        <div class="logo-icon" style="width:52px;height:52px;border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:var(--text-xl);font-weight:700;color:#fff;box-shadow:0 0 30px var(--accent-glow);margin:0 auto var(--sp-3);">
             <i class="fa-solid fa-shield-halved"></i>
         </div>
         <div class="auth-title">Seguridad 2FA</div>
@@ -14,7 +14,7 @@
 
     @if ($errors->any())
         <div class="alert alert-danger">
-            <i class="fa-solid fa-circle-exclamation" style="margin-right:6px"></i>
+            <i class="fa-solid fa-circle-exclamation" style="margin-right:var(--sp-2)"></i>
             {{ $errors->first() }}
         </div>
     @endif
@@ -34,16 +34,16 @@
                    placeholder="abcdef-98765" autocomplete="one-time-code">
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:11px;margin-bottom:18px;">
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:var(--sp-3);margin-bottom:var(--sp-4);">
             <i class="fa-solid fa-unlock-keyhole"></i>
             Verificar Acceso
         </button>
 
         <div style="text-align:center;">
-            <button type="button" class="btn btn-ghost" x-show="!recovery" x-on:click="recovery = true; setTimeout(() => $refs.recovery_code.focus(), 50);" style="font-size:13px;width:100%;justify-content:center;">
+            <button type="button" class="btn btn-ghost" x-show="!recovery" x-on:click="recovery = true; setTimeout(() => $refs.recovery_code.focus(), 50);" style="font-size:var(--text-sm);width:100%;justify-content:center;">
                 Usar un código de recuperación
             </button>
-            <button type="button" class="btn btn-ghost" x-show="recovery" x-on:click="recovery = false; setTimeout(() => $refs.code.focus(), 50);" style="font-size:13px;width:100%;justify-content:center;display:none;">
+            <button type="button" class="btn btn-ghost" x-show="recovery" x-on:click="recovery = false; setTimeout(() => $refs.code.focus(), 50);" style="font-size:var(--text-sm);width:100%;justify-content:center;display:none;">
                 Usar código de aplicación (TOTP)
             </button>
         </div>

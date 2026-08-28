@@ -24,7 +24,7 @@
             @foreach($domains as $domain)
             @php $dkimKey = $dkimKeys->firstWhere('domain_id', $domain->id); @endphp
             <button wire:click="selectDomain({{ $domain->id }})"
-                    style="width:100%;text-align:left;background:{{ $selectedDomainId === $domain->id ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)' }};border:1px solid {{ $selectedDomainId === $domain->id ? 'rgba(99,102,241,0.4)' : 'var(--glass-border)' }};border-radius:8px;padding:10px 12px;cursor:pointer;margin-bottom:6px;display:flex;align-items:center;gap:8px;transition:all 0.2s;">
+                    style="width:100%;text-align:left;background:{{ $selectedDomainId === $domain->id ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'var(--glass-bg)' }};border:1px solid {{ $selectedDomainId === $domain->id ? 'color-mix(in srgb, var(--accent) 40%, transparent)' : 'var(--glass-border)' }};border-radius:var(--radius-sm);padding:10px 12px;cursor:pointer;margin-bottom:6px;display:flex;align-items:center;gap:8px;transition:all 0.2s;">
                 <i class="fa-solid fa-globe" style="color:{{ $selectedDomainId === $domain->id ? 'var(--accent-light)' : 'var(--text-muted)' }};"></i>
                 <div>
                     <div style="font-size:13px;font-weight:600;color:var(--text-primary);">{{ $domain->name }}</div>
@@ -64,7 +64,7 @@
                 @if($dkimKeys->isNotEmpty())
                 @php $activeKey = $dkimKeys->firstWhere('is_active', true); @endphp
                 @if($activeKey)
-                <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;padding:14px;">
+                <div style="background:color-mix(in srgb, var(--success) 8%, transparent);border:1px solid color-mix(in srgb, var(--success) 20%, transparent);border-radius:var(--radius-sm);padding:14px;">
                     <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
                         <span style="font-size:12px;font-weight:600;color:var(--success);"><i class="fa-solid fa-shield-check"></i> Clave DKIM Activa</span>
                         <span style="font-size:11px;color:var(--text-muted);">Selector: <code>{{ $activeKey->selector }}</code></span>
@@ -84,7 +84,7 @@
                 </div>
                 @endif
                 @else
-                <div style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:12px;font-size:12px;color:var(--danger);">
+                <div style="background:color-mix(in srgb, var(--danger) 7%, transparent);border:1px solid color-mix(in srgb, var(--danger) 20%, transparent);border-radius:var(--radius-sm);padding:12px;font-size:12px;color:var(--danger);">
                     <i class="fa-solid fa-triangle-exclamation"></i>
                     Sin clave DKIM. Genera una usando el botón para mejorar la entregabilidad de emails.
                 </div>
@@ -108,7 +108,7 @@
                 @if($dnsZone)
                 @php $spfRecord = $dnsZone->records->where('type','TXT')->where('name','@')->first(fn($r) => str_contains($r->content, 'v=spf1')); @endphp
                 @if($spfRecord)
-                <div style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:8px;padding:10px 14px;font-size:11px;font-family:monospace;color:var(--success);">
+                <div style="background:color-mix(in srgb, var(--success) 7%, transparent);border:1px solid color-mix(in srgb, var(--success) 20%, transparent);border-radius:var(--radius-sm);padding:10px 14px;font-size:11px;font-family:monospace;color:var(--success);">
                     {{ $spfRecord->content }}
                 </div>
                 @else
@@ -139,7 +139,7 @@
                     @foreach(['none' => ['fa-eye','var(--accent-light)','Monitoreo','Sin acción, solo reportes'], 'quarantine' => ['fa-box','var(--warning)','Cuarentena','Va a spam si falla'], 'reject' => ['fa-ban','var(--danger)','Rechazar','Bloqueo total si falla']] as $policy => [$icon, $color, $label, $desc])
                     <label style="cursor:pointer;">
                         <input type="radio" wire:model="dmarcPolicy" value="{{ $policy }}" style="display:none;">
-                        <div style="padding:10px;border-radius:8px;text-align:center;border:1px solid {{ $dmarcPolicy === $policy ? $color : 'var(--glass-border)' }};background:{{ $dmarcPolicy === $policy ? 'rgba(99,102,241,0.08)' : 'transparent' }};transition:all 0.2s;cursor:pointer;">
+                        <div style="padding:10px;border-radius:var(--radius-sm);text-align:center;border:1px solid {{ $dmarcPolicy === $policy ? $color : 'var(--glass-border)' }};background:{{ $dmarcPolicy === $policy ? 'color-mix(in srgb, var(--accent) 8%, transparent)' : 'transparent' }};transition:all 0.2s;cursor:pointer;">
                             <i class="fa-solid {{ $icon }}" style="font-size:16px;color:{{ $color }};margin-bottom:4px;display:block;"></i>
                             <div style="font-size:11px;font-weight:600;color:var(--text-primary);">{{ $label }}</div>
                             <div style="font-size:10px;color:var(--text-muted);">{{ $desc }}</div>
@@ -151,7 +151,7 @@
                 @if($dnsZone)
                 @php $dmarcRecord = $dnsZone->records->where('type','TXT')->where('name','_dmarc')->first(); @endphp
                 @if($dmarcRecord)
-                <div style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:8px;padding:10px 14px;font-size:11px;font-family:monospace;color:var(--success);">{{ $dmarcRecord->content }}</div>
+                <div style="background:color-mix(in srgb, var(--success) 7%, transparent);border:1px solid color-mix(in srgb, var(--success) 20%, transparent);border-radius:var(--radius-sm);padding:10px 14px;font-size:11px;font-family:monospace;color:var(--success);">{{ $dmarcRecord->content }}</div>
                 @else
                 <div style="font-size:12px;color:var(--text-muted);">Sin registro DMARC aún.</div>
                 @endif
@@ -174,7 +174,7 @@
                 @if(!empty($verifyResults))
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
                     @foreach($verifyResults as $type => $result)
-                    <div style="background:rgba(0,0,0,0.2);border:1px solid {{ $result['status'] === 'ok' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)' }};border-radius:10px;padding:14px;text-align:center;">
+                    <div style="background:rgba(0,0,0,0.2);border:1px solid {{ $result['status'] === 'ok' ? 'color-mix(in srgb, var(--success) 30%, transparent)' : 'color-mix(in srgb, var(--danger) 30%, transparent)' }};border-radius:var(--radius-sm);padding:14px;text-align:center;">
                         <i class="fa-solid {{ $result['status'] === 'ok' ? 'fa-circle-check' : 'fa-circle-xmark' }}" style="font-size:24px;color:{{ $result['status'] === 'ok' ? 'var(--success)' : 'var(--danger)' }};margin-bottom:8px;display:block;"></i>
                         <div style="font-size:13px;font-weight:700;text-transform:uppercase;margin-bottom:4px;">{{ $type }}</div>
                         <div style="font-size:11px;color:{{ $result['status'] === 'ok' ? 'var(--success)' : 'var(--danger)' }};">

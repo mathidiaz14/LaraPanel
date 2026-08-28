@@ -24,7 +24,7 @@
 
     {{-- Domains without SSL banner --}}
     @if($domainsWithoutSsl->isNotEmpty())
-    <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+    <div style="background:color-mix(in srgb, var(--warning) 8%, transparent);border:1px solid color-mix(in srgb, var(--warning) 25%, transparent);border-radius:var(--radius-sm);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
         <i class="fa-solid fa-triangle-exclamation" style="color:var(--warning);font-size:18px;flex-shrink:0;"></i>
         <div style="flex:1;">
             <div style="font-size:13px;font-weight:600;color:var(--warning);">
@@ -34,7 +34,7 @@
                 {{ $domainsWithoutSsl->pluck('name')->join(', ') }}
             </div>
         </div>
-        <a href="{{ route('ssl.issue', ['domain' => $domainsWithoutSsl->first()?->id]) }}" class="btn btn-ghost btn-sm" style="border-color:rgba(245,158,11,0.3);color:var(--warning);flex-shrink:0;">
+        <a href="{{ route('ssl.issue', ['domain' => $domainsWithoutSsl->first()?->id]) }}" class="btn btn-ghost btn-sm" style="border-color:color-mix(in srgb, var(--warning) 30%, transparent);color:var(--warning);flex-shrink:0;">
             Activar SSL
         </a>
     </div>
@@ -88,7 +88,7 @@
                                 <i class="fa-solid fa-chevron-right" style="font-size:11px;transition:transform 0.2s;" :style="expanded ? 'transform:rotate(90deg)' : ''"></i>
                             </button>
                             @endif
-                            <div style="width:34px;height:34px;border-radius:8px;background:{{ $isExpired ? 'rgba(239,68,68,0.12)' : ($isExpiringSoon ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)') }};border:1px solid {{ $isExpired ? 'rgba(239,68,68,0.2)' : ($isExpiringSoon ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)') }};display:flex;align-items:center;justify-content:center;{{ !$hasSubs ? 'margin-left:24px;' : '' }}">
+                            <div style="width:34px;height:34px;border-radius:var(--radius-sm);background:{{ $isExpired ? 'color-mix(in srgb, var(--danger) 12%, transparent)' : ($isExpiringSoon ? 'color-mix(in srgb, var(--warning) 12%, transparent)' : 'color-mix(in srgb, var(--success) 12%, transparent)') }};border:1px solid {{ $isExpired ? 'color-mix(in srgb, var(--danger) 20%, transparent)' : ($isExpiringSoon ? 'color-mix(in srgb, var(--warning) 20%, transparent)' : 'color-mix(in srgb, var(--success) 20%, transparent)') }};display:flex;align-items:center;justify-content:center;{{ !$hasSubs ? 'margin-left:24px;' : '' }}">
                                 <i class="fa-solid fa-{{ $isExpired ? 'lock-open' : 'lock' }}" style="color:{{ $isExpired ? 'var(--danger)' : ($isExpiringSoon ? 'var(--warning)' : 'var(--success)') }};font-size:14px;"></i>
                             </div>
                             <div>
@@ -156,7 +156,7 @@
                 </tr>
 
                 @foreach($subcerts as $subcert)
-                <tr wire:key="cert-{{ $subcert->id }}" x-show="expanded" style="background:rgba(255,255,255,0.015);display:none;" x-transition>
+                <tr wire:key="cert-{{ $subcert->id }}" x-show="expanded" style="background:var(--glass-bg);display:none;" x-transition>
                     @php
                         $sDays = $subcert->daysUntilExpiry();
                         $sIsExpiringSoon = $subcert->isExpiringSoon(30);
@@ -164,7 +164,7 @@
                     @endphp
                     <td>
                         <div style="display:flex;align-items:center;gap:10px;padding-left:34px;">
-                            <div style="width:28px;height:28px;border-radius:8px;background:{{ $sIsExpired ? 'rgba(239,68,68,0.08)' : ($sIsExpiringSoon ? 'rgba(245,158,11,0.08)' : 'rgba(16,185,129,0.08)') }};border:1px solid {{ $sIsExpired ? 'rgba(239,68,68,0.15)' : ($sIsExpiringSoon ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)') }};display:flex;align-items:center;justify-content:center;">
+                            <div style="width:28px;height:28px;border-radius:var(--radius-sm);background:{{ $sIsExpired ? 'color-mix(in srgb, var(--danger) 8%, transparent)' : ($sIsExpiringSoon ? 'color-mix(in srgb, var(--warning) 8%, transparent)' : 'color-mix(in srgb, var(--success) 8%, transparent)') }};border:1px solid {{ $sIsExpired ? 'color-mix(in srgb, var(--danger) 15%, transparent)' : ($sIsExpiringSoon ? 'color-mix(in srgb, var(--warning) 15%, transparent)' : 'color-mix(in srgb, var(--success) 15%, transparent)') }};display:flex;align-items:center;justify-content:center;">
                                 <i class="fa-solid fa-{{ $sIsExpired ? 'lock-open' : 'lock' }}" style="color:{{ $sIsExpired ? 'var(--danger)' : ($sIsExpiringSoon ? 'var(--warning)' : 'var(--success)') }};font-size:12px;"></i>
                             </div>
                             <div>
@@ -252,7 +252,7 @@
     <div class="lp-modal-backdrop">
         <div class="lp-modal glass-elevated" style="max-width:420px;text-align:center;">
             <div class="lp-modal-body">
-                <div style="width:52px;height:52px;border-radius:50%;background:rgba(239,68,68,0.15);border:2px solid rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                <div style="width:52px;height:52px;border-radius:50%;background:color-mix(in srgb, var(--danger) 15%, transparent);border:2px solid color-mix(in srgb, var(--danger) 30%, transparent);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
                     <i class="fa-solid fa-lock-open" style="color:var(--danger);font-size:20px;"></i>
                 </div>
                 <h2 style="font-size:17px;font-weight:700;margin-bottom:8px;">Revocar certificado SSL</h2>

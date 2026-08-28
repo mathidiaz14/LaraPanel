@@ -45,7 +45,7 @@
         @foreach($services as $svc)
         <div class="glass-elevated" style="padding:20px;display:flex;flex-direction:column;gap:14px;{{ !$svc['active'] && $svc['critical'] ? 'border-color:rgba(239,68,68,0.35);' : '' }}">
             <div style="display:flex;align-items:center;gap:12px;">
-                <div style="width:42px;height:42px;border-radius:10px;background:rgba(99,102,241,0.1);color:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">
+                <div style="width:42px;height:42px;border-radius:10px;background:rgba(79,70,229,0.1);color:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;">
                     <i class="{{ $svc['icon'] }}"></i>
                 </div>
                 <div style="min-width:0;flex:1;">
