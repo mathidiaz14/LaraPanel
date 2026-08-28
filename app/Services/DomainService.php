@@ -115,6 +115,13 @@ class DomainService
 
         AuditLog::record('domain.created', $domainName, ['domain_id' => $domain->id]);
 
+        // Auto-provision uptime monitoring for the newly hosted site.
+        try {
+            app(\App\Services\UptimeProvisioner::class)->enrollDomain($domain);
+        } catch (\Throwable $e) {
+            \Log::error("Failed to auto-enroll uptime monitor for {$domain->name}: " . $e->getMessage());
+        }
+
         return $domain->fresh();
     }
 

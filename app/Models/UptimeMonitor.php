@@ -14,6 +14,7 @@ class UptimeMonitor extends Model
         'target',
         'interval_minutes',
         'status',
+        'source',
         'last_checked_at',
         'last_error'
     ];

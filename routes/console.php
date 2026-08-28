@@ -42,6 +42,13 @@ Schedule::command('panel:check-uptime')
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/domains-uptime.log'));
 
+// Auto-enroll uptime monitors for newly hosted domains / Docker containers
+Schedule::command('larapanel:uptime-sync')
+    ->hourly()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/larapanel-uptime-sync.log'));
+
 // Backups Scheduler
 Schedule::command('backups:run-scheduled')
     ->hourly()

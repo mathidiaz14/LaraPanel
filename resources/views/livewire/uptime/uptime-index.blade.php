@@ -5,9 +5,14 @@
             <h1 class="page-title" style="margin:0;">Monitor de Servicios (Uptime)</h1>
             <p class="page-subtitle" style="margin: var(--sp-2) 0 0 0;">Monitorea tus sitios web y contenedores Docker en tiempo real.</p>
         </div>
-        <button wire:click="$set('showCreateModal', true)" class="btn btn-primary">
-            <i class="fa-solid fa-plus"></i> Nuevo Monitor
-        </button>
+        <div style="display:flex;gap:var(--sp-3);flex-wrap:wrap;">
+            <button wire:click="syncAuto" wire:loading.attr="disabled" class="btn btn-ghost" title="Crear monitores automáticos para todos los dominios y contenedores Docker del servidor">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Auto-detectar
+            </button>
+            <button wire:click="$set('showCreateModal', true)" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> Nuevo Monitor
+            </button>
+        </div>
     </div>
 
     {{-- Alerts --}}
@@ -67,6 +72,9 @@
                     <h3 style="margin:0 0 4px;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;">
                         <i class="fa-solid fa-{{ $monitor->type === 'http' ? 'globe' : 'box-open' }}" style="color:var(--accent-light);font-size:14px;"></i>
                         {{ $monitor->name }}
+                        @if($monitor->source === 'auto')
+                            <span class="badge badge-info" style="font-size:10px;padding:2px 6px;">AUTO</span>
+                        @endif
                     </h3>
                     <div style="font-size:12px;color:var(--text-muted);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                         {{ $monitor->target }}

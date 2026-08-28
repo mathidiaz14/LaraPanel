@@ -79,6 +79,23 @@ class UptimeIndex extends Component
         }
     }
 
+    /**
+     * Auto-enroll monitors for every hosted domain and Docker container on
+     * this server. Idempotent — does not duplicate existing auto monitors and
+     * leaves manually created monitors untouched.
+     */
+    public function syncAuto()
+    {
+        try {
+            $added = app(\App\Services\UptimeProvisioner::class)->syncAll(auth()->user());
+            $this->successMessage = $added > 0
+                ? "Sincronización completada: {$added} monitor(es) automático(s) añadido(s)."
+                : 'Todos los sitios y contenedores ya están siendo monitoreados.';
+        } catch (\Throwable $e) {
+            $this->errorMessage = 'Error al sincronizar monitores: ' . $e->getMessage();
+        }
+    }
+
     public function render()
     {
         $monitors = UptimeMonitor::where('user_id', auth()->id())
