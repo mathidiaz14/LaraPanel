@@ -345,6 +345,20 @@
                             @error('telegramChatId') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
                         </div>
                     </div>
+
+                    <div style="display:flex;align-items:center;gap:14px;margin-top:16px;flex-wrap:wrap;">
+                        <button type="button" wire:click="sendTestTelegram" wire:loading.attr="disabled" class="btn btn-ghost" style="padding:9px 18px;border-radius:10px;font-size:13px;font-weight:600;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);color:#4ade80;display:inline-flex;align-items:center;gap:8px;cursor:pointer;">
+                            <i class="fa-brands fa-telegram" wire:loading.class="fa-spin"></i>
+                            <span>Enviar mensaje de prueba</span>
+                        </button>
+                        @if($telegramTestMessage)
+                        <span style="font-size:12px;{{ str_starts_with($telegramTestMessage, 'Error') ? 'color:#f87171;' : 'color:#4ade80;' }}">
+                            <i class="fa-solid {{ str_starts_with($telegramTestMessage, 'Error') ? 'fa-circle-exclamation' : 'fa-circle-check' }}"></i>
+                            {{ $telegramTestMessage }}
+                        </span>
+                        @endif
+                    </div>
+
                     <p style="font-size:11px;color:var(--text-muted);margin-top:14px;">Recibe alertas de caídas de uptime, umbral de disco, fallos de backup e inicios de sesión sospechosos.</p>
                 </div>
 

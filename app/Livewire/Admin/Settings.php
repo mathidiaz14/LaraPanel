@@ -4,6 +4,9 @@ namespace App\Livewire\Admin;
 
 use Livewire\Component;
 use Illuminate\Support\Facades\File;
+use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\TelegramTextNotification;
 use App\Services\UpdateService;
 
 class Settings extends Component
@@ -29,6 +32,7 @@ class Settings extends Component
     public bool $telegramEnabled = false;
     public string $telegramBotToken = '';
     public string $telegramChatId = '';
+    public string $telegramTestMessage = '';
     
     public string $generalSuccessMessage = '';
     public string $generalErrorMessage = '';
@@ -264,6 +268,41 @@ class Settings extends Component
                     @unlink($pidFile);
                 }
             }
+        }
+    }
+
+    /**
+     * Send a test Telegram message using the currently entered (not yet saved)
+     * bot token and chat id, so the admin can verify delivery before saving.
+     */
+    public function sendTestTelegram(): void
+    {
+        $this->telegramTestMessage = '';
+
+        $this->validate([
+            'telegramBotToken' => 'required|string|max:512',
+            'telegramChatId'    => 'required|string|max:255',
+        ]);
+
+        // Override runtime config with the form values for this request only.
+        config([
+            'larapanel.notifications.telegram.enabled'   => true,
+            'larapanel.notifications.telegram.bot_token' => $this->telegramBotToken,
+            'larapanel.notifications.telegram.chat_id'   => $this->telegramChatId,
+        ]);
+
+        try {
+            Notification::send(
+                new AnonymousNotifiable(),
+                new TelegramTextNotification(
+                    "✅ LaraPanel: mensaje de prueba de Telegram enviado correctamente.\n"
+                    . "Servidor: " . config('larapanel.server.public_ip')
+                )
+            );
+
+            $this->telegramTestMessage = 'Mensaje de prueba enviado. Revisa tu chat de Telegram.';
+        } catch (\Throwable $e) {
+            $this->telegramTestMessage = 'Error al enviar la prueba: ' . $e->getMessage();
         }
     }
 
