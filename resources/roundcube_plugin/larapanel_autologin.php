@@ -43,11 +43,20 @@ class larapanel_autologin extends rcube_plugin
     function override_imap($args)
     {
         if (!empty($_SESSION['larapanel_master_login'])) {
-            $master_pwd = trim(@file_get_contents('/etc/roundcube/larapanel_master_pwd'));
-            if ($master_pwd) {
-                $args['user'] = $args['user'] . '*larapanel';
-                $args['pass'] = $master_pwd;
+            $pwd_file = '/etc/roundcube/larapanel_master_pwd';
+            if (!file_exists($pwd_file)) {
+                $args['abort'] = true;
+                $args['error'] = 'LaraPanel: No se encontró el archivo de contraseña maestra Dovecot. Ejecute setup-dovecot-master.sh.';
+                return $args;
             }
+            $master_pwd = trim(file_get_contents($pwd_file));
+            if (empty($master_pwd)) {
+                $args['abort'] = true;
+                $args['error'] = 'LaraPanel: La contraseña maestra Dovecot está vacía. Re-ejecute setup-dovecot-master.sh.';
+                return $args;
+            }
+            $args['user'] = $args['user'] . '*larapanel';
+            $args['pass'] = $master_pwd;
         }
         return $args;
     }
@@ -55,11 +64,20 @@ class larapanel_autologin extends rcube_plugin
     function override_smtp($args)
     {
         if (!empty($_SESSION['larapanel_master_login'])) {
-            $master_pwd = trim(@file_get_contents('/etc/roundcube/larapanel_master_pwd'));
-            if ($master_pwd) {
-                $args['smtp_user'] = $args['smtp_user'] . '*larapanel';
-                $args['smtp_pass'] = $master_pwd;
+            $pwd_file = '/etc/roundcube/larapanel_master_pwd';
+            if (!file_exists($pwd_file)) {
+                $args['abort'] = true;
+                $args['error'] = 'LaraPanel: No se encontró el archivo de contraseña maestra Dovecot.';
+                return $args;
             }
+            $master_pwd = trim(file_get_contents($pwd_file));
+            if (empty($master_pwd)) {
+                $args['abort'] = true;
+                $args['error'] = 'LaraPanel: La contraseña maestra Dovecot está vacía.';
+                return $args;
+            }
+            $args['smtp_user'] = $args['smtp_user'] . '*larapanel';
+            $args['smtp_pass'] = $master_pwd;
         }
         return $args;
     }

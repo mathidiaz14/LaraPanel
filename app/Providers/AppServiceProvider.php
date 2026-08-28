@@ -8,7 +8,10 @@ use App\Shell\SudoExecutor;
 use App\Services\TerminalSessionManager;
 use App\Listeners\HandleTerminalMessage;
 use App\Listeners\KillTerminalOnDisconnect;
+use App\Listeners\NotifySuspiciousLogin;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Reverb\Events\ChannelRemoved;
 use Laravel\Reverb\Events\MessageReceived;
@@ -102,5 +105,34 @@ class AppServiceProvider extends ServiceProvider
         // Interactive terminal sockets (Reverb long-lived process)
         Event::listen(MessageReceived::class, HandleTerminalMessage::class);
         Event::listen(ChannelRemoved::class, KillTerminalOnDisconnect::class);
+
+        // Suspicious login detection (Telegram alert on new IP)
+        Event::listen(Login::class, NotifySuspiciousLogin::class);
+
+        // Load Telegram notification settings from the DB into config so that
+        // config('larapanel.notifications.telegram.*') reflects the UI values.
+        try {
+            if (Schema::hasTable('settings')) {
+                config([
+                    'larapanel.notifications.telegram.enabled' => filter_var(
+                        \App\Models\Setting::get(
+                            'telegram_enabled',
+                            config('larapanel.notifications.telegram.enabled')
+                        ),
+                        FILTER_VALIDATE_BOOLEAN
+                    ),
+                    'larapanel.notifications.telegram.bot_token' => \App\Models\Setting::getSecret(
+                        'telegram_bot_token',
+                        config('larapanel.notifications.telegram.bot_token')
+                    ),
+                    'larapanel.notifications.telegram.chat_id' => \App\Models\Setting::get(
+                        'telegram_chat_id',
+                        config('larapanel.notifications.telegram.chat_id')
+                    ),
+                ]);
+            }
+        } catch (\Exception $e) {
+            // Ignore if the database is not ready (e.g. during migrate).
+        }
     }
 }

@@ -46,3 +46,8 @@ Schedule::command('panel:check-uptime')
 Schedule::command('backups:run-scheduled')
     ->hourly()
     ->withoutOverlapping();
+
+// Prune stale phpMyAdmin SSO tokens (DB credentials must not linger in /tmp)
+Schedule::command('larapanel:cleanup-pma-sso')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();

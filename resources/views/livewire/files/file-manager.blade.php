@@ -1,4 +1,5 @@
 <div class="fm-container" x-data="{ selectedAll: false, isUploading: false, progress: 0,
+        isDragOver: false, dragCounter: 0,
         ctx: { open: false, x: 0, y: 0, item: null },
         openCtx(e, item) {
             this.ctx.item = item;
@@ -13,7 +14,36 @@
                 this.ctx.y = Math.max(6, Math.min(this.ctx.y, window.innerHeight - r.height - 10));
             });
         },
-        closeCtx() { this.ctx.open = false; }
+        closeCtx() { this.ctx.open = false; },
+        handleDragEnter(e) {
+            e.preventDefault();
+            this.dragCounter++;
+            if (e.dataTransfer && e.dataTransfer.types.includes('Files')) {
+                this.isDragOver = true;
+            }
+        },
+        handleDragOver(e) {
+            e.preventDefault();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+        },
+        handleDragLeave(e) {
+            e.preventDefault();
+            this.dragCounter--;
+            if (this.dragCounter <= 0) {
+                this.dragCounter = 0;
+                this.isDragOver = false;
+            }
+        },
+        handleDrop(e) {
+            e.preventDefault();
+            this.dragCounter = 0;
+            this.isDragOver = false;
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                this.$refs.dropFileInput.files = files;
+                this.$refs.dropFileInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
     }"
      x-on:livewire-upload-start="isUploading = true"
      x-on:livewire-upload-finish="isUploading = false"
@@ -82,7 +112,23 @@
     </div>
 
     {{-- Main Panel: Explorer & Actions --}}
-    <div class="glass fm-main">
+    <div class="glass fm-main"
+         x-on:dragenter="handleDragEnter($event)"
+         x-on:dragover="handleDragOver($event)"
+         x-on:dragleave="handleDragLeave($event)"
+         x-on:drop="handleDrop($event)"
+         style="position:relative;">
+        {{-- Drop Zone Overlay --}}
+        <div x-show="isDragOver" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+             class="fm-dropzone-overlay" style="display:none;">
+            <div class="fm-dropzone-card">
+                <i class="fa-solid fa-cloud-arrow-up" style="font-size:48px;color:var(--accent-light);margin-bottom:16px;"></i>
+                <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Suelta los archivos aquí</h3>
+                <p style="font-size:13px;color:var(--text-muted);">Se subirán a: <strong>/{{ $currentPath ?: 'var/www' }}</strong></p>
+            </div>
+        </div>
+        <input type="file" wire:model.live="uploads" multiple x-ref="dropFileInput" style="display:none;">
         {{-- Top Toolbar --}}
         <div class="fm-toolbar">
             {{-- Breadcrumb path navigation --}}
@@ -736,8 +782,13 @@
             <div class="fm-upload-bar">
                 <div class="fm-upload-fill" :style="`width: ${progress}%`"></div>
             </div>
-            <div style="font-size:14px;font-weight:600;color:var(--text-secondary);"><span x-text="progress"></span>% Completado</div>
-            <p style="font-size:12px;color:var(--text-muted);margin-top:12px;">Por favor espera, procesando en segundo plano...</p>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                <div style="font-size:14px;font-weight:600;color:var(--text-secondary);"><span x-text="progress"></span>% Completado</div>
+            </div>
+            <div style="width:100%;height:3px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;margin-bottom:12px;">
+                <div style="height:100%;background:linear-gradient(90deg,var(--accent-light),rgba(99,102,241,0.8));border-radius:2px;transition:width 0.3s;animation:fmUploadPulse 1.5s ease-in-out infinite;" :style="`width: ${progress}%`"></div>
+            </div>
+            <p style="font-size:12px;color:var(--text-muted);">Por favor espera, procesando en segundo plano...</p>
         </div>
     </div>
 
@@ -873,6 +924,14 @@
 .fm-upload-card { background: rgba(15, 23, 42, 0.95); border: 1px solid var(--glass-border); border-radius: 12px; padding: 32px; width: 100%; max-width: 400px; text-align: center; }
 .fm-upload-bar { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
 .fm-upload-fill { height: 100%; background: var(--accent-light); border-radius: 4px; transition: width 0.3s; }
+
+/* Drop zone overlay */
+.fm-dropzone-overlay { position: absolute; inset: 0; z-index: 50; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; pointer-events: none; border: 3px dashed var(--accent-light); border-radius: 12px; margin: 8px; }
+.fm-dropzone-card { text-align: center; padding: 48px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 16px; }
+.fm-dropzone-card h3 { color: var(--text-primary); }
+.fm-dropzone-card p { color: var(--text-muted); }
+.fm-dropzone-card strong { color: var(--accent-light); }
+@keyframes fmUploadPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
 
 /* Unzip modal */
 .fm-unzip-log { background: rgba(0,0,0,0.3); border: 1px solid var(--glass-border); border-radius: 8px; padding: 12px; height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; font-family: monospace; }

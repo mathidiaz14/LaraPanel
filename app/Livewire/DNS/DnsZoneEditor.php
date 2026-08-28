@@ -148,7 +148,7 @@ class DnsZoneEditor extends Component
             'records' => $this->zone->records()->orderBy('type')->orderBy('name')->get(),
         ])->layout('layouts.app', [
             'title'      => 'Editar Zona DNS: ' . $this->zone->name,
-            'breadcrumb' => '<span><a href="' . route('dns.index') . '">DNS Manager</a></span> / <strong>' . $this->zone->name . '</strong>',
+            'breadcrumb' => '<span><a href="' . route('dns.index') . '">DNS Manager</a></span> / <strong>' . e($this->zone->name) . '</strong>',
         ]);
     }
 }

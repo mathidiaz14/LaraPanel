@@ -85,4 +85,50 @@ class GitWebhookTest extends TestCase
         $response->assertStatus(400);
         $response->assertJson(['message' => 'Auto-deploy is disabled for this repository']);
     }
+
+    public function test_empty_secret_is_rejected_with_401()
+    {
+        // An empty webhook_secret must never be treated as a valid signature.
+        // Clear the secret that the factory/boot default populated.
+        $this->deployment->update(['webhook_secret' => '']);
+        $this->deployment->refresh();
+
+        // Prevent any real process spawn while we assert on the response.
+        $controller = \Mockery::mock(\App\Http\Controllers\GitWebhookController::class)->makePartial();
+        $controller->shouldReceive('spawnDeploy')->andReturnUsing(fn () => null);
+        $this->app->instance(\App\Http\Controllers\GitWebhookController::class, $controller);
+
+        $payload = json_encode(['ref' => 'refs/heads/main']);
+        $signature = 'sha256=' . hash_hmac('sha256', $payload, '');
+
+        $response = $this->postJson(
+            "/api/webhooks/git/{$this->deployment->webhook_id}",
+            ['ref' => 'refs/heads/main'],
+            ['X-Hub-Signature-256' => $signature]
+        );
+
+        $response->assertStatus(401);
+    }
+
+    public function test_valid_secret_triggers_deploy_without_real_spawn()
+    {
+        // Mock the deploy spawn so the test never actually launches `php artisan`.
+        $controller = \Mockery::mock(\App\Http\Controllers\GitWebhookController::class)->makePartial();
+        $controller->shouldReceive('spawnDeploy')
+            ->once()
+            ->andReturnUsing(fn () => null);
+        $this->app->instance(\App\Http\Controllers\GitWebhookController::class, $controller);
+
+        $payload = json_encode(['ref' => 'refs/heads/main']);
+        $signature = 'sha256=' . hash_hmac('sha256', $payload, 'my-secret-key');
+
+        $response = $this->postJson(
+            "/api/webhooks/git/{$this->deployment->webhook_id}",
+            ['ref' => 'refs/heads/main'],
+            ['X-Hub-Signature-256' => $signature]
+        );
+
+        $response->assertStatus(200);
+        $response->assertJson(['message' => 'Deployment triggered successfully']);
+    }
 }

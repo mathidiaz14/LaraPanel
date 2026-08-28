@@ -162,9 +162,11 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // Registration is disabled: account creation is admin/reseller only
+        // (self-registration on a server control panel is a critical risk).
+        // Features::registration(),
         Features::resetPasswords(),
-        // Features::emailVerification(),
+        Features::emailVerification(),
         Features::updateProfileInformation(),
         Features::updatePasswords(),
         Features::twoFactorAuthentication([

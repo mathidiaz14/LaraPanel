@@ -119,13 +119,14 @@ Route::middleware(['auth'])->group(function () {
     // Impersonation routes
     Route::get('/admin/impersonate/{user}', [\App\Http\Controllers\Admin\ImpersonationController::class, 'start'])
         ->name('admin.impersonate.start')
-        ->middleware('role:admin,reseller');
+        ->middleware(['role:admin,reseller', 'password.confirm']);
 
     Route::get('/impersonate/stop', [\App\Http\Controllers\Admin\ImpersonationController::class, 'stop'])
-        ->name('impersonate.stop');
+        ->name('impersonate.stop')
+        ->middleware('role:admin,reseller');
 
     // ── Admin-Only Global & System Routes ────────────────────────────
-    Route::middleware(['role:admin'])->group(function () {
+    Route::middleware(['role:admin', '2fa'])->group(function () {
         Route::get('/php', PhpIndex::class)->name('php.index');
         Route::get('/firewall',  FirewallIndex::class)->name('firewall.index');
         Route::get('/fail2ban',  Fail2banIndex::class)->name('fail2ban.index');
@@ -152,30 +153,55 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/uptime', \App\Livewire\Uptime\UptimeIndex::class)->name('uptime.index');
         Route::get('/performance', \App\Livewire\Performance\PerformanceIndex::class)->name('performance.index');
+
+        // Stream a GoAccess report inside a sandboxed iframe (avoids XSS from
+        // attacker-influenced log data being injected into the admin session).
+        Route::get('/performance/goaccess/{domain}', function (string $domain) {
+            if (!preg_match('/^[a-zA-Z0-9\-\.]+$/', $domain)) {
+                abort(404);
+            }
+
+            $base = rtrim(config('larapanel.goaccess.reports_path', '/var/larapanel/goaccess'), '/');
+            $path = $base . '/' . $domain . '.html';
+
+            // Prevent path traversal: the resolved path must stay inside $base.
+            $real = realpath($path);
+            if ($real === false || strncmp($real, $base . '/', strlen($base) + 1) !== 0) {
+                abort(404);
+            }
+
+            return response()->file($real, [
+                'Content-Type'           => 'text/html',
+                'Content-Security-Policy' => "sandbox; default-src 'none'; img-src data:; style-src 'unsafe-inline';",
+                'X-Frame-Options'        => 'SAMEORIGIN',
+            ]);
+        })->name('admin.performance.goaccess')
+          ->middleware(['role:admin', '2fa']);
         Route::get('/wordpress', WordPressIndex::class)->name('wordpress.index');
         
         // Root phpMyAdmin Sign-on
         Route::get('/admin/db', function () {
             $token = Str::random(40);
             $tokenDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'larapanel_pma_sso';
-            
+
             if (!is_dir($tokenDir)) {
                 mkdir($tokenDir, 0700, true);
             }
-            
-            $dbUser = env('DB_USERNAME', 'root');
-            $dbPass = env('DB_PASSWORD', '');
-            
+
+            $connection = config('database.default', 'mysql');
+            $dbUser = config("database.connections.{$connection}.username", 'root');
+            $dbPass = config("database.connections.{$connection}.password", '');
+
             file_put_contents("$tokenDir/$token", "$dbUser:$dbPass");
             chmod("$tokenDir/$token", 0600);
-            
+
             return redirect('/pma/signon.php?token=' . $token);
         })->name('admin.db');
     });
 
     // ── Reseller & Admin routes ──────────────────────────────────────
     Route::prefix('admin')->name('admin.')->group(function () {
-        Route::get('/users', UserIndex::class)->name('users.index')->middleware('role:admin,reseller');
+        Route::get('/users', UserIndex::class)->name('users.index')->middleware(['role:admin,reseller', '2fa']);
 
         // Admin-only management routes
         Route::middleware('role:admin')->group(function () {

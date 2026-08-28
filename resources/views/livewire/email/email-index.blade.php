@@ -1,4 +1,8 @@
-<div>
+<div x-data="{ uploadProgress: 0, uploadActive: false }"
+     x-on:livewire-upload-start="uploadActive = true; uploadProgress = 0"
+     x-on:livewire-upload-finish="uploadActive = false"
+     x-on:livewire-upload-error="uploadActive = false"
+     x-on:livewire-upload-progress="uploadProgress = $event.detail.progress">
     {{-- Header --}}
     <div class="page-header">
         <div>
@@ -163,6 +167,10 @@
                                             <a href="{{ route('email.backup', $email->id) }}" class="btn btn-ghost btn-sm" title="Descargar Respaldo" target="_blank">
                                                 <i class="fa-solid fa-floppy-disk" style="color:var(--warning);"></i>
                                             </a>
+                                            {{-- Edit Quota --}}
+                                            <button wire:click="confirmEditQuota({{ $email->id }})" class="btn btn-ghost btn-sm" title="Cambiar Cuota">
+                                                <i class="fa-solid fa-database" style="color:var(--accent-light);"></i>
+                                            </button>
                                             {{-- Forwarders --}}
                                             <button wire:click="editForwarders({{ $email->id }})" class="btn btn-ghost btn-sm" title="Redirecciones">
                                                 <i class="fa-solid fa-route" style="color:var(--accent-light);"></i>
@@ -221,6 +229,41 @@
                 <button wire:click="changePassword" class="btn btn-primary" style="background:var(--warning);border-color:var(--warning);color:black;">
                     Actualizar Contraseña
                 </button>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Edit Quota Modal --}}
+    @if($editingQuotaId)
+    @php $acctToQuota = $emailsByDomain->flatten()->firstWhere('id', $editingQuotaId); @endphp
+    <div class="lp-modal-backdrop">
+        <div class="lp-modal glass-elevated">
+            <div class="lp-modal-header">
+                <h3 class="panel-title" style="margin:0;">
+                    <i class="fa-solid fa-database" style="color:var(--accent-light);"></i>
+                    Cambiar Cuota de Almacenamiento
+                </h3>
+                <button wire:click="$set('editingQuotaId', null)" class="lp-modal-close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="lp-modal-body">
+                <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+                    Actualizar cuota para: <strong style="color:var(--text-primary);">{{ $acctToQuota?->email }}</strong>
+                </p>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label">Nueva Cuota (MB)</label>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <input type="number" wire:model="newQuotaMb" class="form-input" placeholder="500" min="10" max="10240" style="margin-bottom:0;" autofocus>
+                        <span style="color:var(--text-muted);font-size:12px;white-space:nowrap;">MB (10 - 10240)</span>
+                    </div>
+                    @error('newQuotaMb') <div class="form-error">{{ $message }}</div> @enderror
+                </div>
+            </div>
+            <div class="lp-modal-footer">
+                <button wire:click="$set('editingQuotaId', null)" class="btn btn-ghost">Cancelar</button>
+                <button wire:click="saveQuota" class="btn btn-primary">Guardar Cuota</button>
             </div>
         </div>
     </div>
@@ -292,11 +335,18 @@
                         @error('defaultImportPassword') <div class="form-error">{{ $message }}</div> @enderror
                     </div>
                     <div class="form-group" style="margin-bottom:0;">
-                        <label class="form-label">Archivo ZIP (máx. 500MB)</label>
+                        <label class="form-label">Archivo ZIP (máx. 3GB)</label>
                         <input type="file" wire:model="zipFile" class="form-input" accept=".zip" required>
                         @error('zipFile') <div class="form-error">{{ $message }}</div> @enderror
-                        <div wire:loading wire:target="zipFile" style="font-size:11px;color:var(--accent-light);margin-top:4px;">
-                            <i class="fa-solid fa-spinner fa-spin"></i> Subiendo archivo...
+                        {{-- Upload Progress Bar --}}
+                        <div x-show="uploadActive" x-transition style="margin-top:10px;">
+                            <div style="width:100%;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;overflow:hidden;">
+                                <div style="height:100%;background:var(--accent-light);border-radius:4px;transition:width 0.3s;" :style="`width: ${uploadProgress}%`"></div>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text-muted);">
+                                <span><i class="fa-solid fa-cloud-arrow-up" style="color:var(--accent-light);"></i> Subiendo archivo...</span>
+                                <span style="font-weight:700;color:var(--accent-light);"><span x-text="uploadProgress"></span>%</span>
+                            </div>
                         </div>
                     </div>
                 </div>

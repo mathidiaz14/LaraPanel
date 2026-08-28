@@ -5,6 +5,7 @@ namespace App\Livewire\FTP;
 use App\Models\FtpAccount;
 use App\Models\Domain;
 use App\Services\FtpService;
+use App\Services\QuotaService;
 use Livewire\Component;
 use Illuminate\Support\Str;
 
@@ -72,6 +73,9 @@ class FtpIndex extends Component
                 $this->errorMessage = 'Has alcanzado el límite de cuentas FTP de tu plan.';
                 return;
             }
+
+            // Check disk quota before provisioning the FTP account
+            app(QuotaService::class)->enforceDiskQuota(auth()->user());
 
             $ftpService->create(auth()->user(), [
                 'domain_id'             => $this->domainId,

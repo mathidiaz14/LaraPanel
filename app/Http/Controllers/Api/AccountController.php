@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SuspendAccountJob;
+use App\Jobs\TerminateAccountJob;
 use App\Models\AuditLog;
 use App\Models\Plan;
 use App\Models\User;
@@ -74,7 +76,7 @@ class AccountController extends Controller
             'reason'  => $reason,
         ]);
 
-        // TODO: Dispatch job to disable Nginx vhosts
+        SuspendAccountJob::dispatch($user->id);
 
         return response()->json([
             'status'  => 'success',
@@ -121,13 +123,14 @@ class AccountController extends Controller
             'by_user' => $request->user()->id,
         ]);
 
-        // TODO: Dispatch job to physically remove domains, databases, emails from the server.
-
-        $user->delete();
+        // Dispatch job to physically remove domains, databases, emails, ftp and
+        // cron jobs from the server, then delete the user row. The job (not the
+        // controller) is responsible for the actual deletion.
+        TerminateAccountJob::dispatch($user->id, $user->name, $user->email);
 
         return response()->json([
             'status'  => 'success',
-            'message' => 'Account terminated successfully',
+            'message' => 'Account termination scheduled successfully',
         ]);
     }
 

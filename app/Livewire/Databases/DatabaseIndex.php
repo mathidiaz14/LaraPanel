@@ -5,6 +5,7 @@ namespace App\Livewire\Databases;
 use App\Models\DatabaseInstance;
 use App\Models\Domain;
 use App\Services\DatabaseService;
+use App\Services\QuotaService;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Str;
@@ -66,6 +67,9 @@ class DatabaseIndex extends Component
             if (!auth()->user()->canAddDatabase()) {
                 throw new \RuntimeException('Has alcanzado el límite de bases de datos de tu plan.');
             }
+
+            // Check disk quota before provisioning the database
+            app(QuotaService::class)->enforceDiskQuota(auth()->user());
 
             // Verify if DB name or User already exists
             if (DatabaseInstance::where('db_name', $fullName)->exists()) {

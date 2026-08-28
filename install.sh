@@ -1257,6 +1257,11 @@ CONF_EOF
 
 rm -f /etc/nginx/sites-enabled/larapanel_webmail
 ln -sf /etc/nginx/sites-available/larapanel_webmail /etc/nginx/sites-enabled/larapanel_webmail
+
+# Servir Roundcube también desde ${INSTALL_DIR}/public/webmail (panel),
+# para que el auto-login funcione aunque el dominio del correo esté caído.
+ln -sfn /usr/share/roundcube "${INSTALL_DIR}/public/webmail"
+
 nginx -t && systemctl reload nginx
 success "Webmail (Roundcube) configurado."
 

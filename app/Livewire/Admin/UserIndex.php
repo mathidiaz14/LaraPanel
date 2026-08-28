@@ -2,8 +2,11 @@
 
 namespace App\Livewire\Admin;
 
+use App\Jobs\SuspendAccountJob;
+use App\Jobs\TerminateAccountJob;
 use App\Models\Plan;
 use App\Models\User;
+use App\Services\ForceLogoutService;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
 
@@ -107,28 +110,36 @@ class UserIndex extends Component
                 $query->where('parent_id', auth()->id());
             }
             $user = $query->findOrFail($this->userId);
-            
+
+            $originalRole = $user->role;
+
             if (!empty($this->password)) {
                 $data['password'] = Hash::make($this->password);
             } else {
                 unset($data['password']);
             }
-            
+
             $user->update($data);
-            
+
             // Suspension logic
             if (!$this->is_active && !$user->isSuspended()) {
                 $user->suspended_at = now();
                 $user->suspension_reason = 'Suspendido manualmente.';
                 $user->save();
-                // TODO: Dispatch Job to disable Nginx vhosts for all domains belonging to this user
+                // Disable Nginx vhosts / resources via queued job and force logout.
+                SuspendAccountJob::dispatch($user->id);
             } elseif ($this->is_active && $user->isSuspended()) {
                 $user->suspended_at = null;
                 $user->suspension_reason = null;
                 $user->save();
                 // TODO: Dispatch Job to re-enable Nginx vhosts
             }
-            
+
+            // Force logout if the user's role changed (privilege change).
+            if (isset($originalRole) && $originalRole !== $user->role) {
+                app(ForceLogoutService::class)->logoutUser($user->id);
+            }
+
             session()->flash('message', 'Usuario actualizado.');
         } else {
             if (empty($this->password)) {
@@ -161,8 +172,34 @@ class UserIndex extends Component
         $user->suspended_at = now();
         $user->suspension_reason = 'Suspendido rápidamente desde el panel.';
         $user->save();
+
+        SuspendAccountJob::dispatch($user->id);
+        app(ForceLogoutService::class)->logoutUser($user->id);
+
         $this->loadUsers();
         session()->flash('message', 'Usuario suspendido.');
+    }
+
+    /**
+     * Force-logout all active sessions of a user (does not suspend the account).
+     */
+    public function forceLogoutSessions(int $id)
+    {
+        $query = User::query();
+        if (auth()->user()->isReseller()) {
+            $query->where('parent_id', auth()->id());
+        }
+
+        $user = $query->findOrFail($id);
+        if ($user->id === auth()->id()) {
+            session()->flash('error', 'No puedes desconectar tus propias sesiones desde aquí.');
+            return;
+        }
+
+        app(ForceLogoutService::class)->logoutUser($user->id);
+
+        $this->loadUsers();
+        session()->flash('message', 'Sesiones de ' . $user->name . ' desconectadas.');
     }
 
     public function activate(int $id)

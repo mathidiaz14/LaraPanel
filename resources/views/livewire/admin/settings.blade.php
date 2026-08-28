@@ -318,6 +318,36 @@
                     </div>
                 </div>
 
+                {{-- Bloque: Notificaciones Telegram --}}
+                <div class="glass" style="padding:28px;border-radius:16px;background:rgba(255,255,255,0.01);">
+                    <h4 style="font-size:16px;font-weight:700;margin:0 0 20px;display:flex;align-items:center;gap:10px;">
+                        <div style="width:36px;height:36px;background:rgba(0,136,204,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fa-brands fa-telegram" style="color:#229ed9;font-size:20px;"></i>
+                        </div>
+                        Notificaciones Telegram
+                    </h4>
+
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:24px;">
+                        <div class="form-group" style="grid-column:1 / -1;margin:0;display:flex;align-items:center;gap:10px;">
+                            <input type="checkbox" wire:model.defer="telegramEnabled" id="telegramEnabled" style="width:18px;height:18px;">
+                            <label for="telegramEnabled" style="font-size:13px;font-weight:600;color:var(--text-secondary);margin:0;">Habilitar notificaciones de Telegram</label>
+                        </div>
+
+                        <div class="form-group" style="margin:0;">
+                            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Bot Token</label>
+                            <input type="password" wire:model.defer="telegramBotToken" class="form-input" placeholder="123456789:AAE...">
+                            @error('telegramBotToken') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="form-group" style="margin:0;">
+                            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-secondary);">Chat ID</label>
+                            <input type="text" wire:model.defer="telegramChatId" class="form-input" placeholder="-1001234567890">
+                            @error('telegramChatId') <span style="color:var(--danger);font-size:11px;margin-top:4px;display:block;">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
+                    <p style="font-size:11px;color:var(--text-muted);margin-top:14px;">Recibe alertas de caídas de uptime, umbral de disco, fallos de backup e inicios de sesión sospechosos.</p>
+                </div>
+
                 {{-- Bloque 3: Localización y Sistema --}}
                 <div class="glass" style="padding:28px;border-radius:16px;background:rgba(255,255,255,0.01);">
                     <h4 style="font-size:16px;font-weight:700;margin:0 0 20px;display:flex;align-items:center;gap:10px;">

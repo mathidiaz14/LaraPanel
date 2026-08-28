@@ -75,6 +75,7 @@
                                 @else
                                     <button wire:click="activate({{ $user->id }})" class="btn btn-ghost btn-sm" title="Reactivar Cuenta" style="color:var(--success);"><i class="fa-solid fa-check"></i></button>
                                 @endif
+                                <button wire:click="forceLogoutSessions({{ $user->id }})" class="btn btn-ghost btn-sm" title="Desconectar sesiones" style="color:var(--warning);" onclick="return confirm('¿Desconectar todas las sesiones activas de este usuario?')"><i class="fa-solid fa-right-from-bracket"></i></button>
                             </td>
                         </tr>
                         @endforeach

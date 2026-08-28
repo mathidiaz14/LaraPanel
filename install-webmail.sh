@@ -222,6 +222,13 @@ else
     error "Error al configurar Nginx. Revisa el archivo $NGINX_CONF"
 fi
 
+# Servir Roundcube también desde /var/www/panel/public/webmail (el panel),
+# para que el auto-login del panel funcione aunque el dominio del correo esté caído.
+if [ -d "/var/www/panel/public" ]; then
+    ln -sfn /usr/share/roundcube /var/www/panel/public/webmail
+    success "Roundcube también disponible en https://<panel>/webmail/"
+fi
+
 echo -e "\n${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${BOLD}${GREEN}  ¡Instalación de Webmail (Roundcube) completada con éxito!${NC}"
 echo -e "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"

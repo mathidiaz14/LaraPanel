@@ -24,6 +24,11 @@ class Settings extends Component
     public string $awsDefaultRegion = 'us-east-1';
     public string $awsBucket = '';
     public string $awsEndpoint = '';
+
+    // Telegram Notifications
+    public bool $telegramEnabled = false;
+    public string $telegramBotToken = '';
+    public string $telegramChatId = '';
     
     public string $generalSuccessMessage = '';
     public string $generalErrorMessage = '';
@@ -66,6 +71,10 @@ class Settings extends Component
         $this->awsDefaultRegion = \App\Models\Setting::get('aws_default_region', 'us-east-1');
         $this->awsBucket = \App\Models\Setting::get('aws_bucket', '');
         $this->awsEndpoint = \App\Models\Setting::get('aws_endpoint', '');
+
+        $this->telegramEnabled = filter_var(\App\Models\Setting::get('telegram_enabled', '0'), FILTER_VALIDATE_BOOLEAN);
+        $this->telegramBotToken = \App\Models\Setting::getSecret('telegram_bot_token', '');
+        $this->telegramChatId = \App\Models\Setting::get('telegram_chat_id', '');
     }
 
     public function saveGeneralSettings(): void
@@ -84,6 +93,9 @@ class Settings extends Component
             'awsDefaultRegion' => 'nullable|string|max:255',
             'awsBucket' => 'nullable|string|max:255',
             'awsEndpoint' => 'nullable|url|max:255',
+            'telegramEnabled' => 'boolean',
+            'telegramBotToken' => 'nullable|string|max:512',
+            'telegramChatId' => 'nullable|string|max:255',
         ]);
 
         try {
@@ -99,6 +111,10 @@ class Settings extends Component
             \App\Models\Setting::set('aws_default_region', $this->awsDefaultRegion);
             \App\Models\Setting::set('aws_bucket', $this->awsBucket);
             \App\Models\Setting::set('aws_endpoint', $this->awsEndpoint);
+
+            \App\Models\Setting::set('telegram_enabled', $this->telegramEnabled ? '1' : '0');
+            \App\Models\Setting::setSecret('telegram_bot_token', $this->telegramBotToken);
+            \App\Models\Setting::set('telegram_chat_id', $this->telegramChatId);
 
             // Timezone modification logic (if user approved, but here we just update PHP/DB timezone theoretically)
             // If they want OS timezone changes we would do:

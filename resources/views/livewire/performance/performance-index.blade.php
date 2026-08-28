@@ -289,7 +289,9 @@
                 <i class="fa-solid fa-file-code"></i> {{ $goAccessReportPath }}
             </div>
             <div style="border-radius:8px;overflow:hidden;border:1px solid var(--glass-border);">
-                {!! file_get_contents($goAccessReportPath) !!}
+                <iframe src="{{ route('admin.performance.goaccess', $domain->name) }}"
+                        sandbox=""
+                        style="width:100%;height:1200px;border:0;"></iframe>
             </div>
             @else
             <div class="empty-state">

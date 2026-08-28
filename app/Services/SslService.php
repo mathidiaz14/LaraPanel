@@ -202,7 +202,7 @@ class SslService
             ];
 
             // Issue via acme.sh dns_pdns method
-            $result = $this->sudo->withEnv($env)->run([
+            $result = $this->sudo->withEnv($env)->withTimeout(900)->run([
                 $this->acmeSh, '--issue',
                 '--dns', 'dns_pdns',
                 ...array_merge(...array_map(fn($d) => ['-d', $d], $allDomains)),
@@ -523,8 +523,10 @@ class SslService
             $sitesAvail   = config('larapanel.paths.nginx_sites');
             $sitesEnabled = config('larapanel.paths.nginx_enabled');
 
-            file_put_contents("/tmp/lp_ssl_{$domain->name}", $config);
-            $this->sudo->run(['cp', "/tmp/lp_ssl_{$domain->name}", "{$sitesAvail}/{$domain->name}"]);
+            $tmp = tempnam(sys_get_temp_dir(), 'lp_ssl_');
+            file_put_contents($tmp, $config);
+            $this->sudo->run(['cp', $tmp, "{$sitesAvail}/{$domain->name}"]);
+            @unlink($tmp);
             $this->sudo->run(['ln', '-sf', "{$sitesAvail}/{$domain->name}", "{$sitesEnabled}/{$domain->name}"]);
 
             if ($reload) {
@@ -539,12 +541,18 @@ class SslService
 
         $certDir = config('larapanel.paths.ssl_certs') . '/' . $domain->name;
         $this->sudo->run(['mkdir', '-p', $certDir]);
-        file_put_contents("/tmp/lp_cert_{$domain->name}.pem",  $cert);
-        file_put_contents("/tmp/lp_key_{$domain->name}.pem",   $key);
-        file_put_contents("/tmp/lp_chain_{$domain->name}.pem", $chain);
-        $this->sudo->run(['cp', "/tmp/lp_cert_{$domain->name}.pem",  "{$certDir}/fullchain.pem"]);
-        $this->sudo->run(['cp', "/tmp/lp_key_{$domain->name}.pem",   "{$certDir}/privkey.pem"]);
-        $this->sudo->run(['cp', "/tmp/lp_chain_{$domain->name}.pem", "{$certDir}/chain.pem"]);
+        $tmpCert  = tempnam(sys_get_temp_dir(), 'lp_cert_');
+        $tmpKey   = tempnam(sys_get_temp_dir(), 'lp_key_');
+        $tmpChain = tempnam(sys_get_temp_dir(), 'lp_chain_');
+        file_put_contents($tmpCert,  $cert);
+        file_put_contents($tmpKey,   $key);
+        file_put_contents($tmpChain, $chain);
+        $this->sudo->run(['cp', $tmpCert,  "{$certDir}/fullchain.pem"]);
+        $this->sudo->run(['cp', $tmpKey,   "{$certDir}/privkey.pem"]);
+        $this->sudo->run(['cp', $tmpChain, "{$certDir}/chain.pem"]);
+        @unlink($tmpCert);
+        @unlink($tmpKey);
+        @unlink($tmpChain);
         $this->sudo->run(['chown', '-R', 'www-data:www-data', $certDir]);
         $this->sudo->run(['chmod', '600', "{$certDir}/privkey.pem"]);
     }

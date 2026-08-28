@@ -4,9 +4,12 @@ namespace App\Console\Commands;
 
 use App\Models\ServerMetric;
 use App\Models\User;
+use App\Notifications\DiskThresholdNotification;
 use App\Notifications\ServerResourceAlert;
 use App\Services\MonitoringService;
+use App\Services\Notifier;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class CollectServerMetricsCommand extends Command
@@ -77,6 +80,22 @@ class CollectServerMetricsCommand extends Command
 
         if ($ramUsage > $thresholdRam) {
             $this->notifyAdmins('RAM', $ramUsage, "El uso de RAM alcanzó el {$ramUsage}% (Umbral: {$thresholdRam}%).");
+        }
+
+        // Disk threshold check (Telegram) with cooldown to avoid alert spam.
+        $thresholdDisk = config('larapanel.notifications.disk_threshold_percent', 85);
+        if ($diskUsage > $thresholdDisk) {
+            $cacheKey = 'telegram_disk_alert_last';
+            if (! Cache::has($cacheKey)) {
+                Notifier::send(new DiskThresholdNotification(
+                    $diskUsage,
+                    $thresholdDisk,
+                    $diskUsed,
+                    $diskTotal
+                ));
+                // Throttle: at most one disk alert every 6 hours.
+                Cache::put($cacheKey, now(), now()->addHours(6));
+            }
         }
     }
 

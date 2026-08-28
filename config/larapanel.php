@@ -66,7 +66,14 @@ return [
         'max_login_attempts' => 5,
         'audit_log_retention_days' => 365,
         'allowed_sudo_commands' => [
-            // Explicitly whitelisted commands for the shell executor
+            // Explicitly whitelisted commands for the shell executor.
+            //
+            // SECURITY NOTE: `sh` is intentionally present because CronService
+            // runs user cron jobs via `sh -c <command>`. The whitelist only
+            // validates the base binary (basename), NOT arguments, so any
+            // service MUST never build `['sh','-c', $userInput]` or `['su', ...]`
+            // from untrusted input. `su` is kept for legacy sudo user switching
+            // but services should prefer the configured sudo_user instead.
             'systemctl',
             'nginx',
             'php-fpm',
@@ -155,6 +162,7 @@ return [
         'ssl_certs'    => '/etc/ssl/larapanel',
         'backups'      => '/var/larapanel/backups',
         'logs'         => '/var/log',
+        'vmail'        => '/var/vmail',
     ],
 
     /*
@@ -224,7 +232,7 @@ return [
     'mail' => [
         'postfix_config_path' => env('POSTFIX_CONFIG_PATH', '/etc/postfix'),
         'dovecot_config_path' => env('DOVECOT_CONFIG_PATH', '/etc/dovecot/conf.d'),
-        'mailboxes_root'      => env('MAIL_MAILBOXES_ROOT', '/var/mail/vhosts'),
+        'mailboxes_root'      => env('MAIL_MAILBOXES_ROOT', '/var/vmail'),
         'dkim_keys_path'      => env('DKIM_KEYS_PATH', '/etc/rspamd/dkim'),
     ],
 
@@ -274,6 +282,21 @@ return [
 
     'goaccess' => [
         'reports_path' => env('GOACCESS_REPORTS_PATH', '/var/larapanel/goaccess'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notifications
+    |--------------------------------------------------------------------------
+    */
+
+    'notifications' => [
+        'telegram' => [
+            'bot_token' => env('TELEGRAM_BOT_TOKEN', ''),
+            'chat_id'   => env('TELEGRAM_CHAT_ID', ''),
+            'enabled'   => env('TELEGRAM_NOTIFICATIONS_ENABLED', false),
+        ],
+        'disk_threshold_percent' => env('NOTIFY_DISK_THRESHOLD', 85),
     ],
 
 ];

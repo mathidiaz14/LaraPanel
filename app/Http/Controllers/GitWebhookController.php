@@ -40,8 +40,8 @@ class GitWebhookController extends Controller
             return response()->json(['message' => 'Auto-deploy is disabled for this repository'], 400);
         }
 
-        if (!empty($deployment->webhook_secret) && !$signatureValid) {
-            Log::warning("Invalid webhook signature for deployment {$deployment->id}");
+        if (empty($deployment->webhook_secret) || !$signatureValid) {
+            Log::warning("Invalid or missing webhook signature for deployment {$deployment->id}");
             return response()->json(['message' => 'Invalid signature'], 401);
         }
 
@@ -112,8 +112,10 @@ class GitWebhookController extends Controller
 
     protected function signatureIsValid(Request $request, GitDeployment $deployment): bool
     {
+        // An empty secret must never be treated as "valid" — it would allow
+        // anyone who knows the (unguessable) webhook UUID to trigger deploys.
         if (empty($deployment->webhook_secret)) {
-            return true;
+            return false;
         }
 
         $githubSignature = $request->header('X-Hub-Signature-256');

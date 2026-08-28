@@ -185,7 +185,12 @@ class DomainService
     {
         $webserver = $domain->webserver;
         if ($webserver === 'nginx' || $webserver === 'both') {
-            if ($domain->ssl_enabled && $domain->sslCertificate) {
+            $sslUsable = $domain->ssl_enabled
+                && $domain->sslCertificate
+                && is_file(config('larapanel.paths.ssl_certs') . '/' . $domain->name . '/fullchain.pem')
+                && is_file(config('larapanel.paths.ssl_certs') . '/' . $domain->name . '/privkey.pem');
+
+            if ($sslUsable) {
                 $certDir  = config('larapanel.paths.ssl_certs') . '/' . $domain->name;
                 $certFile = "{$certDir}/fullchain.pem";
                 $keyFile  = "{$certDir}/privkey.pem";
@@ -232,6 +237,7 @@ class DomainService
         $microcacheZone   = $this->buildMicrocacheZoneDirective($name, $perf);
         $performanceZones = $this->buildPerformanceZones($name, $perf);
         $brotliDirective  = $this->buildBrotliDirective($perf);
+        $webmailRedirect  = $this->buildWebmailRedirectBlock($name, $root);
 
         return <<<NGINX
         # LaraPanel — generated for {$name}
@@ -262,6 +268,7 @@ class DomainService
         {$brotliDirective}
         {$redirectBlocks}
         {$locationBlock}
+        {$webmailRedirect}
         
             # Let's Encrypt challenge
             location ^~ /.well-known/acme-challenge/ {
@@ -294,6 +301,7 @@ class DomainService
             ? "    add_header Strict-Transport-Security \"{$hstsHeader}\" always;"
             : '';
         $brotliDirective  = $this->buildBrotliDirective($perf);
+        $webmailRedirect  = $this->buildWebmailRedirectBlock($name, $root);
 
         return <<<NGINX
         # LaraPanel SSL — generated for {$name}
@@ -332,6 +340,7 @@ class DomainService
         {$phase10Headers}
         {$redirectBlocks}
         {$locationBlock}
+        {$webmailRedirect}
         
             client_max_body_size 100M;
         }
@@ -409,10 +418,24 @@ class DomainService
             CACHE;
         }
 
+        // Roundcube hardening: denegar instalador y directorio SQL (solo cuando el
+        // document_root apunta a Roundcube, p.ej. subdominios webmail.*)
+        $roundcubeGuards = str_contains($domain->document_root, 'roundcube') ? <<<GUARDS
+
+        location ^~ /installer {
+            deny all;
+        }
+
+        location ^~ /SQL {
+            deny all;
+        }
+        GUARDS : '';
+
         return <<<LOC
         location / {
             try_files \$uri \$uri/ /index.php?\$query_string;
         }
+        {$roundcubeGuards}
     
         location ~ \.php$ {
             fastcgi_pass unix:{$phpSocket};
@@ -444,6 +467,26 @@ class DomainService
 
         return <<<NGINX
         fastcgi_cache_path {$path} levels=1:2 keys_zone=cache_{$token}:10m max_size=1g inactive=60m use_temp_path=off;
+        NGINX;
+    }
+
+    /**
+     * Build a location block that redirects /webmail (y /webmail/) al
+     * subdominio webmail.<dominio> para iniciar sesión en Roundcube.
+     * Se omite para los propios subdominios webmail.* (document_root roundcube).
+     */
+    protected function buildWebmailRedirectBlock(string $domainName, string $documentRoot): string
+    {
+        if (str_contains($documentRoot, 'roundcube')) {
+            return '';
+        }
+
+        return <<<NGINX
+
+        # Redirect dominio/webmail -> webmail.dominio (Roundcube login)
+        location ^~ /webmail {
+            return 301 https://webmail.{$domainName}/;
+        }
         NGINX;
     }
 

@@ -7,6 +7,8 @@ use App\Models\Domain;
 use App\Models\DatabaseInstance;
 use App\Models\User;
 use App\Models\AuditLog;
+use App\Notifications\BackupFailedNotification;
+use App\Services\Notifier;
 use App\Shell\SudoExecutor;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -93,6 +95,9 @@ class BackupService
             ]);
 
             Log::error("BackupService: Backup failed: " . $e->getMessage());
+
+            Notifier::send(new BackupFailedNotification($label, $e->getMessage()));
+
             throw $e;
         }
 

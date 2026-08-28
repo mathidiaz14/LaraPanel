@@ -37,12 +37,13 @@ class WebmailAutoLoginController extends Controller
         file_put_contents("$tokenDir/$roundcubeToken", $email);
         @chmod("$tokenDir/$roundcubeToken", 0640);
 
-        $webmailHost = 'webmail.' . explode('@', $email)[1];
-        $webmailUrl  = 'https://' . $webmailHost;
+        // Roundcube se sirve desde el panel (public/webmail symlink) para que
+        // el auto-login funcione aunque el dominio del correo esté caído.
+        $webmailBase = rtrim(config('app.url'), '/') . '/webmail';
 
         // _task/_action=login es necesario para que Roundcube procese la
         // autenticación (dispara el hook authenticate del plugin).
-        return redirect()->away($webmailUrl . '/?_task=login&_action=login&_autologin_token=' . $roundcubeToken);
+        return redirect()->away($webmailBase . '/?_task=login&_action=login&_autologin_token=' . $roundcubeToken);
     }
 
     /**

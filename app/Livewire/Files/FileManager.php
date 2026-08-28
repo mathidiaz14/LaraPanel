@@ -420,7 +420,7 @@ class FileManager extends Component
         ];
 
         $this->validate([
-            'uploads.*' => 'file|max:2048000',
+            'uploads.*' => 'file|max:3145728',
         ]);
 
         try {

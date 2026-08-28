@@ -4,6 +4,7 @@ namespace App\Livewire\Domains;
 
 use App\Models\Domain;
 use App\Services\DomainService;
+use App\Services\QuotaService;
 use Livewire\Component;
 
 class DomainCreate extends Component
@@ -101,6 +102,9 @@ class DomainCreate extends Component
         $this->isLoading = true;
 
         try {
+            // Check disk quota before writing files to disk
+            app(QuotaService::class)->enforceDiskQuota(auth()->user());
+
             $domain = $service->create(auth()->user(), [
                 'name'          => $finalName,
                 'type'          => $this->type,

@@ -4,6 +4,7 @@ namespace App\Shell;
 
 use Illuminate\Support\Facades\Log;
 use App\Models\AuditLog;
+use App\Contracts\ShellExecutorContract;
 use Symfony\Component\Process\Process;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 
@@ -16,7 +17,7 @@ use Symfony\Component\Process\Exception\ProcessFailedException;
  * - Every execution is logged to the audit log.
  * - Commands can be whitelisted via config/larapanel.php.
  */
-class ShellExecutor
+class ShellExecutor implements ShellExecutorContract
 {
     protected int $timeout = 60;
     protected ?string $workingDirectory = null;

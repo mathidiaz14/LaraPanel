@@ -97,6 +97,18 @@ class EmailService
     }
 
     /**
+     * Update mailbox quota (in bytes).
+     */
+    public function updateQuota(EmailAccount $account, int $quotaBytes): void
+    {
+        $account->update([
+            'quota_bytes' => max(0, $quotaBytes),
+        ]);
+
+        AuditLog::record('email.quota.updated', $account->email, ['quota_bytes' => $quotaBytes]);
+    }
+
+    /**
      * Update forwarders list.
      */
     public function updateForwarders(EmailAccount $account, array $forwarders): void
@@ -236,6 +248,7 @@ class EmailService
 
         $accounts = EmailAccount::with('domain')->where('user_id', $userId)->get();
         $vmailBase = config('larapanel.paths.vmail', '/var/vmail');
+        $sudo = app(\App\Shell\SudoExecutor::class);
 
         foreach ($accounts as $account) {
             $maildir = rtrim($vmailBase, '/') . '/' . $account->domain->name . '/' . $account->username;
@@ -243,22 +256,29 @@ class EmailService
 
             $bytes = 0;
 
-            // Intentar leer de maildirsize si existe (mucho más rápido)
+            // Intentar leer maildirsize (mucho más rápido que du)
+            // Formato Dovecot: línea 1 = cabecera (cuota + flags),
+            // líneas 2+ = <tamaño_carpeta> <num_mensajes> por cada subcarpeta Maildir++
+            // El total real es la SUMA de todas las líneas después de la cabecera.
             if (file_exists($maildirsizePath)) {
-                $content = file_get_contents($maildirsizePath);
-                $lines = explode("\n", $content);
-                // Las líneas después de la primera indican el tamaño acumulado
-                foreach (array_slice($lines, 1) as $line) {
-                    $parts = explode(' ', trim($line));
-                    if (count($parts) > 0 && is_numeric($parts[0])) {
-                        $bytes += (int)$parts[0];
+                $content = @file_get_contents($maildirsizePath);
+                if ($content !== false) {
+                    $lines = array_filter(array_map('trim', explode("\n", $content)));
+                    $dataLines = array_slice($lines, 1); // saltar cabecera
+                    foreach ($dataLines as $line) {
+                        $parts = explode(' ', $line);
+                        if (count($parts) > 0 && is_numeric($parts[0])) {
+                            $bytes += (int) $parts[0];
+                        }
                     }
                 }
-            } elseif (is_dir($maildir)) {
-                // Fallback a du -sb
-                $result = $this->shell->run(['du', '-sb', $maildir], false);
-                if ($result->successful() && $result->stdout !== '') {
-                    $bytes = (int) explode("\t", trim($result->stdout))[0];
+            }
+
+            // Fallback a du -sb si no hay maildirsize o dio 0
+            if ($bytes <= 0 && is_dir($maildir)) {
+                $duResult = $sudo->run(['du', '-sb', $maildir], checkExit: false);
+                if ($duResult->successful() && $duResult->stdout !== '') {
+                    $bytes = (int) explode("\t", trim($duResult->stdout))[0];
                 }
             }
 

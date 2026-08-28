@@ -5,6 +5,7 @@ namespace App\Livewire\Cron;
 use App\Models\CronJob;
 use App\Models\CronRunLog;
 use App\Services\CronService;
+use App\Services\QuotaService;
 use Livewire\Component;
 
 class CronIndex extends Component
@@ -64,6 +65,9 @@ class CronIndex extends Component
                 $this->errorMessage = 'Has alcanzado el límite de tareas programadas (cron) de tu plan.';
                 return;
             }
+
+            // Check disk quota before creating the cron job
+            app(QuotaService::class)->enforceDiskQuota(auth()->user());
 
             $cronService->create(auth()->user(), [
                 'label' => $this->label,

@@ -8,6 +8,8 @@ use App\Models\UptimePing;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\UptimeAlert;
+use App\Notifications\UptimeDownNotification;
+use App\Services\Notifier;
 use App\Shell\ServerContext;
 use App\Shell\SudoExecutor;
 
@@ -76,6 +78,11 @@ class CheckUptime extends Command
             if ($previousStatus !== 'pending' && $previousStatus !== $currentStatus) {
                 if ($monitor->user) {
                     Mail::to($monitor->user->email)->send(new UptimeAlert($monitor, $currentStatus, $errorMsg));
+                }
+
+                // Telegram: notify on transition to DOWN
+                if ($currentStatus === 'down') {
+                    Notifier::send(new UptimeDownNotification($monitor, $errorMsg));
                 }
             }
         }

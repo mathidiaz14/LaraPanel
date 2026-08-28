@@ -34,6 +34,14 @@ class ImpersonationController extends Controller
         // Store current user ID in session
         $request->session()->put('impersonated_by', $currentUser->id);
 
+        \App\Models\AuditLog::record(
+            'impersonation.start',
+            "Impersonando a {$user->email}",
+            ['target_user_id' => $user->id, 'target_role' => $user->role],
+            'critical',
+            $currentUser->id,
+        );
+
         // Login as the target user
         auth()->login($user);
 
@@ -53,6 +61,14 @@ class ImpersonationController extends Controller
         $originalUser = User::find($originalUserId);
 
         if ($originalUser) {
+            \App\Models\AuditLog::record(
+                'impersonation.stop',
+                "Fin de impersonación, regreso a {$originalUser->email}",
+                ['original_user_id' => $originalUser->id],
+                'critical',
+                $originalUser->id,
+            );
+
             auth()->login($originalUser);
             return redirect()->route('admin.users.index')->with('success', "Has regresado a tu cuenta original.");
         }

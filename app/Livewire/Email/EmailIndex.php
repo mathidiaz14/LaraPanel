@@ -5,6 +5,7 @@ namespace App\Livewire\Email;
 use App\Models\EmailAccount;
 use App\Models\Domain;
 use App\Services\EmailService;
+use App\Services\QuotaService;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Str;
@@ -33,6 +34,9 @@ class EmailIndex extends Component
     // Modals
     public ?int $changingPasswordId = null;
     public string $newPassword = '';
+
+    public ?int $editingQuotaId = null;
+    public int $newQuotaMb = 500;
 
     public ?int $editingForwardersId = null;
     public string $forwarderInput = ''; // comma-separated emails
@@ -74,6 +78,9 @@ class EmailIndex extends Component
                 $this->errorMessage = 'Has alcanzado el límite de cuentas de correo de tu plan.';
                 return;
             }
+
+            // Check disk quota before provisioning the mailbox
+            app(QuotaService::class)->enforceDiskQuota(auth()->user());
 
             $emailService->create(auth()->user(), [
                 'domain_id' => $this->domainId,
@@ -119,6 +126,34 @@ class EmailIndex extends Component
         $this->newPassword = '';
         $this->successMessage = '';
         $this->errorMessage = '';
+    }
+
+    public function confirmEditQuota(int $id): void
+    {
+        $account = EmailAccount::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+        $this->editingQuotaId = $id;
+        $this->newQuotaMb = max(10, (int) round($account->quota_bytes / 1048576));
+        $this->successMessage = '';
+        $this->errorMessage = '';
+    }
+
+    public function saveQuota(EmailService $emailService): void
+    {
+        $this->validate([
+            'newQuotaMb' => 'required|integer|min:10|max:10240',
+        ]);
+
+        $account = EmailAccount::where('id', $this->editingQuotaId)
+            ->where('user_id', auth()->id())
+            ->firstOrFail();
+
+        try {
+            $emailService->updateQuota($account, $this->newQuotaMb * 1024 * 1024);
+            $this->successMessage = "Cuota actualizada con éxito.";
+            $this->editingQuotaId = null;
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
     }
 
     public function changePassword(EmailService $emailService): void
@@ -184,7 +219,7 @@ class EmailIndex extends Component
     public function importFromZip(EmailService $emailService): void
     {
         $this->validate([
-            'zipFile' => 'required|file|mimes:zip|max:512000', // max 500MB
+            'zipFile' => 'required|file|mimes:zip|max:3145728', // max 3GB
             'defaultImportPassword' => 'required|string|min:8|max:64',
             'importDomainId' => 'required|integer|exists:domains,id',
         ]);
@@ -197,6 +232,9 @@ class EmailIndex extends Component
                 $this->errorMessage = 'Has alcanzado el límite de cuentas de correo de tu plan.';
                 return;
             }
+
+            // Check disk quota before importing mailboxes
+            app(QuotaService::class)->enforceDiskQuota(auth()->user());
 
             $domain = Domain::where('id', $this->importDomainId)
                 ->where('user_id', auth()->id())
