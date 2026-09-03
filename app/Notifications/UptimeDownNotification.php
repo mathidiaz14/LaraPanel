@@ -11,6 +11,11 @@ class UptimeDownNotification extends LaraPanelTelegramNotification
         protected ?string $error = null,
     ) {}
 
+    public function noticeType(): ?string
+    {
+        return 'uptime_down';
+    }
+
     protected function message(): string
     {
         $name = $this->monitor->name ?: ($this->monitor->target ?: 'Uptime Monitor');

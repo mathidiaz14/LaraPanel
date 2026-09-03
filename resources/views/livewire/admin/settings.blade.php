@@ -346,6 +346,19 @@
                         </div>
                     </div>
 
+                    <div style="margin-top:var(--sp-6);">
+                        <label style="display:block;font-size:var(--text-sm);font-weight:600;margin-bottom:var(--sp-3);color:var(--text-secondary);">Qué quiero que me notifique</label>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:var(--sp-2) var(--sp-6);">
+                            @foreach(\App\Services\NotificationPreferences::types() as $type => $label)
+                            <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer;padding:var(--sp-1) 0;">
+                                <input type="checkbox" wire:model.defer="notificationPrefs.{{ $type }}" style="width:18px;height:18px;accent-color:var(--accent);">
+                                <span style="font-size:var(--text-sm);color:var(--text-primary);">{{ $label }}</span>
+                            </label>
+                            @endforeach
+                        </div>
+                        <p style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--sp-2);">Marca o desmarca cada aviso. Los cambios se aplican al guardar los ajustes.</p>
+                    </div>
+
                     <div style="display:flex;align-items:center;gap:var(--sp-3);margin-top:var(--sp-4);flex-wrap:wrap;">
                         <button type="button" wire:click="sendTestTelegram" wire:loading.attr="disabled" class="btn btn-ghost" style="padding:var(--sp-2) var(--sp-4);border-radius:var(--radius-sm);font-size:var(--text-sm);font-weight:600;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:var(--success);display:inline-flex;align-items:center;gap:var(--sp-2);cursor:pointer;">
                             <i class="fa-brands fa-telegram" wire:loading.class="fa-spin"></i>
@@ -359,7 +372,7 @@
                         @endif
                     </div>
 
-                    <p style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--sp-3);">Recibe alertas de caídas de uptime, umbral de disco, fallos de backup e inicios de sesión sospechosos.</p>
+                    <p style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--sp-3);">Recibe alertas de inicio de sesión, caídas de uptime, umbrales de disco y RAM, backups, cambios de dominio, usuarios nuevos y actualizaciones disponibles. Activa o desactiva cada aviso arriba.</p>
                 </div>
 
                 {{-- Bloque 3: Localización y Sistema --}}

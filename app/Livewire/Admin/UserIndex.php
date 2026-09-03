@@ -6,7 +6,9 @@ use App\Jobs\SuspendAccountJob;
 use App\Jobs\TerminateAccountJob;
 use App\Models\Plan;
 use App\Models\User;
+use App\Notifications\UserCreatedNotification;
 use App\Services\ForceLogoutService;
+use App\Services\Notifier;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
 
@@ -147,8 +149,13 @@ class UserIndex extends Component
                 return;
             }
             $data['password'] = Hash::make($this->password);
-            User::create($data);
+            $created = User::create($data);
             session()->flash('message', 'Usuario creado exitosamente.');
+
+            Notifier::send(new UserCreatedNotification(
+                $created,
+                auth()->user()?->email ?? ''
+            ));
         }
 
         $this->isEditing = false;

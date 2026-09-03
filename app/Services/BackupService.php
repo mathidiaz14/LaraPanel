@@ -7,6 +7,7 @@ use App\Models\Domain;
 use App\Models\DatabaseInstance;
 use App\Models\User;
 use App\Models\AuditLog;
+use App\Notifications\BackupCompletedNotification;
 use App\Notifications\BackupFailedNotification;
 use App\Services\Notifier;
 use App\Shell\SudoExecutor;
@@ -87,6 +88,8 @@ class BackupService
             ]);
 
             AuditLog::record('backup.created', $label, ['type' => $type, 'disk' => $disk, 'size' => $size]);
+
+            Notifier::send(new BackupCompletedNotification($label, $size, $type));
         } catch (\Throwable $e) {
             $backup->update([
                 'status'        => 'failed',

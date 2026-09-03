@@ -7,7 +7,11 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
 use App\Notifications\TelegramTextNotification;
+use App\Notifications\UpdateAvailableNotification;
+use App\Services\Notifier;
+use App\Services\NotificationPreferences;
 use App\Services\UpdateService;
+use Illuminate\Support\Facades\Cache;
 
 class Settings extends Component
 {
@@ -33,6 +37,7 @@ class Settings extends Component
     public string $telegramBotToken = '';
     public string $telegramChatId = '';
     public string $telegramTestMessage = '';
+    public array $notificationPrefs = [];
     
     public string $generalSuccessMessage = '';
     public string $generalErrorMessage = '';
@@ -79,6 +84,10 @@ class Settings extends Component
         $this->telegramEnabled = filter_var(\App\Models\Setting::get('telegram_enabled', '0'), FILTER_VALIDATE_BOOLEAN);
         $this->telegramBotToken = \App\Models\Setting::getSecret('telegram_bot_token', '');
         $this->telegramChatId = \App\Models\Setting::get('telegram_chat_id', '');
+
+        foreach (array_keys(NotificationPreferences::types()) as $type) {
+            $this->notificationPrefs[$type] = NotificationPreferences::isEnabled($type);
+        }
     }
 
     public function saveGeneralSettings(): void
@@ -120,6 +129,10 @@ class Settings extends Component
             \App\Models\Setting::setSecret('telegram_bot_token', $this->telegramBotToken);
             \App\Models\Setting::set('telegram_chat_id', $this->telegramChatId);
 
+            foreach (array_keys(NotificationPreferences::types()) as $type) {
+                NotificationPreferences::setEnabled($type, ! empty($this->notificationPrefs[$type]));
+            }
+
             // Timezone modification logic (if user approved, but here we just update PHP/DB timezone theoretically)
             // If they want OS timezone changes we would do:
             // $executor = new ShellExecutor();
@@ -157,6 +170,14 @@ class Settings extends Component
             $this->workingTreeDirty = $result['working_tree_dirty'];
             $this->updateCheckedAt = $result['checked_at'];
             $this->isUpdateAvailable = $this->currentCommitHash !== $this->latestCommitHash;
+
+            if ($this->isUpdateAvailable) {
+                $notifiedKey = 'update_notified_' . $this->latestCommitHash;
+                if (! Cache::has($notifiedKey)) {
+                    Notifier::send(new UpdateAvailableNotification(count($this->pendingCommits)));
+                    Cache::put($notifiedKey, true, now()->addDays(1));
+                }
+            }
 
             if (! $this->isUpdateAvailable && empty($this->latestCommitMessage)) {
                 $this->latestCommitMessage = $this->currentCommitMessage;

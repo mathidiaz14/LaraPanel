@@ -11,6 +11,11 @@ class DiskThresholdNotification extends LaraPanelTelegramNotification
         protected ?float $total = null,
     ) {}
 
+    public function noticeType(): ?string
+    {
+        return 'disk_threshold';
+    }
+
     protected function message(): string
     {
         $size = '';

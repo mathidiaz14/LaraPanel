@@ -12,6 +12,11 @@ class SuspiciousLoginNotification extends LaraPanelTelegramNotification
         protected ?string $previousIp = null,
     ) {}
 
+    public function noticeType(): ?string
+    {
+        return 'login_new_device';
+    }
+
     protected function message(): string
     {
         $previous = $this->previousIp ?: 'none';

@@ -9,6 +9,11 @@ class BackupFailedNotification extends LaraPanelTelegramNotification
         protected string $error,
     ) {}
 
+    public function noticeType(): ?string
+    {
+        return 'backup_failed';
+    }
+
     protected function message(): string
     {
         return "BACKUP FAILED\n"

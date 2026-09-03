@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Notifications\LaraPanelTelegramNotification;
 use App\Notifications\TelegramTextNotification;
+use App\Services\NotificationPreferences;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
@@ -25,11 +26,17 @@ class Notifier
     }
 
     /**
-     * Send a structured Telegram notification. No-op when disabled/misconfigured.
+     * Send a structured Telegram notification. No-op when disabled/misconfigured
+     * or when the notice type is disabled by the admin.
      */
     public static function send(LaraPanelTelegramNotification $notification): void
     {
         if (! self::enabled()) {
+            return;
+        }
+
+        $type = $notification->noticeType();
+        if ($type !== null && ! NotificationPreferences::isEnabled($type)) {
             return;
         }
 

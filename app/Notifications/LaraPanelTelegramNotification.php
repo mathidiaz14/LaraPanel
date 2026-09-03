@@ -9,6 +9,15 @@ use NotificationChannels\Telegram\TelegramMessage;
 abstract class LaraPanelTelegramNotification extends Notification
 {
     /**
+     * The preference key that gates this notification. Return null to always
+     * send (ignored by the preference system). Subclasses may override this.
+     */
+    public function noticeType(): ?string
+    {
+        return null;
+    }
+
+    /**
      * Deliver only through the Telegram channel.
      *
      * @return array<int, string>

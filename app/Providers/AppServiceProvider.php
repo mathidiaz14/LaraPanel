@@ -8,7 +8,9 @@ use App\Shell\SudoExecutor;
 use App\Services\TerminalSessionManager;
 use App\Listeners\HandleTerminalMessage;
 use App\Listeners\KillTerminalOnDisconnect;
+use App\Listeners\NotifyFailedLogin;
 use App\Listeners\NotifySuspiciousLogin;
+use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
@@ -108,6 +110,9 @@ class AppServiceProvider extends ServiceProvider
 
         // Suspicious login detection (Telegram alert on new IP)
         Event::listen(Login::class, NotifySuspiciousLogin::class);
+
+        // Failed login detection (Telegram alert on brute-force bursts)
+        Event::listen(Failed::class, NotifyFailedLogin::class);
 
         // Load Telegram notification settings from the DB into config so that
         // config('larapanel.notifications.telegram.*') reflects the UI values.

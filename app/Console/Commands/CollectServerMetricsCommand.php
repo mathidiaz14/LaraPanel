@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\ServerMetric;
 use App\Models\User;
 use App\Notifications\DiskThresholdNotification;
+use App\Notifications\RamThresholdNotification;
 use App\Notifications\ServerResourceAlert;
 use App\Services\MonitoringService;
 use App\Services\Notifier;
@@ -80,6 +81,13 @@ class CollectServerMetricsCommand extends Command
 
         if ($ramUsage > $thresholdRam) {
             $this->notifyAdmins('RAM', $ramUsage, "El uso de RAM alcanzó el {$ramUsage}% (Umbral: {$thresholdRam}%).");
+
+            // Telegram alert with cooldown to avoid alert spam.
+            $cacheKey = 'telegram_ram_alert_last';
+            if (! Cache::has($cacheKey)) {
+                Notifier::send(new RamThresholdNotification($ramUsage, $thresholdRam));
+                Cache::put($cacheKey, now(), now()->addHours(6));
+            }
         }
 
         // Disk threshold check (Telegram) with cooldown to avoid alert spam.

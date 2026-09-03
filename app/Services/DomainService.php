@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Models\Domain;
 use App\Models\User;
 use App\Models\AuditLog;
+use App\Notifications\DomainChangedNotification;
 use App\Shell\SudoExecutor;
 use App\Services\DnsService;
+use App\Services\Notifier;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -115,6 +117,12 @@ class DomainService
 
         AuditLog::record('domain.created', $domainName, ['domain_id' => $domain->id]);
 
+        Notifier::send(new DomainChangedNotification(
+            'created',
+            $domainName,
+            $user->email ?: ''
+        ));
+
         // Auto-provision uptime monitoring for the newly hosted site.
         try {
             app(\App\Services\UptimeProvisioner::class)->enrollDomain($domain);
@@ -167,6 +175,12 @@ class DomainService
         $this->reloadWebserver($domain->webserver);
 
         AuditLog::record('domain.deleted', $domain->name, ['files_deleted' => $deleteFiles]);
+
+        Notifier::send(new DomainChangedNotification(
+            'deleted',
+            $domain->name,
+            optional($domain->user)->email ?: (auth()->check() ? auth()->user()->email : '')
+        ));
 
         $domain->forceDelete();
     }
