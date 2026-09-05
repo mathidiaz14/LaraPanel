@@ -137,6 +137,13 @@
                     </a>
                 @endif
 
+                @if(config('larapanel.modules.remote_ftp'))
+                    <a href="{{ route('remote-ftp.index') }}" class="nav-item {{ request()->routeIs('remote-ftp.*') ? 'active' : '' }}">
+                        <span class="nav-icon"><i class="fa-solid fa-cloud-arrow-down"></i></span>
+                        FTP Remoto
+                    </a>
+                @endif
+
                 @if(config('larapanel.modules.dns'))
                     <div class="nav-section-title">Avanzado</div>
                     <a href="{{ route('dns.index') }}" class="nav-item {{ request()->routeIs('dns.*') ? 'active' : '' }}">

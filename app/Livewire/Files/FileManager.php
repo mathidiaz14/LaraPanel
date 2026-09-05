@@ -420,7 +420,7 @@ class FileManager extends Component
         ];
 
         $this->validate([
-            'uploads.*' => 'file|max:3145728',
+            'uploads.*' => 'file|max:10485760',
         ]);
 
         try {
@@ -607,6 +607,70 @@ class FileManager extends Component
             $this->selectedItems = [];
             $this->showBulkCopyModal = false;
             $this->bulkDestDirectory = '';
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Move/copy resources via drag & drop.
+     */
+    public function dragDropItems(array $items, string $destPath, bool $copy, FileService $fileService): void
+    {
+        if (empty($items)) {
+            return;
+        }
+
+        $destPath = trim(str_replace(['..', "\0"], '', $destPath), '/');
+
+        try {
+            if (! is_dir($fileService->resolvePath($destPath))) {
+                throw new \RuntimeException("El directorio destino no existe.");
+            }
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+            return;
+        }
+
+        $sources = [];
+        foreach ($items as $name) {
+            $name = basename(str_replace('\\', '/', trim((string) $name, '/')));
+            if ($name === '' || $name === '.' || $name === '..') {
+                continue;
+            }
+            $sources[] = ltrim($this->currentPath . '/' . $name, '/');
+        }
+
+        if (empty($sources)) {
+            return;
+        }
+
+        // Soltar sobre la misma carpeta no hace nada en el caso de mover.
+        if (! $copy && $destPath === $this->currentPath) {
+            $this->selectedItems = [];
+            return;
+        }
+
+        // Prevenir mover/copiar un directorio dentro de sí mismo o de sus subdirectorios.
+        foreach ($sources as $source) {
+            if (is_dir($fileService->resolvePath($source)) && str_starts_with(rtrim($destPath, '/') . '/', rtrim($source, '/') . '/')) {
+                $this->errorMessage = 'No puedes mover un directorio dentro de sí mismo.';
+                return;
+            }
+        }
+
+        try {
+            if ($copy) {
+                $fileService->copyMultiple($sources, $destPath);
+            } else {
+                $fileService->moveMultiple($sources, $destPath);
+            }
+
+            $this->selectedItems = [];
+            $destLabel = $destPath === '' ? '/var/www' : '/' . $destPath;
+            $this->successMessage = $copy
+                ? "Elementos copiados con éxito a '{$destLabel}'."
+                : "Elementos movidos con éxito a '{$destLabel}'.";
         } catch (\Throwable $e) {
             $this->errorMessage = $e->getMessage();
         }

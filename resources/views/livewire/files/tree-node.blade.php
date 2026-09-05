@@ -1,6 +1,10 @@
 @foreach($nodes as $node)
     <div style="margin-bottom: 2px;">
-        <div style="display:flex;align-items:center;padding:6px 12px;padding-left:{{ 12 + ($level * 16) }}px;border-radius:8px;background:{{ $currentPath === $node['path'] ? 'rgba(99,102,241,0.15)' : 'transparent' }};color:{{ $currentPath === $node['path'] ? 'var(--accent-light)' : 'var(--text-secondary)' }};font-size:13px;font-weight:600;cursor:pointer;transition:background 0.2s;">
+        <div @dragenter.stop="fmDropTargetEnter($event)"
+             @dragleave.stop="fmDropTargetLeave($event)"
+             @dragover.prevent.stop="fmContainerDragOver($event)"
+             @drop.prevent.stop="fmDragDrop($event, @js($node['path']))"
+             style="display:flex;align-items:center;padding:6px 12px;padding-left:{{ 12 + ($level * 16) }}px;border-radius:8px;background:{{ $currentPath === $node['path'] ? 'rgba(99,102,241,0.15)' : 'transparent' }};color:{{ $currentPath === $node['path'] ? 'var(--accent-light)' : 'var(--text-secondary)' }};font-size:13px;font-weight:600;cursor:pointer;transition:background 0.2s;">
             
             {{-- Toggle Button (Arrow) --}}
             <button wire:click.stop="toggleNode('{{ $node['path'] }}')" style="background:transparent;border:none;color:inherit;cursor:pointer;padding:4px;margin-right:4px;width:20px;display:flex;align-items:center;justify-content:center;transition:transform 0.2s;{{ $node['isExpanded'] ? 'transform:rotate(90deg);' : '' }}">

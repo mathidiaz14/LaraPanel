@@ -15,6 +15,7 @@ use App\Livewire\Email\EmailAutoresponders;
 use App\Livewire\Email\DkimManager;
 use App\Livewire\Email\EmailStats;
 use App\Livewire\FTP\FtpIndex;
+use App\Livewire\RemoteFtp\RemoteFtpIndex;
 use App\Livewire\Cron\CronIndex;
 use App\Livewire\Backups\BackupIndex;
 use App\Livewire\DNS\DnsIndex;
@@ -95,6 +96,9 @@ Route::middleware(['auth'])->group(function () {
 
     // FTP
     Route::get('/ftp', FtpIndex::class)->name('ftp.index');
+
+    // Remote FTP
+    Route::get('/remote-ftp', RemoteFtpIndex::class)->name('remote-ftp.index');
 
     // DNS
     Route::get('/dns',       DnsIndex::class)->name('dns.index');

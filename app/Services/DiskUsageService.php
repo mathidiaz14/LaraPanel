@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
-use App\Shell\ShellExecutor;
+use App\Shell\SudoExecutor;
 use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 /**
  * DiskUsageService — Directory size analysis via `du`.
+ *
+ * Runs as root (sudo) so the whole filesystem can be measured accurately
+ * (vmail/mysql are not readable by the web user).
  *
  * Security: only paths under the allowed roots can be scanned. The path is
  * resolved with realpath() and prefix-checked before touching the shell.
@@ -16,6 +19,7 @@ class DiskUsageService
 {
     /** Roots that may be scanned, in display order. */
     public const ALLOWED_ROOTS = [
+        '/',
         '/var/www',
         '/var/log',
         '/var/lib/mysql',
@@ -28,7 +32,7 @@ class DiskUsageService
     protected const CACHE_TTL_SECONDS = 60;
 
     public function __construct(
-        protected ShellExecutor $shell,
+        protected SudoExecutor $shell,
     ) {}
 
     /**

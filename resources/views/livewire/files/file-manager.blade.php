@@ -34,21 +34,76 @@
                 this.isDragOver = false;
             }
         },
-        handleDrop(e) {
+        handleDrop(e, fallbackPath) {
             e.preventDefault();
             this.dragCounter = 0;
             this.isDragOver = false;
+            if (this.hasFileDrag(e)) {
+                this.fmDragDrop(e, fallbackPath);
+                return;
+            }
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 this.$refs.dropFileInput.files = files;
                 this.$refs.dropFileInput.dispatchEvent(new Event('change', { bubbles: true }));
             }
+        },
+        hasFileDrag(e) {
+            return Array.from(e.dataTransfer && e.dataTransfer.types ? e.dataTransfer.types : [])
+                .includes('application/x-larapanel-files');
+        },
+        fmDragStart(e, name) {
+            if (e.target.closest('button, input, a, select, label')) { e.preventDefault(); return; }
+            let items = [name];
+            const checked = Array.from(document.querySelectorAll('.file-checkbox:checked')).map(cb => cb.value);
+            if (checked.indexOf(name) !== -1) { items = checked; }
+            try {
+                e.dataTransfer.setData('application/x-larapanel-files', JSON.stringify({ items: items }));
+                e.dataTransfer.effectAllowed = (e.ctrlKey || e.metaKey) ? 'copy' : 'copyMove';
+            } catch (err) {}
+        },
+        fmDragEnd(e) {
+            this.clearDropTargets();
+        },
+        clearDropTargets() {
+            document.querySelectorAll('.fm-drop-target').forEach(el => {
+                el._fdrag = 0;
+                el.classList.remove('fm-drop-target');
+            });
+        },
+        fmDropTargetEnter(e) {
+            if (!this.hasFileDrag(e)) return;
+            e.preventDefault();
+            const el = e.currentTarget;
+            el._fdrag = (el._fdrag || 0) + 1;
+            el.classList.add('fm-drop-target');
+        },
+        fmDropTargetLeave(e) {
+            if (!this.hasFileDrag(e)) return;
+            e.preventDefault();
+            const el = e.currentTarget;
+            el._fdrag = (el._fdrag || 0) - 1;
+            if (el._fdrag <= 0) {
+                el._fdrag = 0;
+                el.classList.remove('fm-drop-target');
+            }
+        },
+        fmContainerDragOver(e) {
+            if (!this.hasFileDrag(e)) return;
+            e.preventDefault();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = (e.ctrlKey || e.metaKey) ? 'copy' : 'move';
+        },
+        fmDragDrop(e, destPath) {
+            if (!this.hasFileDrag(e)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            this.clearDropTargets();
+            let payload = null;
+            try { payload = JSON.parse(e.dataTransfer.getData('application/x-larapanel-files') || 'null'); } catch (err) {}
+            if (!payload || !payload.items || !payload.items.length) return;
+            this.$wire.dragDropItems(payload.items, destPath, !!(e.ctrlKey || e.metaKey));
         }
     }"
-     x-on:livewire-upload-start="isUploading = true"
-     x-on:livewire-upload-finish="isUploading = false"
-     x-on:livewire-upload-error="isUploading = false"
-     x-on:livewire-upload-progress="progress = $event.detail.progress"
      @contextmenu="closeCtx()">
     
 
@@ -116,7 +171,7 @@
          x-on:dragenter="handleDragEnter($event)"
          x-on:dragover="handleDragOver($event)"
          x-on:dragleave="handleDragLeave($event)"
-         x-on:drop="handleDrop($event)"
+         x-on:drop="handleDrop($event, @js($currentPath))"
          style="position:relative;">
         {{-- Drop Zone Overlay --}}
         <div x-show="isDragOver" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
@@ -178,7 +233,10 @@
         @endif
 
         {{-- File List Container --}}
-        <div style="flex:1;overflow-y:auto;padding:0;position:relative;" class="table-responsive" @scroll="closeCtx()">
+        <div style="flex:1;overflow-y:auto;padding:0;position:relative;" class="table-responsive" @scroll="closeCtx()"
+             @dragenter="fmDropTargetEnter($event)"
+             @dragleave="fmDropTargetLeave($event)"
+             @dragover.prevent="fmContainerDragOver($event)">
             {{-- Loading indicator --}}
             <div wire:loading.delay wire:target="navigate, navigateUp" style="position:absolute;inset:0;z-index:20;background:rgba(15,23,42,0.6);backdrop-filter:blur(2px);">
                 <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:10px;color:var(--accent-light);font-size:13px;font-weight:600;">
@@ -229,6 +287,15 @@
                         $isItemFav = in_array($itemFavPath, $favorites);
                     @endphp
                     <tr wire:key="file-row-{{ md5($item['name'] . '-' . $item['updated_at']) }}"
+                        draggable="true"
+                        @dragstart="fmDragStart($event, @js($item['name']))"
+                        @dragend="fmDragEnd($event)"
+                        @if($item['is_dir'])
+                            @dragenter="fmDropTargetEnter($event)"
+                            @dragleave="fmDropTargetLeave($event)"
+                            @dragover.prevent.stop="fmContainerDragOver($event)"
+                            @drop.prevent.stop="fmDragDrop($event, @js(ltrim(($currentPath ? $currentPath . '/' : '') . $item['name'], '/')))"
+                        @endif
                         class="fm-row {{ in_array($item['name'], $selectedItems) ? 'fm-selected' : '' }}"
                         @contextmenu.prevent.stop="openCtx($event, @js([
                             'name' => $item['name'],
@@ -774,23 +841,102 @@
         });
     </script>
 
-    {{-- Upload Progress Modal --}}
-    <div x-show="isUploading" class="fm-upload-progress" x-bind:style="isUploading ? 'display:flex;' : 'display:none;'">
-        <div class="fm-upload-card">
-            <i class="fa-solid fa-cloud-arrow-up" style="font-size:48px;color:var(--accent-light);margin-bottom:16px;"></i>
-            <h3 style="font-size:18px;font-weight:700;margin-bottom:12px;">Subiendo Archivos...</h3>
-            <div class="fm-upload-bar">
-                <div class="fm-upload-fill" :style="`width: ${progress}%`"></div>
+    {{-- Upload Progress Modal (vanilla JS, escucha en window) --}}
+    <div id="fm-upload-modal" class="fm-upload-progress" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);z-index:99999;align-items:center;justify-content:center;">
+        <div style="background:rgba(15,23,42,0.97);border:1px solid var(--glass-border);border-radius:14px;padding:32px;width:100%;max-width:420px;text-align:center;">
+            <div style="font-size:44px;color:var(--accent-light);margin-bottom:14px;line-height:1;"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+            <h3 style="font-size:18px;font-weight:700;margin:0 0 6px;">Subiendo archivo...</h3>
+            <p id="fm-upload-filename" style="font-size:13px;color:var(--text-secondary);margin:0 0 16px;word-break:break-all;">
+                <span style="color:var(--text-muted);">Preparando...</span>
+            </p>
+            <div style="width:100%;height:8px;background:rgba(255,255,255,0.12);border-radius:5px;overflow:hidden;margin-bottom:10px;">
+                <div id="fm-upload-bar" style="width:0%;height:100%;background:linear-gradient(90deg,var(--accent-light),#818cf8);border-radius:5px;transition:width .2s ease;"></div>
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                <div style="font-size:14px;font-weight:600;color:var(--text-secondary);"><span x-text="progress"></span>% Completado</div>
-            </div>
-            <div style="width:100%;height:3px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;margin-bottom:12px;">
-                <div style="height:100%;background:linear-gradient(90deg,var(--accent-light),rgba(99,102,241,0.8));border-radius:2px;transition:width 0.3s;animation:fmUploadPulse 1.5s ease-in-out infinite;" :style="`width: ${progress}%`"></div>
-            </div>
-            <p style="font-size:12px;color:var(--text-muted);">Por favor espera, procesando en segundo plano...</p>
+            <div id="fm-upload-percent" style="font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:6px;">0%</div>
+            <p id="fm-upload-status" style="font-size:12px;color:var(--text-muted);margin:0;">Subiendo a Livewire, por favor espera...</p>
         </div>
     </div>
+
+    <script>
+        (function () {
+            if (window.__fmUploadBound) return;
+            window.__fmUploadBound = true;
+
+            function el(id) { return document.getElementById(id); }
+
+            function formatSize(bytes) {
+                if (!bytes && bytes !== 0) return '';
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+                return (bytes / 1073741824).toFixed(2) + ' GB';
+            }
+
+            function setProgress(p) {
+                p = Math.max(0, Math.min(100, Math.round(p)));
+                var bar = el('fm-upload-bar');
+                var pct = el('fm-upload-percent');
+                if (bar) bar.style.width = p + '%';
+                if (pct) pct.textContent = p + '%';
+            }
+
+            function showModal() {
+                var modal = el('fm-upload-modal');
+                if (!modal) return;
+                modal.style.display = 'flex';
+                setProgress(0);
+            }
+
+            function hideModal() {
+                var modal = el('fm-upload-modal');
+                if (!modal) return;
+                modal.style.display = 'none';
+                var status = el('fm-upload-status');
+                if (status) status.textContent = 'Subiendo a Livewire, por favor espera...';
+            }
+
+            // Captura los nombres/tamaños en el change ANTES de que Livewire consuma el input
+            document.addEventListener('change', function (e) {
+                if (e.target && e.target.tagName === 'INPUT' && e.target.type === 'file') {
+                    var files = e.target.files;
+                    var nameEl = el('fm-upload-filename');
+                    var total = 0;
+                    if (files && files.length) {
+                        for (var i = 0; i < files.length; i++) total += files[i].size;
+                        var label = files.length === 1
+                            ? files[0].name + ' (' + formatSize(total) + ')'
+                            : files.length + ' archivos (' + formatSize(total) + ')';
+                        if (nameEl) nameEl.innerHTML = '<span style="color:var(--text-muted);">Archivo(s):</span> ' + label;
+                    } else {
+                        if (nameEl) nameEl.innerHTML = '<span style="color:var(--text-muted);">Preparando...</span>';
+                    }
+                }
+            }, true);
+
+            window.addEventListener('livewire-upload-start', function () {
+                showModal();
+            });
+
+            window.addEventListener('livewire-upload-progress', function (e) {
+                if (e.detail && typeof e.detail.progress === 'number') setProgress(e.detail.progress);
+            });
+
+            window.addEventListener('livewire-upload-finish', function () {
+                setProgress(100);
+                var status = el('fm-upload-status');
+                if (status) status.textContent = 'Completado';
+                setTimeout(hideModal, 800);
+            });
+
+            window.addEventListener('livewire-upload-error', function () {
+                var status = el('fm-upload-status');
+                if (status) status.textContent = 'Error al subir el archivo';
+                setTimeout(hideModal, 3000);
+            });
+
+            window.addEventListener('livewire-upload-cancel', hideModal);
+        })();
+    </script>
 
     {{-- Unzip Progress Modal --}}
     @if($showUnzipModal)
@@ -884,7 +1030,8 @@
 .fm-table td.fm-actions { text-align: right; padding-right: 24px; }
 .fm-table tr.fm-row { border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.2s; cursor: default; }
 .fm-table tr.fm-row:hover { background: rgba(255, 255, 255, 0.02) !important; }
-.fm-table tr.fm-selected { background: rgba(99, 102, 241, 0.05); }
+.fm-table tr.fm-row.fm-selected { background: rgba(99, 102, 241, 0.05); }
+.fm-drop-target { outline: 2px dashed var(--accent-light); outline-offset: -2px; background: rgba(99, 102, 241, 0.10) !important; }
 
 /* Action buttons */
 .fm-actions-bar { display: inline-flex; gap: 4px; }

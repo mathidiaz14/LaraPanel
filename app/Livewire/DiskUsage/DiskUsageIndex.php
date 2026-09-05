@@ -7,7 +7,7 @@ use Livewire\Component;
 
 class DiskUsageIndex extends Component
 {
-    public string $path = '/var/www';
+    public string $path = '/';
 
     public array $partitions = [];
     public ?array $scan      = null;
