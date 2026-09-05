@@ -593,6 +593,7 @@ class FileService
      */
     public function move(string $relativeSource, string $relativeDestParent): bool
     {
+        $this->assertNotTrash(ltrim(str_replace('\\', '/', $relativeDestParent), '/'));
         $source = $this->resolvePath($relativeSource);
         $name = basename($relativeSource);
         $dest = $this->resolvePath($relativeDestParent . '/' . $name);
@@ -624,6 +625,7 @@ class FileService
      */
     public function copy(string $relativeSource, string $relativeDestParent): bool
     {
+        $this->assertNotTrash(ltrim(str_replace('\\', '/', $relativeDestParent), '/'));
         $source = $this->resolvePath($relativeSource);
         $name = basename($relativeSource);
         $dest = $this->resolvePath($relativeDestParent . '/' . $name);
@@ -683,6 +685,241 @@ class FileService
         foreach ($relativePaths as $path) {
             $this->delete($path);
         }
+    }
+
+    /**
+     * Move multiple files/folders to the trash.
+     */
+    public function deleteMultipleToTrash(array $relativePaths): void
+    {
+        foreach ($relativePaths as $path) {
+            $this->deleteToTrash($path);
+        }
+    }
+
+    /*
+     * ------------------------------------------------------------------
+     * Papelera (trash)                                                   
+     * ------------------------------------------------------------------
+     * Los elementos "eliminados" se mueven a una carpeta oculta por raíz
+     * de webroot (.larapanel-trash) junto a un manifest JSON que guarda
+     * la ubicación original para poder restaurarlos.
+     */
+
+    public function trashRoot(): string
+    {
+        return rtrim($this->getRootPath(), '/') . '/.larapanel-trash';
+    }
+
+    public function ensureTrashRoot(): void
+    {
+        $trash = $this->trashRoot();
+        if (! is_dir($trash)) {
+            $this->sudo->run(['mkdir', '-p', $trash]);
+            $this->sudo->run(['chown', 'www-data:www-data', $trash]);
+        }
+    }
+
+    protected function manifestPath(): string
+    {
+        return $this->trashRoot() . '/.manifest.json';
+    }
+
+    protected function readManifest(): array
+    {
+        $path = $this->manifestPath();
+        if (! is_file($path)) {
+            return [];
+        }
+        $data = json_decode((string) file_get_contents($path), true);
+        return is_array($data) ? $data : [];
+    }
+
+    protected function writeManifest(array $manifest): void
+    {
+        $manifest = array_filter($manifest, fn ($p) => is_string($p) && $p !== '');
+        $path = $this->manifestPath();
+        $tmp = $path . '.tmp';
+        file_put_contents($tmp, json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        @chmod($tmp, 0644);
+        @rename($tmp, $path);
+    }
+
+    /**
+     * Move a file/folder to the trash instead of deleting it permanently.
+     */
+    public function deleteToTrash(string $relativePath): bool
+    {
+        $this->ensureTrashRoot();
+        $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
+        $this->assertNotRoot($relativePath);
+        $this->assertNotTrash($relativePath);
+
+        $target = $this->resolvePath($relativePath);
+        if (! file_exists($target)) {
+            throw new \RuntimeException('El recurso no existe.');
+        }
+
+        AuditLog::record('filemanager.trash', $relativePath);
+
+        $id = date('Ymd-His') . '-' . bin2hex(random_bytes(4));
+        $targetTrash = $this->trashRoot() . '/' . $id;
+        $this->sudo->run(['mkdir', '-p', $targetTrash]);
+        $this->sudo->run(['chown', 'www-data:www-data', $targetTrash]);
+        $this->sudo->run(['mv', $target, $targetTrash . '/item']);
+
+        $manifest = $this->readManifest();
+        $manifest[$id] = $relativePath;
+        $this->writeManifest($manifest);
+
+        return true;
+    }
+
+    protected function assertNotTrash(string $relativePath): void
+    {
+        if ($relativePath === '.larapanel-trash' || str_starts_with($relativePath . '/', '.larapanel-trash/')) {
+            throw new \RuntimeException('La Papelera no se puede modificar desde el explorador.');
+        }
+    }
+
+    /**
+     * List trash contents (id, nombre, ubicación original, tamaño, fecha).
+     */
+    public function listTrash(): array
+    {
+        $this->ensureTrashRoot();
+        $manifest = $this->readManifest();
+        $entries = [];
+
+        foreach ($manifest as $id => $original) {
+            if (! is_string($id) || ! preg_match('/^[a-zA-Z0-9\-_]+$/', $id)) {
+                continue;
+            }
+            $abs = $this->trashRoot() . '/' . $id . '/item';
+            $exists = file_exists($abs);
+            $size = 0;
+            $isDir = is_dir($abs);
+            if ($exists) {
+                try {
+                    $out = $this->sudo->run(['du', '-sb', $abs]);
+                    $size = (int) (explode("\t", trim($out->stdout))[0] ?? 0);
+                } catch (\Throwable) {
+                    $size = 0;
+                }
+            }
+            $entries[] = [
+                'id'         => $id,
+                'name'       => basename(rtrim(is_string($original) ? $original : '', '/')),
+                'original'   => (string) $original,
+                'exists'     => $exists,
+                'is_dir'     => $isDir,
+                'size'       => $size,
+                'deleted_at' => strtotime(substr($id, 0, 8) . ' ' . str_replace('-', ':', substr($id, 9, 6))),
+            ];
+        }
+
+        usort($entries, fn ($a, $b) => strcmp($b['id'], $a['id']));
+        return $entries;
+    }
+
+    /**
+     * Restore a trash entry back to its original location.
+     */
+    public function restoreFromTrash(string $id): bool
+    {
+        if (! preg_match('/^[a-zA-Z0-9\-_]+$/', $id)) {
+            throw new \RuntimeException('Elemento de la Papelera no válido.');
+        }
+        $manifest = $this->readManifest();
+        if (! isset($manifest[$id])) {
+            throw new \RuntimeException('El elemento ya no está en la Papelera.');
+        }
+
+        $item = $this->trashRoot() . '/' . $id . '/item';
+        if (! file_exists($item)) {
+            throw new \RuntimeException('El contenido del elemento ya no existe en la Papelera.');
+        }
+
+        $original = $manifest[$id];
+        $parentRel = trim(dirname($original), './');
+        $name = basename($original);
+        $parentAbs = ($parentRel === '')
+            ? $this->getRootPath()
+            : $this->resolvePath($parentRel);
+
+        if (! is_dir($parentAbs)) {
+            $this->sudo->run(['mkdir', '-p', $parentAbs]);
+        }
+
+        $finalName = $name;
+        if (file_exists($parentAbs . '/' . $name)) {
+            $base = $name;
+            $ext = '';
+            if (preg_match('/^(.+)(\.[^\/.]+)$/', $name, $m)) {
+                $base = $m[1];
+                $ext = $m[2];
+            }
+            $counter = 1;
+            do {
+                $finalName = $base . '-restaurado' . ($counter > 1 ? $counter : '') . $ext;
+                $counter++;
+            } while (file_exists($parentAbs . '/' . $finalName));
+        }
+
+        $this->sudo->run(['mv', $item, $parentAbs . '/' . $finalName]);
+
+        unset($manifest[$id]);
+        $this->writeManifest($manifest);
+
+        $restoredRel = ($parentRel === '' ? '' : $parentRel . '/') . $finalName;
+        AuditLog::record('filemanager.restore', $restoredRel);
+        return true;
+    }
+
+    /**
+     * Permanently delete a single trash entry.
+     */
+    public function purgeFromTrash(string $id): bool
+    {
+        if (! preg_match('/^[a-zA-Z0-9\-_]+$/', $id)) {
+            throw new \RuntimeException('Elemento de la Papelera no válido.');
+        }
+        $manifest = $this->readManifest();
+        if (! isset($manifest[$id])) {
+            throw new \RuntimeException('El elemento ya no está en la Papelera.');
+        }
+        $dir = $this->trashRoot() . '/' . $id;
+        if (is_dir($dir)) {
+            $this->sudo->run(['rm', '-rf', $dir]);
+        }
+        $original = $manifest[$id];
+        unset($manifest[$id]);
+        $this->writeManifest($manifest);
+        AuditLog::record('filemanager.trash_purge', $original);
+        return true;
+    }
+
+    /**
+     * Empty the entire trash.
+     */
+    public function purgeTrash(): int
+    {
+        $manifest = $this->readManifest();
+        $count = count($manifest);
+        foreach (array_keys($manifest) as $id) {
+            if (! preg_match('/^[a-zA-Z0-9\-_]+$/', $id)) {
+                continue;
+            }
+            $dir = $this->trashRoot() . '/' . $id;
+            if (is_dir($dir)) {
+                $this->sudo->run(['rm', '-rf', $dir]);
+            }
+        }
+        $this->writeManifest([]);
+        if ($count > 0) {
+            AuditLog::record('filemanager.trash_empty', "{$count} elementos");
+        }
+        return $count;
     }
 
     /**

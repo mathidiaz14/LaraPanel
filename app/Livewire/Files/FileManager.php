@@ -54,6 +54,12 @@ class FileManager extends Component
     public string $deletingItemName = '';
     public bool $isDeletingMultiple = false;
 
+    // Papelera (trash)
+    public bool $showTrash = false;
+    public bool $showPurgeModal = false;
+    public string $purgeAction = '';
+    public string $purgeItemId = '';
+
     // Tree state
     public array $expandedPaths = ['']; // root is always expanded
 
@@ -105,6 +111,7 @@ class FileManager extends Component
     {
         $this->currentPath = $path;
         $this->selectedItems = [];
+        $this->showTrash = false;
         $this->resetModals();
         $this->resetErrorAlerts();
     }
@@ -159,6 +166,11 @@ class FileManager extends Component
             'newFolderName' => 'required|string|min:1|max:64|regex:/^[a-zA-Z0-9_\-\.]+$/',
         ]);
 
+        if ($this->newFolderName === '.larapanel-trash') {
+            $this->errorMessage = 'Ese nombre está reservado para la Papelera.';
+            return;
+        }
+
         try {
             if (! $fileService->createFolder($this->currentPath, $this->newFolderName)) {
                 throw new \RuntimeException('No se pudo crear la carpeta.');
@@ -179,6 +191,11 @@ class FileManager extends Component
         $this->validate([
             'newFileName' => 'required|string|min:1|max:64|regex:/^[a-zA-Z0-9_\-\.]+$/',
         ]);
+
+        if ($this->newFileName === '.larapanel-trash') {
+            $this->errorMessage = 'Ese nombre está reservado para la Papelera.';
+            return;
+        }
 
         try {
             if (! $fileService->createFile($this->currentPath, $this->newFileName)) {
@@ -216,15 +233,15 @@ class FileManager extends Component
     }
 
     /**
-     * Delete resource.
+     * Move resource to the trash.
      */
     public function deleteItem(string $name, FileService $fileService): void
     {
         $path = $this->currentPath . '/' . $name;
         try {
-            $fileService->delete($path);
+            $fileService->deleteToTrash($path);
             $this->selectedItems = array_values(array_diff($this->selectedItems, [$name]));
-            $this->successMessage = "Recurso eliminado correctamente.";
+            $this->successMessage = "'{$name}' movido a la Papelera.";
         } catch (\Throwable $e) {
             $this->errorMessage = $e->getMessage();
         }
@@ -463,7 +480,7 @@ class FileManager extends Component
     }
 
     /**
-     * Delete selected items.
+     * Move selected items to the trash.
      */
     public function deleteSelected(FileService $fileService): void
     {
@@ -473,8 +490,8 @@ class FileManager extends Component
 
         try {
             $paths = array_map(fn($item) => $this->currentPath . '/' . $item, $this->selectedItems);
-            $fileService->deleteMultiple($paths);
-            $this->successMessage = "Elementos seleccionados eliminados correctamente.";
+            $fileService->deleteMultipleToTrash($paths);
+            $this->successMessage = "Elementos seleccionados movidos a la Papelera.";
             $this->selectedItems = [];
         } catch (\Throwable $e) {
             $this->errorMessage = $e->getMessage();
@@ -676,6 +693,65 @@ class FileManager extends Component
         }
     }
 
+    /**
+     * Abrir la vista de la Papelera.
+     */
+    public function openTrash(): void
+    {
+        $this->showTrash = true;
+        $this->selectedItems = [];
+        $this->resetErrorAlerts();
+    }
+
+    public function closeTrash(): void
+    {
+        $this->showTrash = false;
+        $this->showPurgeModal = false;
+    }
+
+    /**
+     * Restaurar un elemento de la Papelera.
+     */
+    public function restoreTrashItem(string $id, FileService $fileService): void
+    {
+        try {
+            $fileService->restoreFromTrash($id);
+            $this->successMessage = "Elemento restaurado a su ubicación original.";
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+    }
+
+    /**
+     * Confirmar borrado definitivo desde la Papelera (item o vaciarla).
+     */
+    public function confirmPurge(string $id = '', string $action = 'item'): void
+    {
+        $this->purgeItemId = $id;
+        $this->purgeAction = $action;
+        $this->showPurgeModal = true;
+    }
+
+    public function executePurge(FileService $fileService): void
+    {
+        try {
+            if ($this->purgeAction === 'all') {
+                $count = $fileService->purgeTrash();
+                $this->successMessage = $count > 0
+                    ? "Papelera vaciada ({$count} elementos eliminados definitivamente)."
+                    : 'La Papelera ya estaba vacía.';
+            } else {
+                $fileService->purgeFromTrash($this->purgeItemId);
+                $this->successMessage = "Elemento eliminado definitivamente.";
+            }
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+        }
+        $this->showPurgeModal = false;
+        $this->purgeItemId = '';
+        $this->purgeAction = '';
+    }
+
     public function toggleNode(string $path): void
     {
         $index = array_search($path, $this->expandedPaths);
@@ -698,6 +774,9 @@ class FileManager extends Component
         }
 
         foreach ($items as $item) {
+            if ($item['name'] === '.larapanel-trash') {
+                continue;
+            }
             if ($item['is_dir']) {
                 $itemPath = $path === '' ? $item['name'] : $path . '/' . $item['name'];
                 $node = [
@@ -728,7 +807,25 @@ class FileManager extends Component
             $items = $fileService->listDirectory($this->currentPath);
         }
 
+        // The trash folder is managed exclusively through the Papelera view.
+        if (! $this->showTrash) {
+            $items = array_values(array_filter($items, fn ($item) => $item['name'] !== '.larapanel-trash'));
+        }
+
         $tree = $this->buildTreeLevel('', $fileService, 0);
+
+        $trashItems = [];
+        try {
+            $trashItems = $fileService->listTrash();
+        } catch (\Throwable $e) {
+            if ($this->showTrash) {
+                $this->errorMessage = $e->getMessage();
+            }
+        }
+        $trashCount = count($trashItems);
+        if ($this->showTrash) {
+            $items = [];
+        }
 
         // Favorite directories (with existence check for the sidebar)
         $favoritesList = collect($this->favorites)->map(function ($path) use ($fileService) {
@@ -776,6 +873,8 @@ class FileManager extends Component
             'diskInfo' => $diskInfo,
             'tree' => $tree,
             'favoritesList' => $favoritesList,
+            'trashItems' => $trashItems,
+            'trashCount' => $trashCount,
         ])->layout('layouts.app', [
             'title'      => 'Administrador de Archivos',
             'breadcrumb' => '<span>Hosting</span> / <strong>Administrador de Archivos</strong>',

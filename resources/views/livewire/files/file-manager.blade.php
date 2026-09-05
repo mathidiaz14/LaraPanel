@@ -118,8 +118,17 @@
         </div>
         
         <div class="fm-sidebar-content">
-            <button wire:click="navigate('')" class="btn btn-ghost" style="width:100%;text-align:left;justify-content:flex-start;padding:10px 14px;border-radius:8px;background:{{ $currentPath === '' ? 'rgba(99,102,241,0.15)' : 'transparent' }};color:{{ $currentPath === '' ? 'var(--accent-light)' : 'var(--text-secondary)' }};font-size:13px;font-weight:600;margin-bottom:10px;">
-                <i class="fa-solid fa-server" style="width:20px;font-size:14px;color:{{ $currentPath === '' ? 'var(--accent-light)' : 'var(--text-muted)' }};"></i> /var/www
+            <button wire:click="navigate('')" class="btn btn-ghost" style="width:100%;text-align:left;justify-content:flex-start;padding:10px 14px;border-radius:8px;background:{{ $currentPath === '' && !$showTrash ? 'rgba(99,102,241,0.15)' : 'transparent' }};color:{{ $currentPath === '' && !$showTrash ? 'var(--accent-light)' : 'var(--text-secondary)' }};font-size:13px;font-weight:600;margin-bottom:10px;">
+                <i class="fa-solid fa-server" style="width:20px;font-size:14px;color:{{ $currentPath === '' && !$showTrash ? 'var(--accent-light)' : 'var(--text-muted)' }};"></i> /var/www
+            </button>
+
+            <button wire:click="openTrash" class="btn btn-ghost" style="width:100%;text-align:left;justify-content:flex-start;padding:10px 14px;border-radius:8px;background:{{ $showTrash ? 'rgba(248,113,113,0.15)' : 'transparent' }};color:{{ $showTrash ? '#f87171' : 'var(--text-secondary)' }};font-size:13px;font-weight:600;margin-bottom:10px;">
+                <i class="fa-solid fa-trash-can" style="width:20px;font-size:14px;color:{{ $showTrash ? '#f87171' : 'var(--text-muted)' }};"></i> Papelera
+                @if(!empty($trashCount))
+                    <span style="margin-left:auto;background:rgba(248,113,113,0.15);color:#f87171;border-radius:10px;font-size:11px;font-weight:700;padding:2px 8px;">{{ $trashCount }}</span>
+                @else
+                    <span style="margin-left:auto;font-size:11px;color:var(--text-muted);">0</span>
+                @endif
             </button>
             
             {{-- Favorite Directories --}}
@@ -184,6 +193,122 @@
             </div>
         </div>
         <input type="file" wire:model.live="uploads" multiple x-ref="dropFileInput" style="display:none;">
+
+        @if($showTrash)
+        {{-- ============ PAPELERA ============ --}}
+        <div class="fm-toolbar">
+            <div class="fm-breadcrumb">
+                <button wire:click="closeTrash" class="btn btn-ghost btn-sm" style="padding:6px 10px;border-radius:6px;background:rgba(255,255,255,0.03);">
+                    <i class="fa-solid fa-arrow-left" style="font-size:14px;"></i>
+                </button>
+                <span style="color:var(--glass-border);">|</span>
+                <i class="fa-solid fa-trash-can" style="color:#f87171;font-size:15px;margin-right:2px;"></i>
+                <span style="color:#f87171;cursor:pointer;font-weight:700;">Papelera</span>
+                <span style="color:var(--text-muted);font-size:12px;margin-left:6px;">
+                    ({{ $trashCount }} {{ $trashCount === 1 ? 'elemento' : 'elementos' }}) — los archivos eliminados se guardan aquí y se pueden restaurar
+                </span>
+            </div>
+
+            <div class="fm-toolbar-actions">
+                <button class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;color:var(--text-muted);{{ $trashCount === 0 ? 'opacity:0.4;cursor:not-allowed;' : '' }}" @if($trashCount === 0) disabled @endif wire:click="confirmPurge('', 'all')">
+                    <i class="fa-solid fa-brush" style="color:#f87171;"></i>
+                    <span>Vaciar Papelera</span>
+                </button>
+            </div>
+        </div>
+
+        @if($successMessage)
+            <div class="fm-alert fm-alert-success">
+                <i class="fa-solid fa-circle-check" style="font-size:16px;"></i> 
+                <span>{{ $successMessage }}</span>
+            </div>
+        @endif
+        @if($errorMessage)
+            <div class="fm-alert fm-alert-error">
+                <i class="fa-solid fa-circle-exclamation" style="font-size:16px;"></i> 
+                <span>{{ $errorMessage }}</span>
+            </div>
+        @endif
+
+        <div style="flex:1;overflow-y:auto;padding:0;position:relative;" class="table-responsive">
+            <table class="lp-table fm-table">
+                <thead>
+                    <tr>
+                        <th style="padding:14px 20px;width:38%;text-align:left;font-weight:700;color:var(--text-muted);">Elemento</th>
+                        <th style="width:28%;text-align:left;font-weight:700;color:var(--text-muted);">Ubicación original</th>
+                        <th style="width:10%;text-align:left;font-weight:700;color:var(--text-muted);">Tamaño</th>
+                        <th style="width:14%;text-align:left;font-weight:700;color:var(--text-muted);">Eliminado</th>
+                        <th style="text-align:right;padding-right:24px;width:18%;font-weight:700;color:var(--text-muted);">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody style="background:transparent;">
+                    @forelse($trashItems as $trash)
+                    <tr wire:key="trash-row-{{ $trash['id'] }}">
+                        <td style="padding:12px 20px;vertical-align:middle;">
+                            <div style="display:flex;align-items:center;gap:12px;color:var(--text-primary);">
+                                <i class="fa-solid {{ $trash['is_dir'] ? 'fa-folder' : 'fa-file-lines' }}" style="font-size:18px;color:{{ $trash['is_dir'] ? '#38bdf8' : 'var(--text-secondary)' }};"></i>
+                                <span style="font-weight:600;">{{ $trash['name'] }}
+                                    @if(!$trash['exists'])
+                                        <i class="fa-solid fa-triangle-exclamation" style="font-size:11px;color:#f87171;margin-left:4px;" title="El contenido ya no existe en el disco"></i>
+                                    @endif
+                                </span>
+                            </div>
+                        </td>
+                        <td style="color:var(--text-secondary);vertical-align:middle;font-family:monospace;font-size:12px;">
+                            @if($trash['original'] === '')
+                                /var/www/
+                            @else
+                                /{{ $trash['original'] }}
+                            @endif
+                        </td>
+                        <td style="color:var(--text-secondary);vertical-align:middle;font-family:monospace;font-size:12px;">
+                            @php
+                                $tb = $trash['size'];
+                                $tu = ['B', 'KB', 'MB', 'GB'];
+                                for ($i = 0; $tb >= 1024 && $i < count($tu) - 1; $i++) { $tb /= 1024; }
+                            @endphp
+                            @if($trash['is_dir'])
+                                <span style="color:var(--text-muted);font-family:monospace;font-size:11px;">DIR</span>
+                            @else
+                                {{ round($tb, 1) }} {{ $tu[$i] }}
+                            @endif
+                        </td>
+                        <td style="color:var(--text-secondary);vertical-align:middle;font-size:12px;">
+                            @if($trash['deleted_at'])
+                                {{ date('d M Y H:i', $trash['deleted_at']) }}
+                            @else
+                                <span style="color:var(--text-muted);">—</span>
+                            @endif
+                        </td>
+                        <td style="text-align:right;padding-right:24px;vertical-align:middle;">
+                            <div style="display:inline-flex;gap:4px;">
+                                <button wire:click="restoreTrashItem('{{ $trash['id'] }}')" class="btn btn-ghost btn-sm" title="Restaurar a su ubicación original" style="padding:6px 10px;border-radius:6px;background:rgba(16,185,129,0.1);" @if(!$trash['exists']) disabled @endif>
+                                    <i class="fa-solid fa-rotate-left" style="color:#6ee7b7;font-size:14px;"></i>
+                                </button>
+                                <button wire:click="confirmPurge('{{ $trash['id'] }}', 'item')" class="btn btn-ghost btn-sm" title="Eliminar definitivamente" style="padding:6px 10px;border-radius:6px;color:var(--danger);">
+                                    <i class="fa-solid fa-trash-can" style="font-size:14px;"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="5" style="text-align:center;padding:80px 20px;color:var(--text-muted);">
+                            <div style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+                                <div style="width:64px;height:64px;background:rgba(255,255,255,0.02);border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--glass-border);">
+                                    <i class="fa-regular fa-trash-can" style="font-size:26px;color:var(--text-muted);opacity:0.6;"></i>
+                                </div>
+                                <span style="font-size:14px;font-weight:600;">La Papelera está vacía</span>
+                                <span style="font-size:12px;color:var(--text-muted);">Los elementos que elimines se guardarán aquí para poder restaurarlos.</span>
+                            </div>
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        @else
+
         {{-- Top Toolbar --}}
         <div class="fm-toolbar">
             {{-- Breadcrumb path navigation --}}
@@ -446,6 +571,7 @@
             </button>
         </div>
         @endif
+        @endif
     </div>
 
     {{-- Right-click Context Menu --}}
@@ -511,19 +637,46 @@
             <div class="fm-delete-icon">
                 <i class="fa-solid fa-trash-can" style="color:var(--danger);font-size:20px;"></i>
             </div>
-            <h3 class="fm-modal-title" style="justify-content:center;">Confirmar Eliminación</h3>
+            <h3 class="fm-modal-title" style="justify-content:center;">Mover a la Papelera</h3>
             <p class="fm-delete-text">
                 @if($isDeletingMultiple)
-                    ¿Estás seguro de que deseas eliminar <strong>{{ count($selectedItems) }}</strong> elementos de forma permanente?
+                    ¿Estás seguro de que deseas mover <strong>{{ count($selectedItems) }}</strong> elementos a la Papelera?
                 @else
-                    ¿Estás seguro de que deseas eliminar <strong>{{ $deletingItemName }}</strong> de forma permanente?
+                    ¿Estás seguro de que deseas mover <strong>{{ $deletingItemName }}</strong> a la Papelera?
                 @endif
-                Esta acción no se puede deshacer.
+                Podrás restaurarlo desde la Papelera hasta que la vacíes.
             </p>
             <div class="fm-modal-footer" style="justify-content:center;">
                 <button wire:click="$set('showDeleteModal', false)" class="btn btn-ghost" style="flex:1;justify-content:center;">Cancelar</button>
                 <button wire:click="executeDelete" class="btn btn-danger" style="flex:1;justify-content:center;">
-                    <i class="fa-solid fa-trash"></i> Eliminar
+                    <i class="fa-solid fa-trash"></i> Mover a Papelera
+                </button>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- Purge Confirmation Modal --}}
+    @if($showPurgeModal)
+    <div class="fm-modal-backdrop">
+        <div class="glass-elevated fm-modal" style="text-align:center;">
+            <div class="fm-delete-icon">
+                <i class="fa-solid fa-brush" style="color:var(--danger);font-size:20px;"></i>
+            </div>
+            <h3 class="fm-modal-title" style="justify-content:center;">Eliminación definitiva</h3>
+            <p class="fm-delete-text">
+                @if($purgeAction === 'all')
+                    ¿Estás seguro de que deseas <strong>vaciar la Papelera</strong>?
+                    Esta acción es irreversible y no se puede deshacer.
+                @else
+                    ¿Estás seguro de que deseas <strong>eliminar definitivamente</strong> este elemento?
+                    Esta acción es irreversible y no se puede deshacer.
+                @endif
+            </p>
+            <div class="fm-modal-footer" style="justify-content:center;">
+                <button wire:click="$set('showPurgeModal', false)" class="btn btn-ghost" style="flex:1;justify-content:center;">Cancelar</button>
+                <button wire:click="executePurge" class="btn btn-danger" style="flex:1;justify-content:center;">
+                    <i class="fa-solid fa-trash"></i> Eliminar definitivamente
                 </button>
             </div>
         </div>
