@@ -115,6 +115,15 @@ class DomainService
             }
         }
 
+        // Auto-crear el registro DNS A del subdominio en la zona del dominio padre
+        if ($type === 'subdomain') {
+            try {
+                $this->createSubdomainDnsRecord($domain, $data['parent_domain'] ?? null);
+            } catch (\Throwable $e) {
+                \Log::error("Failed to auto-create DNS record for subdomain {$domain->name}: " . $e->getMessage());
+            }
+        }
+
         AuditLog::record('domain.created', $domainName, ['domain_id' => $domain->id]);
 
         Notifier::send(new DomainChangedNotification(
@@ -131,6 +140,69 @@ class DomainService
         }
 
         return $domain->fresh();
+    }
+
+    /**
+     * Create the DNS A record for a subdomain inside its parent zone.
+     *
+     * @param  Domain       $subdomain      The subdomain being provisioned.
+     * @param  int|string|null $parentDomain   Parent domain id or name (from payload).
+     */
+    protected function createSubdomainDnsRecord(Domain $subdomain, $parentDomain = null): void
+    {
+        // Resolve the parent domain name (handles both numeric ids and names).
+        $parentName = null;
+
+        if (is_numeric($parentDomain)) {
+            $parent = Domain::find((int) $parentDomain);
+            $parentName = $parent?->name;
+        } elseif (is_string($parentDomain) && $parentDomain !== '') {
+            $parentName = $parentDomain;
+        }
+
+        // Fallback: derive the parent by stripping the first label (e.g. webmail. -> root).
+        if (!$parentName) {
+            $labels = explode('.', $subdomain->name);
+            if (count($labels) >= 2) {
+                $parentName = implode('.', array_slice($labels, 1));
+            }
+        }
+
+        if (!$parentName) {
+            return;
+        }
+
+        $zone = \App\Models\DnsZone::where('name', $parentName)->where('is_active', true)->first();
+
+        if (!$zone) {
+            \Log::warning("No DNS zone found for parent '{$parentName}' while creating subdomain {$subdomain->name}.");
+            return;
+        }
+
+        // Relative record name (e.g. "webmail" / "recibos") within the zone.
+        $relativeName = strtolower(substr($subdomain->name, 0, -strlen($parentName)));
+        $relativeName = trim($relativeName, '.');
+
+        if ($relativeName === '' || $relativeName === '@') {
+            return;
+        }
+
+        $exists = \App\Models\DnsRecord::where('dns_zone_id', $zone->id)
+            ->where('name', $relativeName)
+            ->where('type', 'A')
+            ->exists();
+
+        if ($exists) {
+            return;
+        }
+
+        $this->dns->createRecord($zone, [
+            'name'     => $relativeName,
+            'type'     => 'A',
+            'content'  => config('larapanel.server.public_ip'),
+            'ttl'      => 3600,
+            'priority' => 0,
+        ]);
     }
 
     /**
