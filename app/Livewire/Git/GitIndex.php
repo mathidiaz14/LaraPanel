@@ -210,6 +210,11 @@ class GitIndex extends Component
         $this->activeTab = 'logs';
     }
 
+    public function backToList()
+    {
+        $this->selectedLog = null;
+    }
+
     public function delete()
     {
         if ($this->selectedDeployment) {

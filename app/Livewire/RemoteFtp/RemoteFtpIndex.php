@@ -55,7 +55,8 @@ class RemoteFtpIndex extends Component
 
     public function mount(): void
     {
-        $this->targetDomainId = auth()->user()?->domains()->orderBy('name')->value('id');
+        // Sin dominio pre-seleccionado: el destino por defecto es /var/www
+        // y el usuario elige la carpeta final en el modal de copia.
     }
 
     // ─────────────────────────── render ───────────────────────────
@@ -371,8 +372,7 @@ class RemoteFtpIndex extends Component
             return rtrim($path, '/');
         }
 
-        $domain = auth()->user()?->domains()->orderBy('name')->first();
-        return $domain ? '/var/www/' . $domain->name : '';
+        return '/var/www';
     }
 
     // ─────────────────────────── jobs ───────────────────────────

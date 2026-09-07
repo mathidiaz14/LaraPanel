@@ -269,7 +269,7 @@
                     <div class="glass lp-panel" style="padding:20px;">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
                             <div>
-                                <button wire:click="$set('selectedLog', null)" class="btn btn-ghost btn-sm" style="margin-right:12px;">
+                                <button wire:click="backToList" class="btn btn-ghost btn-sm" style="margin-right:12px;">
                                     <i class="fa-solid fa-arrow-left"></i> Volver
                                 </button>
                                 <span class="badge {{ $selectedLog->statusBadgeClass() }}">{{ strtoupper($selectedLog->status) }}</span>

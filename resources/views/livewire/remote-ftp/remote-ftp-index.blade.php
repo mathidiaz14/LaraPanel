@@ -56,7 +56,7 @@
                                 <span class="badge {{ $conn->protocol === 'ftps' ? 'badge-success' : 'badge-secondary' }}" style="font-size:10px;">{{ strtoupper($conn->protocol) }}</span>
                             </div>
                             <div style="font-size:11px;color:var(--text-muted);font-family:monospace;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                                {{ $conn->username }}@{{ $conn->host }}:{{ $conn->port }}
+                                {{ $conn->username . '@' . $conn->host . ':' . $conn->port }}
                             </div>
                         </div>
                         <div style="display:inline-flex;gap:6px;flex-shrink:0;">
