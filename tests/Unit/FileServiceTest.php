@@ -95,4 +95,26 @@ class FileServiceTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->fileService->delete('');
     }
+
+    public function test_it_copies_with_a_new_destination_name(): void
+    {
+        @mkdir($this->testRoot . '/sub', 0777, true);
+        file_put_contents($this->testRoot . '/original.txt', 'content');
+
+        $this->fileService->copy('original.txt', 'sub', 'renombrado (2).txt');
+
+        $this->assertFileExists($this->testRoot . '/sub/renombrado (2).txt');
+        $this->assertSame('content', file_get_contents($this->testRoot . '/sub/renombrado (2).txt'));
+    }
+
+    public function test_it_moves_with_a_new_destination_name(): void
+    {
+        @mkdir($this->testRoot . '/sub', 0777, true);
+        file_put_contents($this->testRoot . '/original.txt', 'content');
+
+        $this->fileService->move('original.txt', 'sub', 'renombrado (2).txt');
+
+        $this->assertFileExists($this->testRoot . '/sub/renombrado (2).txt');
+        $this->assertFalse(file_exists($this->testRoot . '/original.txt'));
+    }
 }

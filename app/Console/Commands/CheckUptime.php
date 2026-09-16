@@ -45,10 +45,10 @@ class CheckUptime extends Command
                 }
             } elseif ($monitor->type === 'docker') {
                 try {
-                    $result = $sudo->execute("docker inspect -f '{{.State.Status}}' " . escapeshellarg($monitor->target));
-                    $isUp = trim($result) === 'running';
+                    $result = $sudo->run(['docker', 'inspect', '-f', '{{.State.Status}}', $monitor->target], checkExit: false);
+                    $isUp = trim($result->stdout) === 'running';
                     if (!$isUp) {
-                        $errorMsg = "Docker status: " . trim($result);
+                        $errorMsg = "Docker status: " . trim($result->stderr ?: $result->stdout);
                     }
                 } catch (\Exception $e) {
                     $isUp = false;

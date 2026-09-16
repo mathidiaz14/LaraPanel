@@ -1,8 +1,31 @@
 <div class="fm-container" x-data="{ selectedAll: false, isUploading: false, progress: 0,
+        selAnchor: null,
         isDragOver: false, dragCounter: 0,
-        ctx: { open: false, x: 0, y: 0, item: null },
+        ctx: { open: false, x: 0, y: 0, item: null, items: [], folderPath: null },
         openCtx(e, item) {
+            const checked = Array.from(document.querySelectorAll('.file-checkbox:checked')).map(cb => cb.value);
+            const items = checked.includes(item.name) ? checked : [item.name];
             this.ctx.item = item;
+            this.ctx.items = items;
+            this.ctx.folderPath = null;
+            if (!checked.includes(item.name)) {
+                this.$wire.set('selectedItems', [item.name]);
+            }
+            this.openMenuAt(e);
+        },
+        openFolderCtx(e, path) {
+            this.ctx.item = { name: path.split('/').pop() || 'var/www', isDir: true };
+            this.ctx.items = [];
+            this.ctx.folderPath = path;
+            this.openMenuAt(e);
+        },
+        openEmptyCtx(e) {
+            this.ctx.item = null;
+            this.ctx.items = [];
+            this.ctx.folderPath = null;
+            this.openMenuAt(e);
+        },
+        openMenuAt(e) {
             this.ctx.x = e.clientX;
             this.ctx.y = e.clientY;
             this.ctx.open = true;
@@ -13,6 +36,29 @@
                 this.ctx.x = Math.max(6, Math.min(this.ctx.x, window.innerWidth - r.width - 10));
                 this.ctx.y = Math.max(6, Math.min(this.ctx.y, window.innerHeight - r.height - 10));
             });
+        },
+        handleRowClick(e, idx, name) {
+            if (e.target.closest('a, button, input, select, label')) return;
+            const cbs = Array.from(document.querySelectorAll('.file-checkbox'));
+            if (e.shiftKey) {
+                const names = cbs.map(cb => cb.value);
+                const checked = cbs.map((cb, i) => cb.checked ? i : -1).filter(i => i >= 0);
+                const anchor = (this.selAnchor !== null && checked.length) ? this.selAnchor : (checked.length ? checked[checked.length - 1] : null);
+                if (anchor !== null) {
+                    const i0 = Math.min(anchor, idx);
+                    const i1 = Math.max(anchor, idx);
+                    this.$wire.set('selectedItems', names.slice(i0, i1 + 1));
+                } else {
+                    this.selAnchor = idx;
+                    this.$wire.set('selectedItems', [name]);
+                }
+            } else if (e.ctrlKey || e.metaKey) {
+                this.selAnchor = idx;
+                this.$wire.toggleSelection(name);
+            } else {
+                this.selAnchor = idx;
+                this.$wire.set('selectedItems', [name]);
+            }
         },
         closeCtx() { this.ctx.open = false; },
         handleDragEnter(e) {
@@ -118,7 +164,7 @@
         </div>
         
         <div class="fm-sidebar-content">
-            <button wire:click="navigate('')" class="btn btn-ghost" style="width:100%;text-align:left;justify-content:flex-start;padding:10px 14px;border-radius:8px;background:{{ $currentPath === '' && !$showTrash ? 'rgba(99,102,241,0.15)' : 'transparent' }};color:{{ $currentPath === '' && !$showTrash ? 'var(--accent-light)' : 'var(--text-secondary)' }};font-size:13px;font-weight:600;margin-bottom:10px;">
+            <button wire:click="navigate('')" class="btn btn-ghost" style="width:100%;text-align:left;justify-content:flex-start;padding:10px 14px;border-radius:8px;background:{{ $currentPath === '' && !$showTrash ? 'rgba(99,102,241,0.15)' : 'transparent' }};color:{{ $currentPath === '' && !$showTrash ? 'var(--accent-light)' : 'var(--text-secondary)' }};font-size:13px;font-weight:600;margin-bottom:10px;" @contextmenu.prevent.stop="openFolderCtx($event, '')">
                 <i class="fa-solid fa-server" style="width:20px;font-size:14px;color:{{ $currentPath === '' && !$showTrash ? 'var(--accent-light)' : 'var(--text-muted)' }};"></i> /var/www
             </button>
 
@@ -359,6 +405,7 @@
 
         {{-- File List Container --}}
         <div style="flex:1;overflow-y:auto;padding:0;position:relative;" class="table-responsive" @scroll="closeCtx()"
+             @contextmenu.prevent.stop="openEmptyCtx($event)"
              @dragenter="fmDropTargetEnter($event)"
              @dragleave="fmDropTargetLeave($event)"
              @dragover.prevent="fmContainerDragOver($event)">
@@ -415,6 +462,7 @@
                         draggable="true"
                         @dragstart="fmDragStart($event, @js($item['name']))"
                         @dragend="fmDragEnd($event)"
+                        x-on:click="handleRowClick($event, @js($loop->index), @js($item['name']))"
                         @if($item['is_dir'])
                             @dragenter="fmDropTargetEnter($event)"
                             @dragleave="fmDropTargetLeave($event)"
@@ -449,7 +497,7 @@
                         >
                             @if($item['is_dir'])
                                 <div style="display:flex;align-items:center;gap:12px;">
-                                    <div wire:click="navigate('{{ ltrim($currentPath . '/' . $item['name'], '/') }}')" style="cursor:pointer;display:flex;align-items:center;gap:12px;color:var(--text-primary);font-weight:600;transition:color 0.2s;" onmouseover="this.style.color='var(--accent-light)'" onmouseout="this.style.color='var(--text-primary)'">
+                                    <div x-on:click.stop="if ($event.shiftKey || $event.ctrlKey || $event.metaKey) { handleRowClick($event, @js($loop->index), @js($item['name'])) } else { @this.navigate('{{ ltrim($currentPath . '/' . $item['name'], '/') }}') }" style="cursor:pointer;display:flex;align-items:center;gap:12px;color:var(--text-primary);font-weight:600;transition:color 0.2s;" onmouseover="this.style.color='var(--accent-light)'" onmouseout="this.style.color='var(--text-primary)'">
                                         <i class="fa-solid fa-folder" style="font-size:18px;color:#38bdf8;"></i>
                                         <span>{{ $item['name'] }}</span>
                                     </div>
@@ -571,6 +619,27 @@
             </button>
         </div>
         @endif
+
+        {{-- Floating Clipboard Bar --}}
+        @if(!empty($clipboardItems))
+        <div class="fm-float-bar" style="bottom:84px;">
+            <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;">
+                <i class="fa-solid {{ $clipboardMode === 'cut' ? 'fa-scissors' : 'fa-copy' }}" style="color:{{ $clipboardMode === 'cut' ? 'var(--warning)' : 'var(--accent-light)' }};"></i>
+                <span style="color:var(--text-primary);">{{ count($clipboardItems) }} {{ count($clipboardItems) === 1 ? 'elemento' : 'elementos' }}{{ $clipboardMode === 'cut' ? ' cortados' : ' copiados' }}</span>
+            </div>
+
+            <div class="fm-float-divider"></div>
+
+            <div style="display:flex;gap:8px;">
+                <button wire:click="pasteClipboard" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(16,185,129,0.1);color:#6ee7b7;border-radius:8px;padding:6px 12px;font-size:12px;">
+                    <i class="fa-solid fa-clipboard-check"></i> Pegar aquí
+                </button>
+                <button wire:click="clearClipboard" class="btn btn-ghost btn-sm" style="display:flex;align-items:center;gap:6px;background:rgba(239,68,68,0.1);color:#f87171;border-radius:8px;padding:6px 12px;font-size:12px;">
+                    <i class="fa-solid fa-xmark"></i> Cancelar
+                </button>
+            </div>
+        </div>
+        @endif
         @endif
     </div>
 
@@ -580,7 +649,32 @@
          class="fm-ctx-menu glass-elevated"
          @click.outside="closeCtx()"
          @keyup.escape.window="closeCtx()">
-        <template x-if="ctx.item">
+        <template x-if="ctx.item && ctx.folderPath !== null">
+            <div>
+                <div class="fm-ctx-header">
+                    <i class="fa-solid fa-folder" style="font-size:12px;color:var(--accent-light);"></i>
+                    <span x-text="'/var/www/' + ctx.folderPath"></span>
+                </div>
+                <button class="fm-ctx-item" @click="closeCtx(); $wire.navigate(ctx.folderPath)">
+                    <i class="fa-solid fa-folder-open" style="width:18px;color:#38bdf8;"></i> Abrir carpeta
+                </button>
+                @if(!empty($clipboardItems))
+                    <div class="fm-ctx-divider"></div>
+                    <div class="fm-ctx-header" style="border-top:none;margin-bottom:4px;padding:0 12px;">
+                        <i class="fa-solid {{ $clipboardMode === 'cut' ? 'fa-scissors' : 'fa-clipboard-check' }}" style="font-size:12px;color:{{ $clipboardMode === 'cut' ? 'var(--warning)' : '#6ee7b7' }};"></i>
+                        <span>{{ count($clipboardItems) }} {{ count($clipboardItems) === 1 ? 'elemento' : 'elementos' }}</span>
+                    </div>
+                    <button class="fm-ctx-item" @click="closeCtx(); $wire.pasteClipboardTo(ctx.folderPath)">
+                        <i class="fa-solid fa-clipboard-check" style="width:18px;color:#6ee7b7;"></i> Pegar aquí
+                    </button>
+                    <button class="fm-ctx-item" @click="closeCtx(); $wire.clearClipboard()">
+                        <i class="fa-solid fa-xmark" style="width:18px;"></i> Cancelar (vaciar portapapeles)
+                    </button>
+                @endif
+            </div>
+        </template>
+
+        <template x-if="ctx.item && ctx.folderPath === null">
             <div>
                 <div class="fm-ctx-header">
                     <i class="fa-solid" :class="ctx.item.isDir ? 'fa-folder' : 'fa-file-lines'" style="font-size:12px;color:var(--accent-light);"></i>
@@ -606,6 +700,17 @@
 
                 <div class="fm-ctx-divider"></div>
 
+                <button class="fm-ctx-item" @click="closeCtx(); $wire.copyToClipboard(ctx.items)">
+                    <i class="fa-solid fa-copy" style="width:18px;color:var(--accent-light);"></i>
+                    <span x-text="ctx.items.length > 1 ? ('Copiar (' + ctx.items.length + ')') : 'Copiar'"></span>
+                </button>
+                <button class="fm-ctx-item" @click="closeCtx(); $wire.cutToClipboard(ctx.items)">
+                    <i class="fa-solid fa-scissors" style="width:18px;color:var(--warning);"></i>
+                    <span x-text="ctx.items.length > 1 ? ('Cortar (' + ctx.items.length + ')') : 'Cortar'"></span>
+                </button>
+
+                <div class="fm-ctx-divider"></div>
+
                 <button class="fm-ctx-item" x-show="ctx.item.isDir" @click="closeCtx(); $wire.prepareZip(ctx.item.name)">
                     <i class="fa-solid fa-file-zipper" style="width:18px;color:var(--warning);"></i> Comprimir en .zip
                 </button>
@@ -623,6 +728,41 @@
 
                 <button class="fm-ctx-item fm-ctx-danger" @click="closeCtx(); $wire.confirmDelete(ctx.item.name)">
                     <i class="fa-solid fa-trash-can" style="width:18px;"></i> Eliminar
+                </button>
+            </div>
+        </template>
+
+        <template x-if="!ctx.item">
+            <div>
+                <div class="fm-ctx-header">
+                    <i class="fa-solid fa-folder-open" style="font-size:12px;color:var(--text-muted);"></i>
+                    <span>Carpeta actual</span>
+                </div>
+                @if(!empty($clipboardItems))
+                    <div class="fm-ctx-header" style="border-top:1px solid var(--glass-border);margin-top:4px;padding-top:8px;">
+                        <i class="fa-solid {{ $clipboardMode === 'cut' ? 'fa-scissors' : 'fa-clipboard-check' }}" style="font-size:12px;color:{{ $clipboardMode === 'cut' ? 'var(--warning)' : '#6ee7b7' }};"></i>
+                        <span>{{ count($clipboardItems) }} {{ count($clipboardItems) === 1 ? 'elemento' : 'elementos' }} {{ $clipboardMode === 'cut' ? 'en espera de corte' : 'en portapapeles' }}</span>
+                    </div>
+                    <button class="fm-ctx-item" @click="closeCtx(); $wire.pasteClipboard()">
+                        <i class="fa-solid fa-clipboard-check" style="width:18px;color:#6ee7b7;"></i> Pegar aquí
+                    </button>
+                    <button class="fm-ctx-item" @click="closeCtx(); $wire.clearClipboard()">
+                        <i class="fa-solid fa-xmark" style="width:18px;"></i> Cancelar (vaciar portapapeles)
+                    </button>
+                    <div class="fm-ctx-divider"></div>
+                @endif
+                <button class="fm-ctx-item" @click="closeCtx(); @this.set('showCreateFolderModal', true)">
+                    <i class="fa-solid fa-folder-plus" style="width:18px;color:#38bdf8;"></i> Nueva carpeta
+                </button>
+                <button class="fm-ctx-item" @click="closeCtx(); @this.set('showCreateFileModal', true)">
+                    <i class="fa-solid fa-file-circle-plus" style="width:18px;color:var(--accent-light);"></i> Nuevo archivo
+                </button>
+                <div class="fm-ctx-divider"></div>
+                <button class="fm-ctx-item" @click="closeCtx(); @this.set('selectedItems', Array.from(document.querySelectorAll('.file-checkbox')).map(el => el.value))">
+                    <i class="fa-solid fa-check-double" style="width:18px;color:#6ee7b7;"></i> Seleccionar todo
+                </button>
+                <button class="fm-ctx-item" @click="closeCtx(); @this.set('selectedItems', [])">
+                    <i class="fa-regular fa-square" style="width:18px;"></i> Deseleccionar todo
                 </button>
             </div>
         </template>
@@ -990,6 +1130,38 @@
                     e.preventDefault();
                     @this.set('editingPath', null);
                 }
+            }
+        });
+    </script>
+
+    {{-- Atajos de teclado: copiar / cortar / pegar / seleccionar todo --}}
+    <script>
+        document.addEventListener('keydown', function (e) {
+            if (document.getElementById('monaco-full-editor')) return;
+            const t = e.target;
+            if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return;
+            const mod = e.ctrlKey || e.metaKey;
+            if (!mod) return;
+            const key = e.key.toLowerCase();
+            if (!['a', 'c', 'x', 'v'].includes(key)) return;
+
+            if (key === 'a') {
+                e.preventDefault();
+                @this.set('selectedItems', Array.from(document.querySelectorAll('.file-checkbox')).map(el => el.value));
+                return;
+            }
+
+            const names = Array.from(document.querySelectorAll('.file-checkbox:checked')).map(cb => cb.value);
+            if ((key === 'c' || key === 'x') && names.length) {
+                e.preventDefault();
+                if (key === 'c') {
+                    @this.copyToClipboard(names);
+                } else {
+                    @this.cutToClipboard(names);
+                }
+            } else if (key === 'v') {
+                e.preventDefault();
+                @this.pasteClipboard();
             }
         });
     </script>

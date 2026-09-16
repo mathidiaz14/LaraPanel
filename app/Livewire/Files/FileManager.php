@@ -27,6 +27,10 @@ class FileManager extends Component
     public bool $showBulkCopyModal = false;
     public string $bulkDestDirectory = '';
 
+    // Clipboard (copiar / cortar / pegar)
+    public array $clipboardItems = [];
+    public ?string $clipboardMode = null;
+
     // Modals state
     public bool $showCreateFolderModal = false;
     public string $newFolderName = '';
@@ -630,6 +634,196 @@ class FileManager extends Component
     }
 
     /**
+     * Copiar al portapapeles (modo copiar).
+     */
+    public function copyToClipboard(array $names): void
+    {
+        $this->clipboardItems = $this->buildClipboardPaths($names);
+        if (empty($this->clipboardItems)) {
+            $this->errorMessage = 'No hay elementos válidos para copiar.';
+            return;
+        }
+        $this->clipboardMode = 'copy';
+        $this->successMessage = count($this->clipboardItems) . ' elemento(s) copiado(s) al portapapeles.';
+    }
+
+    /**
+     * Cortar al portapapeles (modo mover).
+     */
+    public function cutToClipboard(array $names): void
+    {
+        $this->clipboardItems = $this->buildClipboardPaths($names);
+        if (empty($this->clipboardItems)) {
+            $this->errorMessage = 'No hay elementos válidos para cortar.';
+            return;
+        }
+        $this->clipboardMode = 'cut';
+        $this->successMessage = count($this->clipboardItems) . ' elemento(s) cortado(s). Usa Pegar para moverlos.';
+    }
+
+    /**
+     * Pegar el contenido del portapapeles en la carpeta actual.
+     */
+    public function pasteClipboard(FileService $fileService): void
+    {
+        if (empty($this->clipboardItems)) {
+            $this->errorMessage = 'El portapapeles está vacío.';
+            return;
+        }
+
+        $mode = $this->clipboardMode ?? 'copy';
+        $dest = trim($this->currentPath, '/');
+
+        try {
+            if (! is_dir($fileService->resolvePath($dest))) {
+                throw new \RuntimeException('El directorio destino no existe.');
+            }
+        } catch (\Throwable $e) {
+            $this->errorMessage = $e->getMessage();
+            return;
+        }
+
+        // Evitar copiar/mover un directorio dentro de sí mismo o de sus subdirectorios.
+        foreach ($this->clipboardItems as $src) {
+            try {
+                $isDir = is_dir($fileService->resolvePath($src));
+            } catch (\Throwable $e) {
+                $this->errorMessage = $e->getMessage();
+                return;
+            }
+            if ($isDir) {
+                $srcNorm = rtrim($src, '/');
+                if ($dest === $srcNorm || str_starts_with($dest . '/', $srcNorm . '/')) {
+                    $this->errorMessage = 'No puedes copiar o mover un directorio dentro de sí mismo.';
+                    return;
+                }
+            }
+        }
+
+        $processed = 0;
+        $hadError = false;
+        foreach ($this->clipboardItems as $src) {
+            $name = basename(\App\Services\FileService::normalizeSeparators($src));
+
+            // Mover al mismo directorio no hace nada.
+            $srcParent = trim(dirname(\App\Services\FileService::normalizeSeparators($src)), '/');
+            if ($mode === 'cut' && $srcParent === $dest) {
+                $processed++;
+                continue;
+            }
+
+            try {
+                $newName = $this->uniqueDestinationName($fileService, $dest, $name);
+                if ($mode === 'cut') {
+                    $fileService->move($src, $dest, $newName);
+                } else {
+                    $fileService->copy($src, $dest, $newName);
+                }
+                $processed++;
+            } catch (\Throwable $e) {
+                $this->errorMessage = $e->getMessage();
+                $hadError = true;
+                break;
+            }
+        }
+
+        if (! $hadError) {
+            $verb = $mode === 'cut' ? 'movido' : 'copiado';
+            $loc = $dest === '' ? '/var/www' : '/var/www/' . $dest;
+            $this->successMessage = "{$processed} elemento(s) {$verb}(s) a '{$loc}'.";
+
+            if ($mode === 'cut' && $processed === count($this->clipboardItems)) {
+                $this->clearClipboard(false);
+            }
+        }
+    }
+
+    /**
+     * Vaciar el portapapeles.
+     */
+    public function clearClipboard(bool $notify = true): void
+    {
+        $this->clipboardItems = [];
+        $this->clipboardMode = null;
+        if ($notify) {
+            $this->successMessage = 'Portapapeles vaciado.';
+        }
+    }
+
+    /**
+     * Pegar el contenido del portapapeles en una carpeta concreta (menú del árbol lateral).
+     */
+    public function pasteClipboardTo(string $folderPath, FileService $fileService): void
+    {
+        $this->currentPath = trim(str_replace(['..', "\0"], '', $folderPath), '/');
+        $this->pasteClipboard($fileService);
+    }
+
+    /**
+     * Alternar (agregar/quitar) un elemento de la selección (Ctrl/Cmd + clic).
+     */
+    public function toggleSelection(string $name): void
+    {
+        $name = basename(\App\Services\FileService::normalizeSeparators(trim((string) $name)));
+        if ($name === '' || $name === '.' || $name === '..') {
+            return;
+        }
+        $index = array_search($name, $this->selectedItems);
+        if ($index !== false) {
+            unset($this->selectedItems[$index]);
+            $this->selectedItems = array_values($this->selectedItems);
+        } else {
+            $this->selectedItems[] = $name;
+        }
+    }
+
+    /**
+     * Convierte nombres (basename) a rutas relativas completas para el portapapeles.
+     */
+    protected function buildClipboardPaths(array $names): array
+    {
+        $paths = [];
+        foreach ($names as $name) {
+            $name = basename(\App\Services\FileService::normalizeSeparators(trim((string) $name)));
+            if ($name === '' || $name === '.' || $name === '..' || $name === '.larapanel-trash') {
+                continue;
+            }
+            $paths[] = ltrim($this->currentPath . '/' . $name, '/');
+        }
+        return array_values(array_unique($paths));
+    }
+
+    /**
+     * Genera un nombre libre en el destino (evita sobrescribir agrega " (2)", " (3)"...).
+     */
+    protected function uniqueDestinationName(FileService $fileService, string $destParent, string $name): string
+    {
+        $destParent = trim($destParent, '/');
+        $prefix = $destParent === '' ? '' : $destParent . '/';
+
+        if (! file_exists($fileService->resolvePath($prefix . $name))) {
+            return $name;
+        }
+
+        $dotParts = explode('.', $name);
+        $ext = count($dotParts) > 1 && $dotParts[count($dotParts) - 1] !== '' ? '.' . array_pop($dotParts) : '';
+        $base = implode('.', $dotParts);
+        if ($base === '') {
+            $base = $name;
+            $ext = '';
+        }
+
+        for ($i = 2; $i <= 9999; $i++) {
+            $candidate = $base . ' (' . $i . ')' . $ext;
+            if (! file_exists($fileService->resolvePath($prefix . $candidate))) {
+                return $candidate;
+            }
+        }
+
+        throw new \RuntimeException("No se pudo generar un nombre libre para '{$name}' en el destino.");
+    }
+
+    /**
      * Move/copy resources via drag & drop.
      */
     public function dragDropItems(array $items, string $destPath, bool $copy, FileService $fileService): void
@@ -651,7 +845,7 @@ class FileManager extends Component
 
         $sources = [];
         foreach ($items as $name) {
-            $name = basename(str_replace('\\', '/', trim((string) $name, '/')));
+            $name = basename(\App\Services\FileService::normalizeSeparators(trim((string) $name, '/')));
             if ($name === '' || $name === '.' || $name === '..') {
                 continue;
             }

@@ -32,6 +32,19 @@ class FileService
     }
 
     /**
+     * Normaliza los separadores de una ruta.
+     *
+     * En Windows la barra invertida (\) es un separador de directorios y debe
+     * convertirse a '/'. En Linux/macOS, en cambio, '\' es un carácter válido
+     * dentro del nombre de un archivo (típico en archivos extraídos de un ZIP
+     * creado en Windows) y NO debe convertirse, o la ruta se interpretaría mal.
+     */
+    public static function normalizeSeparators(string $path): string
+    {
+        return PHP_OS_FAMILY === 'Windows' ? str_replace('\\', '/', $path) : $path;
+    }
+
+    /**
      * Safely resolve absolute path and prevent traversal attacks.
      */
     public function resolvePath(string $relativePath): string
@@ -42,7 +55,7 @@ class FileService
         }
 
         $normalizedRoot = $this->normalizePath($root);
-        $path = $normalizedRoot . '/' . ltrim(str_replace('\\', '/', $relativePath), '/');
+        $path = $normalizedRoot . '/' . ltrim(self::normalizeSeparators($relativePath), '/');
 
         // Resolve absolute path parts to catch navigation like "/../"
         $resolved = $this->normalizePath($path);
@@ -130,7 +143,7 @@ class FileService
      */
     protected function normalizePath(string $path): string
     {
-        $normalized = str_replace('\\', '/', $path);
+        $normalized = self::normalizeSeparators($path);
         $isAbsolute = str_starts_with($normalized, '/');
         $drivePrefix = '';
 
@@ -508,7 +521,7 @@ class FileService
                     if ($file->isDir()) continue;
                     $filePath = $file->getRealPath();
                     $entry = $entryRoot . '/' . substr($filePath, strlen($path) + 1);
-                    $zip->addFile($filePath, str_replace('\\', '/', $entry));
+                    $zip->addFile($filePath, self::normalizeSeparators($entry));
                 }
             } else {
                 $zip->addFile($path, $entryRoot);
@@ -591,11 +604,14 @@ class FileService
     /**
      * Move file/folder to a new parent directory.
      */
-    public function move(string $relativeSource, string $relativeDestParent): bool
+    public function move(string $relativeSource, string $relativeDestParent, ?string $newName = null): bool
     {
-        $this->assertNotTrash(ltrim(str_replace('\\', '/', $relativeDestParent), '/'));
+        $this->assertNotTrash(ltrim(self::normalizeSeparators($relativeDestParent), '/'));
         $source = $this->resolvePath($relativeSource);
-        $name = basename($relativeSource);
+        $name = $newName ?? basename($relativeSource);
+        if ($newName !== null) {
+            $this->assertSafeArchiveName($newName);
+        }
         $dest = $this->resolvePath($relativeDestParent . '/' . $name);
 
         if (!file_exists($source)) {
@@ -623,11 +639,14 @@ class FileService
     /**
      * Copy file/folder to a new parent directory.
      */
-    public function copy(string $relativeSource, string $relativeDestParent): bool
+    public function copy(string $relativeSource, string $relativeDestParent, ?string $newName = null): bool
     {
-        $this->assertNotTrash(ltrim(str_replace('\\', '/', $relativeDestParent), '/'));
+        $this->assertNotTrash(ltrim(self::normalizeSeparators($relativeDestParent), '/'));
         $source = $this->resolvePath($relativeSource);
-        $name = basename($relativeSource);
+        $name = $newName ?? basename($relativeSource);
+        if ($newName !== null) {
+            $this->assertSafeArchiveName($newName);
+        }
         $dest = $this->resolvePath($relativeDestParent . '/' . $name);
 
         if (!file_exists($source)) {
@@ -751,7 +770,7 @@ class FileService
     public function deleteToTrash(string $relativePath): bool
     {
         $this->ensureTrashRoot();
-        $relativePath = ltrim(str_replace('\\', '/', $relativePath), '/');
+        $relativePath = ltrim(self::normalizeSeparators($relativePath), '/');
         $this->assertNotRoot($relativePath);
         $this->assertNotTrash($relativePath);
 

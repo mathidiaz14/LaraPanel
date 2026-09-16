@@ -1,9 +1,10 @@
 @foreach($nodes as $node)
     <div style="margin-bottom: 2px;">
-        <div @dragenter.stop="fmDropTargetEnter($event)"
-             @dragleave.stop="fmDropTargetLeave($event)"
-             @dragover.prevent.stop="fmContainerDragOver($event)"
-             @drop.prevent.stop="fmDragDrop($event, @js($node['path']))"
+<div @contextmenu.prevent.stop="openFolderCtx($event, @js($node['path']))"
+         @dragenter.stop="fmDropTargetEnter($event)"
+         @dragleave.stop="fmDropTargetLeave($event)"
+         @dragover.prevent.stop="fmContainerDragOver($event)"
+         @drop.prevent.stop="fmDragDrop($event, @js($node['path']))"
              style="display:flex;align-items:center;padding:6px 12px;padding-left:{{ 12 + ($level * 16) }}px;border-radius:8px;background:{{ $currentPath === $node['path'] ? 'rgba(99,102,241,0.15)' : 'transparent' }};color:{{ $currentPath === $node['path'] ? 'var(--accent-light)' : 'var(--text-secondary)' }};font-size:13px;font-weight:600;cursor:pointer;transition:background 0.2s;">
             
             {{-- Toggle Button (Arrow) --}}
