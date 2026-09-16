@@ -294,9 +294,11 @@ class DomainService
                 } else {
                     $sitesAvail   = config('larapanel.paths.nginx_sites');
                     $sitesEnabled = config('larapanel.paths.nginx_enabled');
-                    file_put_contents("/tmp/lp_ssl_{$domain->name}", $config);
-                    $this->sudo->run(['cp', "/tmp/lp_ssl_{$domain->name}", "{$sitesAvail}/{$domain->name}"]);
+                    $tmpFile = tempnam(sys_get_temp_dir(), 'lp_ssl_');
+                    file_put_contents($tmpFile, $config);
+                    $this->sudo->run(['cp', $tmpFile, "{$sitesAvail}/{$domain->name}"]);
                     $this->sudo->run(['ln', '-sf', "{$sitesAvail}/{$domain->name}", "{$sitesEnabled}/{$domain->name}"]);
+                    @unlink($tmpFile);
                 }
             } else {
                 $this->deployNginxConfig($domain);
@@ -972,9 +974,11 @@ class DomainService
         }
 
         $confPath = "{$sitesAvail}/{$filename}";
-        file_put_contents('/tmp/larapanel_vhost_' . $filename, $config);
-        $this->sudo->run(['cp', '/tmp/larapanel_vhost_' . $filename, $confPath]);
+        $tmpFile = tempnam(sys_get_temp_dir(), 'lp_vhost_');
+        file_put_contents($tmpFile, $config);
+        $this->sudo->run(['cp', $tmpFile, $confPath]);
         $this->sudo->run(['ln', '-sf', $confPath, "{$sitesEnabled}/{$filename}"]);
+        @unlink($tmpFile);
 
         $domain->update(['config' => array_merge($domain->config ?? [], ['nginx' => $confPath])]);
     }
@@ -986,9 +990,11 @@ class DomainService
         }
         $config = $this->generateApacheConfig($domain);
         $path   = config('larapanel.paths.apache_sites') . '/' . $domain->name . '.conf';
-        file_put_contents('/tmp/lp_apache_' . $domain->name, $config);
-        $this->sudo->run(['cp', '/tmp/lp_apache_' . $domain->name, $path]);
+        $tmpFile = tempnam(sys_get_temp_dir(), 'lp_apache_');
+        file_put_contents($tmpFile, $config);
+        $this->sudo->run(['cp', $tmpFile, $path]);
         $this->sudo->run(['a2ensite', $domain->name . '.conf']);
+        @unlink($tmpFile);
     }
 
     protected function enableNginxSite(string $domainName): void
