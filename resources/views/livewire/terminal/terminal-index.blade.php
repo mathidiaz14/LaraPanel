@@ -14,7 +14,6 @@
                     <option value="{{ $server->id }}">{{ $server->is_local ? 'Local' : $server->name }} · {{ $server->hostname }}</option>
                 @endforeach
             </select>
-            <span class="badge badge-warning" style="font-size:11px;">SIN WEBSOCKET</span>
         </div>
     </div>
 
@@ -32,14 +31,10 @@
         </div>
     @endif
 
-    <div style="display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start;">
-        <section class="glass lp-panel" style="padding:0;overflow:hidden;border-color:rgba(79,70,229,.3);">
+    <section class="glass lp-panel" style="padding:0;overflow:hidden;border-color:rgba(79,70,229,.3);">
             <div style="background:var(--bg-base);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--glass-border);gap:12px;flex-wrap:wrap;">
                 <div style="display:flex;gap:6px;align-items:center;">
-                    <span style="width:11px;height:11px;border-radius:50%;background:var(--danger);"></span>
-                    <span style="width:11px;height:11px;border-radius:50%;background:var(--warning);"></span>
-                    <span style="width:11px;height:11px;border-radius:50%;background:var(--success);"></span>
-                    <span style="margin-left:8px;font-family:monospace;font-size:11px;color:var(--text-muted);">{{ $cwd }}</span>
+                    <span style="font-family:monospace;font-size:11px;color:var(--text-muted);">{{ $cwd }}</span>
                 </div>
                 <div style="display:flex;gap:10px;align-items:center;font-size:11px;color:var(--text-muted);">
                     <label style="display:flex;gap:5px;align-items:center;cursor:pointer;">
@@ -51,7 +46,9 @@
                     @endif
                 </div>
             </div>
-            <div id="terminal-container" wire:ignore style="height:360px;box-sizing:border-box;padding:12px 12px 24px;background:var(--bg-base);"></div>
+            <div wire:ignore style="height:calc(100vh - 300px);min-height:460px;max-height:900px;padding:12px 12px 24px;box-sizing:border-box;background:#090b10;">
+                <div id="terminal-container" style="height:100%;width:100%;"></div>
+            </div>
             <div style="padding:8px 14px;display:flex;gap:14px;font-size:11px;color:var(--text-muted);">
                 <span><kbd>Tab</kbd> autocompletar</span><span><kbd>↑ ↓</kbd> historial</span><span><kbd>Ctrl+L</kbd> limpiar</span><span><kbd>Ctrl+C</kbd> cancelar línea</span>
                 @if($exitCode !== null)<span style="margin-left:auto;color:{{ $exitCode === 0 ? '#a6e3a1' : '#f38ba8' }};">Salida: {{ $exitCode }} · {{ $durationMs ?? 0 }} ms</span>@endif
@@ -59,30 +56,6 @@
                 <button onclick="downloadTerminalOutput(this)" data-output="{{ base64_encode($output) }}" class="btn btn-ghost btn-sm" title="Descargar salida"><i class="fa-solid fa-download"></i></button>
             </div>
         </section>
-
-        <aside style="display:flex;flex-direction:column;gap:16px;">
-            <section class="glass" style="padding:var(--sp-4);">
-                <h3 style="font-size:13px;margin:0 0 12px;color:var(--text-primary);"><i class="fa-solid fa-bolt" style="color:var(--warning);"></i> Comandos rápidos</h3>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;">
-                    @foreach($quickCommands as $quick)
-                        <button wire:click="runQuickCommand('{{ addslashes($quick['command']) }}')" class="btn btn-ghost btn-sm" style="font-size:10px;text-align:left;padding:8px;">
-                            <i class="fa-solid {{ $quick['icon'] }}" style="width:15px;color:var(--info);"></i> {{ $quick['label'] }}
-                        </button>
-                    @endforeach
-                </div>
-            </section>
-
-            <section class="glass" style="padding:var(--sp-4);">
-                <h3 style="font-size:13px;margin:0 0 12px;color:var(--text-primary);"><i class="fa-solid fa-screwdriver-wrench" style="color:var(--success);"></i> Mantenimiento</h3>
-                <div style="display:flex;flex-direction:column;gap:7px;">
-                    <button wire:click="runMaintenance('optimize')" class="btn btn-ghost btn-sm" style="text-align:left;">Optimizar Laravel</button>
-                    <button wire:click="runMaintenance('clear-cache')" class="btn btn-ghost btn-sm" style="text-align:left;">Limpiar cachés</button>
-                    <button wire:click="runMaintenance('git-status')" class="btn btn-ghost btn-sm" style="text-align:left;">Estado del proyecto</button>
-                    <button wire:click="runMaintenance('git-pull')" class="btn btn-ghost btn-sm" style="text-align:left;color:var(--warning);">Actualizar proyecto</button>
-                </div>
-            </section>
-
-        </aside>
     </div>
 
     @assets
@@ -96,7 +69,6 @@
         #terminal-container .xterm-screen { padding-bottom:0; }
         kbd { background:rgba(255,255,255,.1);padding:2px 5px;border-radius:3px; }
         @media (max-width:900px) { .page-header { flex-direction:column; } .page-header > div:last-child { justify-content:flex-start !important; } }
-        @media (max-width:760px) { .glass.lp-panel + aside, aside { display:block; } [style*="grid-template-columns:minmax(0,1fr) 290px"] { display:flex !important; flex-direction:column; } }
     </style>
     @endassets
 
@@ -113,6 +85,24 @@
             const resizeTerminal = () => { if (container.offsetParent !== null) { fit.fit(); term.scrollToBottom(); } };
             window.addEventListener('resize', resizeTerminal);
             if (window.ResizeObserver) new ResizeObserver(resizeTerminal).observe(container);
+            const pasteClipboard = () => {
+                const apply = (text) => { if (text) { insert(text); term.focus(); } };
+                const legacyPaste = () => {
+                    const ta = document.createElement('textarea');
+                    ta.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0;pointer-events:none;';
+                    ta.setAttribute('tabindex', '-1');
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    let ok = false;
+                    try { ok = document.execCommand('paste'); } catch (e) { ok = false; }
+                    if (ok && ta.value) apply(ta.value);
+                    ta.remove();
+                    term.focus();
+                };
+                if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(apply).catch(legacyPaste);
+                else legacyPaste();
+            };
+            container.addEventListener('contextmenu', (e) => { e.preventDefault(); pasteClipboard(); });
             let line = ''; let position = 0; let history = @js($history); let historyIndex = -1; let draft = ''; let currentCwd = @js($cwd);
             const suggestions = @json($suggestions);
             const prompt = () => '\x1b[1;32mroot@larapanel\x1b[0m:\x1b[1;34m' + currentCwd + '\x1b[0m# ';

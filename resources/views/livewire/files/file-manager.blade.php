@@ -88,10 +88,78 @@
                 this.fmDragDrop(e, fallbackPath);
                 return;
             }
+            if (this.hasFolderDrag(e)) {
+                this.processFolderDrop(e);
+                return;
+            }
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 this.$refs.dropFileInput.files = files;
                 this.$refs.dropFileInput.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        },
+        hasFolderDrag(e) {
+            const items = e.dataTransfer.items;
+            if (!items || !items.length) return false;
+            for (let i = 0; i < items.length; i++) {
+                const it = items[i];
+                if (it.kind === 'file' && typeof it.webkitGetAsEntry === 'function') {
+                    const entry = it.webkitGetAsEntry();
+                    if (entry && entry.isDirectory) return true;
+                }
+            }
+            return false;
+        },
+        async processFolderDrop(e) {
+            const allFiles = [];
+            const items = e.dataTransfer.items;
+            for (let i = 0; i < items.length; i++) {
+                const it = items[i];
+                if (it.kind !== 'file' || typeof it.webkitGetAsEntry !== 'function') continue;
+                const entry = it.webkitGetAsEntry();
+                if (!entry) continue;
+                await this.traverseEntry(entry, '', allFiles);
+            }
+            if (allFiles.length === 0) return;
+            const paths = allFiles.map(f => f.relativePath);
+            await this.$wire.set('uploadPaths', paths);
+            const dt = new DataTransfer();
+            allFiles.forEach(f => dt.items.add(f.file));
+            this.$refs.dropFileInput.files = dt.files;
+            this.$refs.dropFileInput.dispatchEvent(new Event('change', { bubbles: true }));
+        },
+        async traverseEntry(entry, basePath, results) {
+            if (entry.isFile) {
+                return new Promise(resolve => {
+                    entry.file(file => {
+                        results.push({
+                            file: file,
+                            relativePath: basePath ? basePath + '/' + file.name : file.name
+                        });
+                        resolve();
+                    });
+                });
+            }
+            if (!entry.isDirectory) return;
+            const childBasePath = basePath ? basePath + '/' + entry.name : entry.name;
+            const reader = entry.createReader();
+            const readBatch = new Promise((resolve, reject) => {
+                const allEntries = [];
+                const doRead = () => {
+                    reader.readEntries(batch => {
+                        if (batch.length === 0) {
+                            resolve(allEntries);
+                        } else {
+                            allEntries.push(...batch);
+                            doRead();
+                        }
+                    }, reject);
+                };
+                doRead();
+            });
+            const entries = await readBatch;
+            for (const child of entries) {
+                await this.traverseEntry(child, childBasePath, results);
             }
         },
         hasFileDrag(e) {
@@ -234,7 +302,7 @@
              class="fm-dropzone-overlay" style="display:none;">
             <div class="fm-dropzone-card">
                 <i class="fa-solid fa-cloud-arrow-up" style="font-size:48px;color:var(--accent-light);margin-bottom:16px;"></i>
-                <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Suelta los archivos aquí</h3>
+                <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Suelta archivos o carpetas aquí</h3>
                 <p style="font-size:13px;color:var(--text-muted);">Se subirán a: <strong>/{{ $currentPath ?: 'var/www' }}</strong></p>
             </div>
         </div>

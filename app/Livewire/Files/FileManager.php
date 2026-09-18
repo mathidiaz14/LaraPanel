@@ -21,6 +21,9 @@ class FileManager extends Component
     // File upload
     public $uploads = [];
 
+    // Relative paths (inside dropped folders) for each uploaded file, in order
+    public array $uploadPaths = [];
+
     // Bulk action state
     public array $selectedItems = [];
     public bool $showBulkMoveModal = false;
@@ -158,6 +161,7 @@ class FileManager extends Component
         $this->successMessage = '';
         $this->errorMessage = '';
         $this->uploads = [];
+        $this->uploadPaths = [];
         $this->selectedItems = [];
     }
 
@@ -445,7 +449,7 @@ class FileManager extends Component
         ]);
 
         try {
-            foreach ($this->uploads as $upload) {
+            foreach ($this->uploads as $index => $upload) {
                 $originalName = $upload->getClientOriginalName();
                 $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
 
@@ -463,21 +467,52 @@ class FileManager extends Component
                     throw new \RuntimeException("Nombre de archivo no válido: {$originalName}");
                 }
 
-                $tmpPath = $upload->storeAs('livewire-tmp', $filename);
+                // Unique temp name to avoid collisions between files of the same name
+                $tmpName = $index . '_' . $filename;
+                $tmpPath = $upload->storeAs('livewire-tmp', $tmpName);
                 $fullTmpPath = \Illuminate\Support\Facades\Storage::disk('local')->path($tmpPath);
-                
-                $destPath = $fileService->resolvePath($this->currentPath . '/' . $filename);
-                
+
+                // Folders dropped as a whole keep their relative structure
+                $relativePath = $this->uploadPaths[$index] ?? null;
+
+                if ($relativePath) {
+                    $relativePath = trim(str_replace(['..', "\0"], '', $relativePath), '/');
+                    $relativePath = ltrim($relativePath, '/');
+                    $relativePath = preg_replace('#/+#', '/', $relativePath);
+
+                    if ($relativePath === '') {
+                        throw new \RuntimeException("Ruta de archivo no válida: {$originalName}");
+                    }
+
+                    $targetDir = dirname($this->currentPath . '/' . $relativePath);
+                    $destDirAbs = $fileService->resolvePath($targetDir);
+
+                    if (! is_dir($destDirAbs)) {
+                        if (PHP_OS_FAMILY !== 'Windows') {
+                            app(\App\Shell\SudoExecutor::class)->run(['mkdir', '-p', $destDirAbs]);
+                            app(\App\Shell\SudoExecutor::class)->run(['chown', 'www-data:www-data', $destDirAbs]);
+                        } else {
+                            @mkdir($destDirAbs, 0755, true);
+                        }
+                    }
+
+                    $destPath = $fileService->resolvePath($this->currentPath . '/' . $relativePath);
+                } else {
+                    $destPath = $fileService->resolvePath($this->currentPath . '/' . $filename);
+                }
+
                 if (PHP_OS_FAMILY !== 'Windows') {
                     app(\App\Shell\SudoExecutor::class)->run(['cp', $fullTmpPath, $destPath]);
                     app(\App\Shell\SudoExecutor::class)->run(['chown', 'www-data:www-data', $destPath]);
                     unlink($fullTmpPath);
                 } else {
+                    @mkdir(dirname($destPath), 0755, true);
                     rename($fullTmpPath, $destPath);
                 }
             }
             $this->successMessage = "Archivos subidos correctamente.";
             $this->uploads = [];
+            $this->uploadPaths = [];
         } catch (\Throwable $e) {
             $this->errorMessage = "Error al subir archivos: " . $e->getMessage();
         }
