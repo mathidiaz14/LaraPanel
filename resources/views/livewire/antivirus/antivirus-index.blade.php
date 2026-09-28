@@ -47,7 +47,7 @@
     {{-- ══════════════════════════════════════════════════════════════════════ --}}
     @if($activeTab === 'scanner')
         <div @if($isScanning) wire:poll.3s="refreshScan" @endif>
-        <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start;">
+        <div class="lp-split" style="display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start;">
 
             {{-- Left column: Scan form + output --}}
             <div>
@@ -240,7 +240,7 @@
             </div>
 
             @if(empty($quarantineFiles))
-                <div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
+                <div style="text-align:center;padding:clamp(24px,8vw,60px) 16px;color:var(--text-muted);">
                     <i class="fa-solid fa-shield-check" style="font-size:48px;opacity:0.2;margin-bottom:16px;display:block;color:var(--success);"></i>
                     <div style="font-size:15px;font-weight:600;margin-bottom:6px;">Cuarentena vacía</div>
                     <div style="font-size:13px;">No hay archivos aislados. El sistema está limpio.</div>

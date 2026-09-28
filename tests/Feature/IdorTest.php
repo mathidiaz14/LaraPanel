@@ -18,18 +18,21 @@ class IdorTest extends TestCase
         $intruder = User::factory()->create(['role' => 'client']);
 
         $domain = Domain::create([
-            'user_id'    => $owner->id,
-            'name'       => 'owner-domain.com',
-            'type'       => 'main',
-            'status'     => 'active',
-            'is_active'  => true,
+            'user_id'       => $owner->id,
+            'name'          => 'owner-domain.com',
+            'type'          => 'main',
+            'status'        => 'active',
+            'is_active'     => true,
+            'document_root' => '/var/www/owner-domain.com/public_html',
+            'php_version'   => '8.3',
+            'webserver'     => 'nginx',
         ]);
 
         $zone = DnsZone::create([
             'user_id'    => $owner->id,
             'domain_id'  => $domain->id,
             'name'       => 'owner-domain.com',
-            'type'       => 'master',
+            'type'       => 'MASTER',
             'is_active'  => true,
         ]);
 

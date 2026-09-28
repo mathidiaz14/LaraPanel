@@ -8,13 +8,13 @@ use Illuminate\Console\Command;
 class SslRenewCertificates extends Command
 {
     protected $signature   = 'ssl:renew {--force : Force renewal even if not expiring soon}';
-    protected $description = 'Renew SSL certificates expiring within 30 days (Let\'s Encrypt auto-renewal)';
+    protected $description = 'Renovate (auto) Let\'s Encrypt certificates expiring within 30 days, retrying failed ones';
 
     public function handle(SslService $sslService): int
     {
         $this->info('🔒 LaraPanel SSL — Checking certificates for renewal...');
 
-        $results = $sslService->renewAll();
+        $results = $sslService->renewAll(force: (bool) $this->option('force'));
 
         if (!empty($results['renewed'])) {
             $this->info('✅ Renewed: ' . implode(', ', $results['renewed']));

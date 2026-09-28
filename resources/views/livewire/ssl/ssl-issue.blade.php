@@ -96,6 +96,22 @@
                 @endif
             </div>
 
+            {{-- Validation method --}}
+            @if($selectedDomain && !$isWildcard)
+            <div style="margin-bottom:20px;">
+                <div class="form-label" style="margin-bottom:8px;">Método de validación</div>
+                <label style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--radius-sm);cursor:pointer;">
+                    <input type="checkbox" wire:model.live="viaDns" style="accent-color:var(--accent);width:16px;height:16px;">
+                    <div>
+                        <div style="font-size:13px;font-weight:600;">Usar validación por DNS (DNS-01 via PowerDNS)</div>
+                        <div style="font-size:11px;color:var(--text-muted);">
+                            Recomendado si el dominio aún no apunta HTTP a este servidor. Requiere que el DNS autoritativo esté gestionado por el PowerDNS local.
+                        </div>
+                    </div>
+                </label>
+            </div>
+            @endif
+
             {{-- Extra SANs --}}
             <div class="form-group" style="{{ $isWildcard ? 'display:none;' : '' }}">
                 <label class="form-label">Dominios adicionales (SAN) <span style="color:var(--text-muted);font-weight:400;">opcional</span></label>
@@ -135,7 +151,11 @@
                     <li>Let's Encrypt emitirá un certificado Wildcard (*.{{ $domains->firstWhere('id',$domainId)?->name }}) válido por <strong>90 días</strong></li>
                     <li><strong>Todos los subdominios activos</strong> quedarán protegidos con HTTPS usando este mismo certificado</li>
                     @else
+                    @if($viaDns)
+                    <li>Se usará la validación por DNS (DNS-01 en PowerDNS local) para demostrar la propiedad del dominio</li>
+                    @else
                     <li>Se verificará que <strong>{{ $domains->firstWhere('id',$domainId)?->name }}</strong> apunta a este servidor</li>
+                    @endif
                     <li>Let's Encrypt emitirá un certificado válido por <strong>90 días</strong></li>
                     @endif
                     <li>Se instalará en Nginx con HTTPS redirect automático (HTTP→HTTPS)</li>

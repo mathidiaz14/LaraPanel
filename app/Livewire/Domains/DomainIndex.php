@@ -38,9 +38,8 @@ class DomainIndex extends Component
 
     public function deleteDomain(DomainService $service): void
     {
-        $domain = Domain::where('id', $this->deletingId)
-            ->where('user_id', auth()->id())
-            ->firstOrFail();
+        $domain = Domain::findOrFail($this->deletingId);
+        $this->authorize('delete', $domain);
 
         $service->delete($domain, $this->deleteFiles);
 
@@ -51,14 +50,18 @@ class DomainIndex extends Component
 
     public function suspendDomain(int $id, DomainService $service): void
     {
-        $domain = Domain::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+        $domain = Domain::findOrFail($id);
+        $this->authorize('update', $domain);
+
         $service->suspend($domain, 'Manual suspension from panel');
         $this->successMessage = "Dominio {$domain->name} suspendido.";
     }
 
     public function unsuspendDomain(int $id, DomainService $service): void
     {
-        $domain = Domain::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+        $domain = Domain::findOrFail($id);
+        $this->authorize('update', $domain);
+
         $service->unsuspend($domain);
         $this->successMessage = "Dominio {$domain->name} reactivado.";
     }
@@ -70,7 +73,9 @@ class DomainIndex extends Component
 
     public function editDomain(int $id): void
     {
-        $domain = Domain::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+        $domain = Domain::findOrFail($id);
+        $this->authorize('update', $domain);
+
         $this->editingId = $domain->id;
         $this->editPath = $domain->document_root;
         $this->editPhp = $domain->php_version;
@@ -85,7 +90,8 @@ class DomainIndex extends Component
 
     public function updateDomain(DomainService $service): void
     {
-        $domain = Domain::where('id', $this->editingId)->where('user_id', auth()->id())->firstOrFail();
+        $domain = Domain::findOrFail($this->editingId);
+        $this->authorize('update', $domain);
         
         $this->validate([
             'editPath' => 'required|string|min:5|max:255',

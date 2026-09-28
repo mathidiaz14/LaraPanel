@@ -222,7 +222,7 @@
             </h2>
 
             @if($backups->isEmpty())
-            <div style="text-align:center;padding:60px 20px;color:var(--text-secondary);">
+            <div style="text-align:center;padding:clamp(24px,8vw,60px) 16px;color:var(--text-secondary);">
                 <i class="fa-solid fa-box-archive" style="font-size:40px;opacity:0.25;margin-bottom:14px;display:block;"></i>
                 No tiene backups creados. Cree su primer backup de seguridad.
             </div>
@@ -236,6 +236,7 @@
                             <th>Tamaño</th>
                             <th>Duración</th>
                             <th>Estado</th>
+                            <th>Verificación</th>
                             <th>Fecha</th>
                             <th style="text-align:right;">Acciones</th>
                         </tr>
@@ -275,6 +276,15 @@
                                 <span class="badge {{ $sBadge }}" style="font-size:11px;">{{ $sLabel }}</span>
                             </td>
                             <td>
+                                @if($backup->type === 'database')
+                                <span class="badge {{ $backup->verificationBadge() }}" style="font-size:11px;" title="{{ $backup->verified_at ? 'Verificado el ' . $backup->verified_at->format('d/m/Y H:i') : 'Sin verificar' }}">
+                                    {{ $backup->verificationLabel() }}
+                                </span>
+                                @else
+                                <span class="badge badge-muted" style="font-size:11px;">—</span>
+                                @endif
+                            </td>
+                            <td>
                                 <span style="font-size:12px;color:var(--text-secondary);">{{ $backup->created_at->format('d M H:i') }}</span>
                             </td>
                             <td style="text-align:right;">
@@ -288,6 +298,11 @@
                                     </button>
                                     <button wire:click="restoreBackup({{ $backup->id }})" class="btn btn-ghost btn-sm" onclick="return confirm('ATENCIÓN: Restaurar un backup reemplazará los archivos y/o base de datos actuales de forma irreversible. ¿Deseas continuar?')" title="Restaurar (Reemplaza datos actuales)">
                                         <i class="fa-solid fa-clock-rotate-left" style="color:var(--warning);"></i>
+                                    </button>
+                                    @endif
+                                    @if($backup->type === 'database' && $backup->status === 'completed')
+                                    <button wire:click="verifyBackup({{ $backup->id }})" class="btn btn-ghost btn-sm" wire:loading.attr="disabled" title="Verificar integridad (restaura en BD temporal)">
+                                        <i class="fa-solid fa-flask-vial" style="color:var(--accent-light);"></i>
                                     </button>
                                     @endif
                                     <button wire:click="deleteBackup({{ $backup->id }})" class="btn btn-danger btn-sm" onclick="return confirm('¿Seguro que desea eliminar este backup y su archivo?')" title="Eliminar">

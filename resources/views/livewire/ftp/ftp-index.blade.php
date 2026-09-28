@@ -17,7 +17,7 @@
     <div class="alert alert-danger" style="margin-bottom:20px;"><i class="fa-solid fa-circle-exclamation"></i> {{ $errorMessage }}</div>
     @endif
 
-    <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;align-items:start;">
+    <div class="lp-ratio-split" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:20px;align-items:start;">
 
         {{-- Creation Panel --}}
         <div class="glass lp-panel">
@@ -118,7 +118,7 @@
             </h2>
 
             @if($ftps->isEmpty())
-            <div style="text-align:center;padding:60px 20px;color:var(--text-secondary);">
+            <div style="text-align:center;padding:clamp(24px,8vw,60px) 16px;color:var(--text-secondary);">
                 <i class="fa-solid fa-user-slash" style="font-size:40px;opacity:0.25;margin-bottom:14px;display:block;"></i>
                 No tiene usuarios FTP configurados en este momento.
             </div>

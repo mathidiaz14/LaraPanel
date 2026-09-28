@@ -19,8 +19,42 @@ class ExecuteTerminalCommand implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 1;
+    /**
+     * Command execution must never be retried blindly: re-running an arbitrary
+     * terminal command could duplicate its side effects, so $tries stays at 1.
+     */
+    public int $tries   = 1;
     public int $timeout = 300;
+
+    public function failed(\Throwable $e): void
+    {
+        Log::error('ExecuteTerminalCommand failed permanently', [
+            'history_id' => $this->historyId,
+            'error'      => $e->getMessage(),
+        ]);
+
+        $userId = null;
+
+        try {
+            $history = TerminalCommandHistory::find($this->historyId);
+            $userId = $history?->user_id;
+
+            if ($history && $history->status === 'running') {
+                $history->update([
+                    'status'      => 'failed',
+                    'exit_code'   => 1,
+                    'finished_at' => now(),
+                ]);
+            }
+        } catch (\Throwable) {
+            // Best effort only — the audit trail below is the source of record.
+        }
+
+        AuditLog::record('terminal.command.job_failed', (string) $this->historyId, [
+            'history_id' => $this->historyId,
+            'error'      => $e->getMessage(),
+        ], 'warning', $userId);
+    }
 
     public function __construct(public readonly int $historyId) {}
 

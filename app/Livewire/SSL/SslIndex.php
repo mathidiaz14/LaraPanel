@@ -43,6 +43,20 @@ class SslIndex extends Component
         session()->flash('success', 'Certificado SSL revocado correctamente.');
     }
 
+    public function renewCertificate(int $certId, SslService $sslService): void
+    {
+        $cert = SslCertificate::findOrFail($certId);
+        // Verify ownership via domain
+        abort_unless($cert->domain?->user_id === auth()->id(), 403);
+
+        try {
+            $sslService->renewCertificate($cert->domain);
+            session()->flash('success', "Certificado SSL renovado correctamente para {$cert->domain->name}.");
+        } catch (\Throwable $e) {
+            session()->flash('error', "No se pudo renovar {$cert->domain?->name}: {$e->getMessage()}");
+        }
+    }
+
     public function render()
     {
         $certificates = $this->getCertificates();

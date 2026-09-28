@@ -1,6 +1,6 @@
-<div style="display:flex;height:calc(100vh - 140px);gap:20px;">
+<div class="lp-split-flex" style="display:flex;height:calc(100vh - 140px);gap:20px;min-height:0;">
     {{-- Sidebar Selector --}}
-    <div class="glass lp-panel" style="width:280px;display:flex;flex-direction:column;padding:0;">
+    <div class="glass lp-panel lp-split-flex-side" style="display:flex;flex-direction:column;padding:0;">
         <div style="padding:20px;border-bottom:1px solid var(--glass-border);">
             <h3 class="panel-title" style="margin:0;"><i class="fa-solid fa-file-waveform" style="color:var(--accent-light);margin-right:8px;"></i> Archivos de Log</h3>
         </div>

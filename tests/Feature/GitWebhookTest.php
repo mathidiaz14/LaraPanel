@@ -94,7 +94,9 @@ class GitWebhookTest extends TestCase
         $this->deployment->refresh();
 
         // Prevent any real process spawn while we assert on the response.
-        $controller = \Mockery::mock(\App\Http\Controllers\GitWebhookController::class)->makePartial();
+        $controller = \Mockery::mock(\App\Http\Controllers\GitWebhookController::class)
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
         $controller->shouldReceive('spawnDeploy')->andReturnUsing(fn () => null);
         $this->app->instance(\App\Http\Controllers\GitWebhookController::class, $controller);
 
@@ -113,7 +115,9 @@ class GitWebhookTest extends TestCase
     public function test_valid_secret_triggers_deploy_without_real_spawn()
     {
         // Mock the deploy spawn so the test never actually launches `php artisan`.
-        $controller = \Mockery::mock(\App\Http\Controllers\GitWebhookController::class)->makePartial();
+        $controller = \Mockery::mock(\App\Http\Controllers\GitWebhookController::class)
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
         $controller->shouldReceive('spawnDeploy')
             ->once()
             ->andReturnUsing(fn () => null);

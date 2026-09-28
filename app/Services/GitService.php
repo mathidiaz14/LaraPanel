@@ -46,7 +46,7 @@ class GitService
             return $this->simulateDeploy($deployment, $log);
         }
 
-        $domainPath = $deployment->deploy_path ?: '/var/www/' . $deployment->domain_name . '/public_html';
+        $domainPath = $deployment->deploy_path ?: rtrim(config('larapanel.paths.webroots', '/var/www'), '/') . '/' . $deployment->domain_name . '/public_html';
         $branch = trim($deployment->branch ?: 'main');
         if (! preg_match('/^[A-Za-z0-9._\/-]{1,200}$/', $branch) || str_starts_with($branch, '-')) {
             throw new \InvalidArgumentException('La rama Git no es válida.');
@@ -188,7 +188,7 @@ class GitService
      */
     public function getRepoStatus(GitDeployment $deployment): array
     {
-        $domainPath = $deployment->deploy_path ?: '/var/www/' . $deployment->domain_name . '/public_html';
+        $domainPath = $deployment->deploy_path ?: rtrim(config('larapanel.paths.webroots', '/var/www'), '/') . '/' . $deployment->domain_name . '/public_html';
         
         if (!is_dir($domainPath)) {
             return ['status' => 'not_found', 'message' => 'El directorio no existe en el servidor.'];

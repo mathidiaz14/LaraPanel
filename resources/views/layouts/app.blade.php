@@ -93,9 +93,16 @@
                         <span class="nav-icon"><i class="fa-solid fa-globe"></i></span>
                         Dominios
                     </a>
-                    <a href="{{ route('ssl.index') }}" class="nav-item {{ request()->routeIs('ssl.*') ? 'active' : '' }}">
+                    <a href="{{ route('ssl.index') }}" class="nav-item {{ request()->routeIs('ssl.index') ? 'active' : '' }}">
                         <span class="nav-icon"><i class="fa-solid fa-lock"></i></span>
                         SSL / TLS
+                    </a>
+                @endif
+
+                @if(config('larapanel.modules.ssl') && auth()->user()?->isAdmin())
+                    <a href="{{ route('ssl.monitor') }}" class="nav-item {{ request()->routeIs('ssl.monitor') ? 'active' : '' }}">
+                        <span class="nav-icon"><i class="fa-solid fa-bell"></i></span>
+                        Monitor SSL
                     </a>
                 @endif
 
@@ -207,9 +214,14 @@
                     </a>
                 @endif
 
-                <a href="{{ route('git.index') }}" class="nav-item {{ request()->routeIs('git.*') ? 'active' : '' }}">
+                <a href="{{ route('git.index') }}" class="nav-item {{ request()->routeIs('git.index') ? 'active' : '' }}">
                     <span class="nav-icon"><i class="fa-brands fa-git-alt"></i></span>
                     Git Deploy
+                </a>
+
+                <a href="{{ route('deploy.pipelines.index') }}" class="nav-item {{ request()->routeIs('deploy.pipelines.index') ? 'active' : '' }}">
+                    <span class="nav-icon"><i class="fa-solid fa-arrows-spin"></i></span>
+                    Pipelines
                 </a>
 
                 @if(config('larapanel.modules.docker') && auth()->user()?->isAdmin())
@@ -266,6 +278,27 @@
                         </a>
                     @endif
 
+                    @if(config('larapanel.modules.cache'))
+                        <a href="{{ route('cache.index') }}" class="nav-item {{ request()->routeIs('cache.index') ? 'active' : '' }}">
+                            <span class="nav-icon"><i class="fa-solid fa-bolt"></i></span>
+                            Cache Manager
+                        </a>
+                    @endif
+
+                    @if(config('larapanel.modules.dependencies'))
+                        <a href="{{ route('dependencies.index') }}" class="nav-item {{ request()->routeIs('dependencies.index') ? 'active' : '' }}">
+                            <span class="nav-icon"><i class="fa-solid fa-bug"></i></span>
+                            Dependencias
+                        </a>
+                    @endif
+
+                    @if(config('larapanel.modules.health'))
+                        <a href="{{ route('health.index') }}" class="nav-item {{ request()->routeIs('health.index') ? 'active' : '' }}">
+                            <span class="nav-icon"><i class="fa-solid fa-heart-circle-check"></i></span>
+                            Salud Servidor
+                        </a>
+                    @endif
+
                     @if(config('larapanel.modules.phpmanager'))
                         <a href="{{ route('php.index') }}" class="nav-item {{ request()->routeIs('php.*') ? 'active' : '' }}">
                             <span class="nav-icon"><i class="fa-brands fa-php"></i></span>
@@ -274,9 +307,13 @@
                     @endif
 
                     @if(config('larapanel.modules.logs'))
-                        <a href="{{ route('logs.index') }}" class="nav-item {{ request()->routeIs('logs.*') ? 'active' : '' }}">
+                        <a href="{{ route('logs.index') }}" class="nav-item {{ request()->routeIs('logs.index') ? 'active' : '' }}">
                             <span class="nav-icon"><i class="fa-solid fa-scroll"></i></span>
                             Logs
+                        </a>
+                        <a href="{{ route('logs.aggregate') }}" class="nav-item {{ request()->routeIs('logs.aggregate') ? 'active' : '' }}">
+                            <span class="nav-icon"><i class="fa-solid fa-layer-group"></i></span>
+                            Logs Agregados
                         </a>
                     @endif
                 @endif

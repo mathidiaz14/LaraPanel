@@ -39,7 +39,7 @@
     {{-- Domains Table --}}
     <div class="glass" style="overflow:hidden;">
         @if($domains->isEmpty())
-            <div style="padding:60px;text-align:center;">
+            <div style="padding:clamp(24px,8vw,60px);;text-align:center;">
                 <div style="font-size:40px;opacity:0.3;margin-bottom:16px;">
                     <i class="fa-solid fa-globe"></i>
                 </div>
@@ -81,7 +81,7 @@
                             </div>
                             <div>
                                 <div style="font-weight:600;font-size:14px;">{{ $domain->name }}</div>
-                                <div style="font-size:11px;color:var(--text-muted);">{{ $domain->document_root }}</div>
+                                <div style="font-size:11px;color:var(--text-muted);overflow-wrap:anywhere;">{{ $domain->document_root }}</div>
                             </div>
                         </div>
                     </td>
@@ -141,6 +141,11 @@
                                     style="color:var(--success)">
                                 <i class="fa-solid fa-play"></i>
                             </button>
+                            @endif
+                            @if(!$domain->isSubdomain())
+                            <a href="{{ route('domains.staging', $domain->id) }}" class="btn btn-ghost btn-sm" title="Staging / Balanceo">
+                                <i class="fa-solid fa-network-wired" style="color:var(--info);"></i>
+                            </a>
                             @endif
                             <button wire:click="editDomain({{ $domain->id }})"
                                     class="btn btn-ghost btn-sm" title="Editar Configuración">

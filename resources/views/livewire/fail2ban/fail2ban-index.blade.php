@@ -74,7 +74,7 @@
 
     {{-- TAB: Dashboard --}}
     @if($activeTab === 'dashboard')
-    <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:16px;align-items:start;">
+    <div class="lp-ratio-split" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:16px;align-items:start;">
 
         {{-- Manual Ban Form --}}
         <div class="glass lp-panel">
@@ -157,7 +157,7 @@
 
     {{-- TAB: Jails --}}
     @elseif($activeTab === 'jails')
-    <div style="display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start;">
+    <div class="lp-split" style="display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:start;">
 
         {{-- Jail List --}}
         <div class="glass lp-panel">
@@ -271,7 +271,7 @@
         </h2>
 
         @if($history->isEmpty())
-        <div style="text-align:center;padding:40px;color:var(--text-muted);">
+        <div style="text-align:center;padding:clamp(20px,6vw,40px);color:var(--text-muted);">
             <i class="fa-solid fa-inbox" style="font-size:36px;opacity:0.2;margin-bottom:12px;display:block;"></i>
             Sin acciones manuales registradas aún.
         </div>
@@ -318,7 +318,7 @@
                     Si la IP sigue atacando, fail2ban la volverá a banear automáticamente.
                 </p>
             </div>
-            <div style="display:flex;gap:10px;justify-content:center;">
+            <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
                 <button wire:click="$set('unbanIp',null)" class="btn btn-ghost">Cancelar</button>
                 <button wire:click="unbanIp" class="btn btn-primary" style="background:var(--success);border-color:var(--success);">
                     <i class="fa-solid fa-circle-check"></i> Sí, desbanear

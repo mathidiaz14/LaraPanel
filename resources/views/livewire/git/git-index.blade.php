@@ -1,7 +1,7 @@
-<div style="display:grid;grid-template-columns:260px 1fr;gap:24px;align-items:start;">
+<div class="lp-split" style="display:grid;grid-template-columns:260px minmax(0,1fr);gap:24px;align-items:start;">
     {{-- Sidebar --}}
     <div class="glass lp-panel" style="padding:16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;justify-content:space-between;gap:8px;margin-bottom:16px;">
             <h2 class="panel-title" style="margin:0;">Repositorios</h2>
             <button wire:click="createNew" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus"></i></button>
         </div>
@@ -10,7 +10,7 @@
             @foreach($deployments as $dep)
             <button wire:click="selectDeployment({{ $dep->id }})" 
                 style="width:100%;text-align:left;padding:12px;border-radius:8px;border:1px solid {{ ($selectedDeployment && $selectedDeployment->id === $dep->id && !$isCreating) ? 'rgba(99,102,241,0.5)' : 'var(--glass-border)' }};background:{{ ($selectedDeployment && $selectedDeployment->id === $dep->id && !$isCreating) ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.03)' }};cursor:pointer;transition:all 0.2s;">
-                <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px;">{{ $dep->domain_name }}</div>
+                <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px;overflow-wrap:anywhere;">{{ $dep->domain_name }}</div>
                 <div style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
                     <i class="fa-brands fa-git-alt"></i> {{ $dep->branch }}
                 </div>
@@ -55,7 +55,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">URL del Repositorio (HTTPS/SSH)</label>
-                            <input type="text" wire:model="repository_url" class="form-input" placeholder="https://github.com/usuario/repo.git">
+                            <input type="text" wire:model="repository_url" class="form-input" style="overflow-wrap:anywhere;" placeholder="https://github.com/usuario/repo.git">
                             <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
                                 Si es un repositorio privado, incluye el token: <br>
                                 <code>https://usuario:TOKEN@gitlab.com/usuario/repo.git</code>
@@ -102,7 +102,7 @@
             </div>
         @elseif($selectedDeployment)
             {{-- Tabs --}}
-            <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--glass-border);padding-bottom:12px;">
+            <div class="lp-tabs" style="margin-bottom:20px;">
                 <button wire:click="$set('activeTab', 'config')" class="btn {{ $activeTab === 'config' ? 'btn-primary' : 'btn-ghost' }} btn-sm">
                     <i class="fa-solid fa-gear"></i> Configuración
                 </button>
@@ -113,12 +113,12 @@
 
             @if($activeTab === 'config')
                 <div class="glass lp-panel" style="padding:24px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-                        <h2 class="panel-title" style="font-size:18px;margin:0;">
+                    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:center;margin-bottom:20px;">
+                        <h2 class="panel-title" style="font-size:18px;margin:0;overflow-wrap:anywhere;">
                             <i class="fa-brands fa-git-alt" style="color:var(--warning);margin-right:8px;"></i>
                             {{ $selectedDeployment->domain_name }}
                         </h2>
-                        <div style="display:flex;gap:8px;align-items:center;">
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
                             <span style="font-size:11px;color:var(--text-muted);margin-right:4px;" title="{{ $selectedDeployment->last_deployed_at?->format('d/m/Y H:i') ?? '' }}">
                                 @if($selectedDeployment->last_deployed_at)
                                     <i class="fa-regular fa-clock"></i> Último despliegue: {{ $selectedDeployment->last_deployed_at->diffForHumans() }}
@@ -139,7 +139,7 @@
                     {{-- Repo Status Info --}}
                     @if(!empty($repoStatus))
                     <div style="background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);border-radius:8px;padding:16px;margin-bottom:24px;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center;margin-bottom:12px;">
                             <h3 style="font-size:13px;font-weight:700;color:var(--text-primary);"><i class="fa-brands fa-git-alt" style="color:var(--warning);margin-right:6px;"></i> Estado del Repositorio Local</h3>
                             <button wire:click="refreshRepoStatus" class="btn btn-ghost btn-sm" wire:loading.attr="disabled" wire:target="refreshRepoStatus">
                                 <span wire:loading.remove wire:target="refreshRepoStatus"><i class="fa-solid fa-rotate"></i> Actualizar</span>
@@ -167,7 +167,7 @@
                             @if($repoStatus['has_changes'])
                                 <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--glass-border);">
                                     <div style="color:var(--warning);margin-bottom:6px;font-size:12px;font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> Archivos modificados localmente (podrían sobreescribirse o causar conflictos):</div>
-                                    <pre style="background:rgba(0,0,0,0.4);padding:10px;border-radius:6px;font-family:monospace;font-size:11px;color:var(--text-secondary);max-height:120px;overflow-y:auto;border:1px solid rgba(255,255,255,0.05);">{{ $repoStatus['changes'] }}</pre>
+                                    <pre style="background:rgba(0,0,0,0.4);padding:10px;border-radius:6px;font-family:monospace;font-size:11px;color:var(--text-secondary);max-height:120px;overflow:auto;border:1px solid rgba(255,255,255,0.05);white-space:pre-wrap;word-break:break-all;">{{ $repoStatus['changes'] }}</pre>
                                 </div>
                             @else
                                 <div style="margin-top:16px;color:var(--success);font-size:12px;display:flex;align-items:center;gap:6px;">
@@ -180,7 +180,7 @@
 
                     {{-- Webhook Info --}}
                     <div style="background:rgba(99,102,241,0.05);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:16px;margin-bottom:24px;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;">
                             <h3 style="font-size:13px;font-weight:700;color:var(--accent-light);"><i class="fa-solid fa-link"></i> Webhook URL</h3>
                             @if($selectedDeployment->auto_deploy)
                                 <span class="badge badge-success"><i class="fa-solid fa-bolt"></i> Auto-Deploy Activo</span>
@@ -188,8 +188,8 @@
                                 <span class="badge badge-muted"><i class="fa-solid fa-power-off"></i> Auto-Deploy Apagado</span>
                             @endif
                         </div>
-                        <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
-                            <input type="text" readonly value="{{ $selectedDeployment->webhook_url }}" class="form-input" style="flex:1;font-family:monospace;font-size:12px;color:var(--text-primary);background:rgba(0,0,0,0.3);">
+                        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:12px;">
+                            <input type="text" readonly value="{{ $selectedDeployment->webhook_url }}" class="form-input" style="flex:1 1 220px;font-family:monospace;font-size:12px;color:var(--text-primary);background:rgba(0,0,0,0.3);">
                             <button wire:click="testWebhook" class="btn btn-ghost btn-sm" wire:loading.attr="disabled" wire:target="testWebhook" style="white-space:nowrap;" title="Envía una petición firmada al webhook para verificar conectividad y secreto (no despliega nada)">
                                 <span wire:loading.remove wire:target="testWebhook"><i class="fa-solid fa-satellite-dish"></i> Probar</span>
                                 <span wire:loading wire:target="testWebhook"><i class="fa-solid fa-spinner fa-spin"></i> Probando...</span>
@@ -202,12 +202,12 @@
                             <span>{{ $webhookTestResult['message'] }}</span>
                         </div>
                         @endif
-                        <div style="display:flex;gap:12px;align-items:center;">
-                            <div style="flex:1;">
+                        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+                            <div style="flex:1 1 220px;">
                                 <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">Webhook Secret (X-Hub-Signature-256)</div>
                                 <input type="text" readonly value="{{ $selectedDeployment->webhook_secret }}" class="form-input" style="font-family:monospace;font-size:12px;color:var(--text-primary);background:rgba(0,0,0,0.3);">
                             </div>
-                            <button wire:click="generateNewSecret" class="btn btn-ghost btn-sm" style="margin-top:18px;"><i class="fa-solid fa-rotate"></i> Regenerar</button>
+                            <button wire:click="generateNewSecret" class="btn btn-ghost btn-sm" style="margin-top:18px;flex-shrink:0;"><i class="fa-solid fa-rotate"></i> Regenerar</button>
                         </div>
                         <p style="font-size:11px;color:var(--text-muted);margin-top:12px;">
                             Configura esta URL en GitHub/GitLab para que LaraPanel despliegue automáticamente al hacer push a la rama <strong>{{ $selectedDeployment->branch }}</strong>.
@@ -267,8 +267,8 @@
             @elseif($activeTab === 'logs')
                 @if($selectedLog)
                     <div class="glass lp-panel" style="padding:20px;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                            <div>
+                        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:16px;">
+                            <div style="display:flex;flex-wrap:wrap;align-items:center;">
                                 <button wire:click="backToList" class="btn btn-ghost btn-sm" style="margin-right:12px;">
                                     <i class="fa-solid fa-arrow-left"></i> Volver
                                 </button>
@@ -281,12 +281,12 @@
                                 {{ substr($selectedLog->commit_hash ?? 'N/A', 0, 7) }}
                             </div>
                         </div>
-                        <pre style="background:rgba(0,0,0,0.5);border:1px solid var(--glass-border);border-radius:8px;padding:16px;font-family:monospace;font-size:11px;color:#cdd6f4;line-height:1.6;white-space:pre-wrap;max-height:500px;overflow-y:auto;">{{ $selectedLog->output }}</pre>
+                        <pre style="background:rgba(0,0,0,0.5);border:1px solid var(--glass-border);border-radius:8px;padding:16px;font-family:monospace;font-size:11px;color:#cdd6f4;line-height:1.6;white-space:pre-wrap;word-break:break-word;max-height:500px;overflow:auto;">{{ $selectedLog->output }}</pre>
                     </div>
                 @else
                     <div class="glass lp-panel" style="padding:0;">
                         @if($selectedDeployment->logs->isEmpty())
-                        <div style="text-align:center;padding:40px;color:var(--text-muted);">
+                        <div style="text-align:center;padding:clamp(20px,6vw,40px);color:var(--text-muted);">
                             <i class="fa-solid fa-inbox" style="font-size:32px;opacity:0.3;margin-bottom:12px;display:block;"></i>
                             No hay despliegues registrados.
                         </div>
@@ -325,7 +325,7 @@
                 @endif
             @endif
         @else
-            <div class="glass lp-panel" style="padding:60px 20px;text-align:center;">
+            <div class="glass lp-panel" style="padding:clamp(24px,8vw,60px) 16px;text-align:center;">
                 <i class="fa-brands fa-git-alt" style="font-size:48px;opacity:0.2;margin-bottom:16px;display:block;"></i>
                 <h3 class="panel-title" style="font-size:18px;margin-bottom:8px;">Git Deploy</h3>
                 <p style="color:var(--text-secondary);font-size:13px;max-width:400px;margin:0 auto 24px auto;">

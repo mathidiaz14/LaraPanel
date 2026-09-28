@@ -2,6 +2,8 @@
 
 namespace App\Shell;
 
+use App\Contracts\ShellExecutorContract;
+
 /**
  * Test double for ShellExecutorContract.
  *
@@ -32,6 +34,7 @@ class FakeShellExecutor implements ShellExecutorContract
     public function run(array $command, bool $checkExit = true): ShellResult
     {
         $this->recordedCommands[] = $command;
+        $this->recordConfig($command);
 
         if ($checkExit && !$this->result->successful()) {
             throw new \RuntimeException(
@@ -45,6 +48,7 @@ class FakeShellExecutor implements ShellExecutorContract
     public function runStreaming(array $command, callable $onOutput): ShellResult
     {
         $this->recordedCommands[] = $command;
+        $this->recordConfig($command);
 
         return $this->result;
     }
@@ -133,13 +137,16 @@ class FakeShellExecutor implements ShellExecutorContract
             : end($this->recordedCommands);
     }
 
-    protected function recordConfig(): void
+    protected function recordConfig(?array $command = null): void
     {
-        $this->configurations[] = [
+        // A single "active configuration" slot: fluent chains overwrite it so
+        // the final snapshot reflects the fully-configured state of the executor.
+        $this->configurations = [[
+            'command' => $command,
             'timeout' => $this->timeout,
             'cwd'     => $this->workingDirectory,
             'env'     => $this->envVars,
             'input'   => $this->input,
-        ];
+        ]];
     }
 }

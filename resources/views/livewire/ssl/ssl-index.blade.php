@@ -22,6 +22,10 @@
     <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i> {{ session('success') }}</div>
     @endif
 
+    @if(session('error'))
+    <div class="alert alert-danger"><i class="fa-solid fa-circle-xmark"></i> {{ session('error') }}</div>
+    @endif
+
     {{-- Domains without SSL banner --}}
     @if($domainsWithoutSsl->isNotEmpty())
     <div style="background:color-mix(in srgb, var(--warning) 8%, transparent);border:1px solid color-mix(in srgb, var(--warning) 25%, transparent);border-radius:var(--radius-sm);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
@@ -42,10 +46,10 @@
 
     {{-- Certificates list --}}
     @if($certificates->isEmpty())
-    <div class="glass" style="padding:60px;text-align:center;">
+    <div class="glass" style="padding:clamp(24px,8vw,60px);text-align:center;">
         <div style="font-size:48px;opacity:0.25;margin-bottom:16px;"><i class="fa-solid fa-lock"></i></div>
         <p style="color:var(--text-secondary);margin-bottom:20px;">No hay certificados SSL instalados.<br>Activa HTTPS en tus dominios con un clic.</p>
-        <div style="display:flex;gap:10px;justify-content:center;">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
             <a href="{{ route('ssl.issue') }}" class="btn btn-primary">
                 <i class="fa-brands fa-leanpub"></i> Emitir con Let's Encrypt
             </a>
@@ -140,10 +144,10 @@
                     </td>
                     <td style="text-align:right;">
                         <div class="lp-row-actions">
-                            @if($cert->provider === 'letsencrypt' && !$isExpired)
-                            <a href="{{ route('ssl.issue') }}?domain={{ $cert->domain_id }}" class="btn btn-ghost btn-sm" title="Renovar">
+                            @if($cert->provider === 'letsencrypt')
+                            <button wire:click="renewCertificate({{ $cert->id }})" class="btn btn-ghost btn-sm" title="Renovar ahora" wire:loading.attr="disabled" wire:target="renewCertificate">
                                 <i class="fa-solid fa-rotate"></i>
-                            </a>
+                            </button>
                             @endif
                             <a href="{{ route('ssl.install') }}?domain={{ $cert->domain_id }}" class="btn btn-ghost btn-sm" title="Reemplazar">
                                 <i class="fa-solid fa-arrow-up-from-bracket"></i>
@@ -212,10 +216,10 @@
                     </td>
                     <td style="text-align:right;">
                         <div class="lp-row-actions">
-                            @if($subcert->provider === 'letsencrypt' && !$sIsExpired)
-                            <a href="{{ route('ssl.issue') }}?domain={{ $subcert->domain_id }}" class="btn btn-ghost btn-sm" title="Renovar">
+                            @if($subcert->provider === 'letsencrypt')
+                            <button wire:click="renewCertificate({{ $subcert->id }})" class="btn btn-ghost btn-sm" title="Renovar ahora" wire:loading.attr="disabled" wire:target="renewCertificate">
                                 <i class="fa-solid fa-rotate"></i>
-                            </a>
+                            </button>
                             @endif
                             <a href="{{ route('ssl.install') }}?domain={{ $subcert->domain_id }}" class="btn btn-ghost btn-sm" title="Reemplazar">
                                 <i class="fa-solid fa-arrow-up-from-bracket"></i>

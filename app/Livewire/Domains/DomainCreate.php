@@ -93,11 +93,8 @@ class DomainCreate extends Component
             return;
         }
 
-        // Check plan quota
-        if (!auth()->user()->canAddDomain()) {
-            $this->errorMessage = 'Has alcanzado el límite de dominios de tu plan.';
-            return;
-        }
+        // Check plan quota (centralized in DomainPolicy@create)
+        $this->authorize('create', Domain::class);
 
         $this->isLoading = true;
 

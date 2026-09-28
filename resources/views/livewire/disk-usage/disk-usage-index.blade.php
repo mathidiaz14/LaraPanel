@@ -91,7 +91,7 @@
             <table class="lp-table">
                 <thead>
                     <tr>
-                        <th style="min-width:220px;">Directorio</th>
+                        <th>Directorio</th>
                         <th style="width:40%;">Tamaño</th>
                         <th>% del Total</th>
                         <th></th>

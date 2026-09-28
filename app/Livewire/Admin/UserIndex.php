@@ -69,12 +69,8 @@ class UserIndex extends Component
 
     public function edit(int $id)
     {
-        $query = User::query();
-        if (auth()->user()->isReseller()) {
-            $query->where('parent_id', auth()->id());
-        }
-        
-        $user = $query->findOrFail($id);
+        $user = User::findOrFail($id);
+        $this->authorize('update', $user);
         $this->userId    = $user->id;
         $this->name      = $user->name;
         $this->email     = $user->email;
@@ -89,6 +85,8 @@ class UserIndex extends Component
     public function save()
     {
         $data = $this->validate();
+
+        $this->authorize('create', User::class);
 
         // Check email uniqueness manually to allow updating current user
         $existing = User::where('email', $this->email)->first();
@@ -107,11 +105,8 @@ class UserIndex extends Component
         }
 
         if ($this->userId) {
-            $query = User::query();
-            if (auth()->user()->isReseller()) {
-                $query->where('parent_id', auth()->id());
-            }
-            $user = $query->findOrFail($this->userId);
+            $user = User::findOrFail($this->userId);
+            $this->authorize('update', $user);
 
             $originalRole = $user->role;
 
@@ -164,17 +159,9 @@ class UserIndex extends Component
 
     public function suspend(int $id)
     {
-        $query = User::query();
-        if (auth()->user()->isReseller()) {
-            $query->where('parent_id', auth()->id());
-        }
-        
-        $user = $query->findOrFail($id);
-        if ($user->id === auth()->id()) {
-            session()->flash('error', 'No puedes suspenderte a ti mismo.');
-            return;
-        }
-        
+        $user = User::findOrFail($id);
+        $this->authorize('suspend', $user);
+
         $user->is_active = false;
         $user->suspended_at = now();
         $user->suspension_reason = 'Suspendido rápidamente desde el panel.';
@@ -192,16 +179,8 @@ class UserIndex extends Component
      */
     public function forceLogoutSessions(int $id)
     {
-        $query = User::query();
-        if (auth()->user()->isReseller()) {
-            $query->where('parent_id', auth()->id());
-        }
-
-        $user = $query->findOrFail($id);
-        if ($user->id === auth()->id()) {
-            session()->flash('error', 'No puedes desconectar tus propias sesiones desde aquí.');
-            return;
-        }
+        $user = User::findOrFail($id);
+        $this->authorize('update', $user);
 
         app(ForceLogoutService::class)->logoutUser($user->id);
 
@@ -211,12 +190,9 @@ class UserIndex extends Component
 
     public function activate(int $id)
     {
-        $query = User::query();
-        if (auth()->user()->isReseller()) {
-            $query->where('parent_id', auth()->id());
-        }
-        
-        $user = $query->findOrFail($id);
+        $user = User::findOrFail($id);
+        $this->authorize('unsuspend', $user);
+
         $user->is_active = true;
         $user->suspended_at = null;
         $user->save();

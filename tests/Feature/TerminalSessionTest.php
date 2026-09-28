@@ -16,6 +16,13 @@ class TerminalSessionTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // These tests exercise the session lifecycle/authorization, not 2FA.
+        config(['larapanel.security.2fa_required_for_admin' => false]);
+    }
+
     // ── Creation (route authorization) ────────────────────────────────────────
 
     public function test_guest_cannot_create_terminal_session(): void

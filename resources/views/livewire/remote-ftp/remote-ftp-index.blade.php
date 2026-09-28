@@ -29,7 +29,7 @@
     <div class="alert alert-danger" style="margin-bottom:20px;"><i class="fa-solid fa-circle-exclamation"></i> {{ $errorMessage }}</div>
     @endif
 
-    <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;align-items:start;">
+    <div class="lp-ratio-split" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:20px;align-items:start;">
 
         {{-- Left: connection management --}}
         <div style="display:flex;flex-direction:column;gap:20px;">
@@ -160,7 +160,7 @@
             </h2>
 
             @if(!$connected)
-            <div style="text-align:center;padding:60px 20px;color:var(--text-secondary);">
+            <div style="text-align:center;padding:clamp(24px,8vw,60px) 16px;color:var(--text-secondary);">
                 <i class="fa-solid fa-plug-circle-xmark" style="font-size:42px;opacity:0.25;margin-bottom:14px;display:block;"></i>
                 Conectese a un servidor remoto para explorar sus archivos.
             </div>

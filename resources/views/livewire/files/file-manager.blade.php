@@ -1,6 +1,7 @@
 <div class="fm-container" x-data="{ selectedAll: false, isUploading: false, progress: 0,
         selAnchor: null,
         isDragOver: false, dragCounter: 0,
+        openFilesMeta: {},
         ctx: { open: false, x: 0, y: 0, item: null, items: [], folderPath: null },
         openCtx(e, item) {
             const checked = Array.from(document.querySelectorAll('.file-checkbox:checked')).map(cb => cb.value);
@@ -216,9 +217,83 @@
             try { payload = JSON.parse(e.dataTransfer.getData('application/x-larapanel-files') || 'null'); } catch (err) {}
             if (!payload || !payload.items || !payload.items.length) return;
             this.$wire.dragDropItems(payload.items, destPath, !!(e.ctrlKey || e.metaKey));
+        },
+        onOpenEditor(d) {
+            const path = d.path || null;
+            if (path && !this.openFilesMeta[path]) {
+                this.openFilesMeta[path] = { path: path, filename: d.filename };
+            }
+            const entry = path ? this.openFilesMeta[path] : null;
+            if (entry) {
+                entry.filename = d.filename;
+                if (entry.content === undefined) entry.content = d.content;
+                entry.language = window.__fmGuessLang ? window.__fmGuessLang(d.filename) : (entry.language || 'plaintext');
+            }
+            const iframe = document.getElementById('monaco-editor-iframe');
+            const overlay = document.getElementById('monaco-full-editor');
+            const active = overlay ? overlay.dataset.editorPath : null;
+            if (active === path && iframe && iframe === fmReadyIframe) {
+                return;
+            }
+            const content = (entry && entry.content !== undefined) ? entry.content : d.content;
+            const lang = (entry && entry.language) || 'plaintext';
+            if (window.__fmPrepareEditor) window.__fmPrepareEditor(content, lang, d.filename);
+        },
+        storeEditorContent(d) {
+            if (d && d.path && this.openFilesMeta[d.path]) {
+                this.openFilesMeta[d.path].content = d.content;
+            }
+        },
+        closeEditorEvent(d) {
+            if (d && d.path) {
+                delete this.openFilesMeta[d.path];
+            }
+        },
+        getEditorValue() {
+            return window.__fmGetEditorValue ? window.__fmGetEditorValue() : Promise.resolve(null);
+        },
+        async minimizeEditor() {
+            const overlay = document.getElementById('monaco-full-editor');
+            const path = overlay ? overlay.dataset.editorPath : null;
+            if (!path) return;
+            const content = await this.getEditorValue();
+            if (content !== null && this.openFilesMeta[path]) {
+                this.openFilesMeta[path].content = content;
+            }
+            await this.$wire.set('editingPath', null);
+        },
+        async restoreEditor(path, filename) {
+            if (!path) return;
+            const entry = this.openFilesMeta[path];
+            const content = (entry && entry.content !== undefined) ? entry.content : null;
+            const lang = (entry && entry.language) || 'plaintext';
+            await this.$wire.set('editingPath', path);
+            if (window.__fmPrepareEditor) window.__fmPrepareEditor(content, lang, filename);
+        },
+        async clickEditor(path, filename) {
+            const overlay = document.getElementById('monaco-full-editor');
+            const active = overlay ? overlay.dataset.editorPath : null;
+            if (active === path) {
+                this.minimizeEditor();
+                return;
+            }
+            if (active && this.openFilesMeta[active]) {
+                const content = await this.getEditorValue();
+                if (content !== null) this.openFilesMeta[active].content = content;
+            }
+            this.restoreEditor(path, filename);
+        },
+        async closeEditor() {
+            const overlay = document.getElementById('monaco-full-editor');
+            const path = overlay ? overlay.dataset.editorPath : null;
+            if (!path) return;
+            await this.$wire.call('closeFile', path);
         }
     }"
-     @contextmenu="closeCtx()">
+     @contextmenu="closeCtx()"
+     x-on:open-editor.window="onOpenEditor($event.detail)"
+     x-on:close-editor.window="closeEditorEvent($event.detail)"
+     x-on:fm-store-content.window="storeEditorContent($event.detail)">
     
 
 
@@ -472,7 +547,7 @@
         @endif
 
         {{-- File List Container --}}
-        <div style="flex:1;overflow-y:auto;padding:0;position:relative;" class="table-responsive" @scroll="closeCtx()"
+        <div style="flex:1;overflow-y:auto;padding:0;position:relative;{{ !empty($openFiles) ? 'padding-bottom:52px;' : '' }}" class="table-responsive" @scroll="closeCtx()"
              @contextmenu.prevent.stop="openEmptyCtx($event)"
              @dragenter="fmDropTargetEnter($event)"
              @dragleave="fmDropTargetLeave($event)"
@@ -655,9 +730,28 @@
             </table>
         </div>
 
+        {{-- Taskbar: archivos abiertos (minimizables tipo SO) --}}
+        @if(!empty($openFiles))
+        <div class="fm-taskbar" @contextmenu.prevent.stop="closeCtx()">
+            @foreach($openFiles as $openPath)
+                @php
+                    $openName = basename($openPath);
+                    $isOpenActive = ($editingPath === $openPath);
+                @endphp
+                <button type="button"
+                        class="fm-taskbar-item {{ $isOpenActive ? 'fm-taskbar-active' : 'fm-taskbar-min' }}"
+                        @click="clickEditor('{{ addslashes($openPath) }}', '{{ addslashes($openName) }}')"
+                        title="Abrir /var/www/{{ $openPath }}">
+                    <i class="fa-solid fa-file-lines"></i>
+                    <span>{{ $openName }}</span>
+                </button>
+            @endforeach
+        </div>
+        @endif
+
         {{-- Floating Action Bar for Selected Items (Bulk Actions) --}}
         @if(!empty($selectedItems))
-        <div class="fm-float-bar">
+        <div class="fm-float-bar" style="{{ !empty($openFiles) ? 'bottom:74px;' : '' }}">
             <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;">
                 <span class="fm-float-count">{{ count($selectedItems) }}</span>
                 <span style="color:var(--text-primary);">seleccionados</span>
@@ -690,7 +784,7 @@
 
         {{-- Floating Clipboard Bar --}}
         @if(!empty($clipboardItems))
-        <div class="fm-float-bar" style="bottom:84px;">
+        <div class="fm-float-bar" style="bottom:{{ !empty($openFiles) ? '138px' : '84px' }};">
             <div style="font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;">
                 <i class="fa-solid {{ $clipboardMode === 'cut' ? 'fa-scissors' : 'fa-copy' }}" style="color:{{ $clipboardMode === 'cut' ? 'var(--warning)' : 'var(--accent-light)' }};"></i>
                 <span style="color:var(--text-primary);">{{ count($clipboardItems) }} {{ count($clipboardItems) === 1 ? 'elemento' : 'elementos' }}{{ $clipboardMode === 'cut' ? ' cortados' : ' copiados' }}</span>
@@ -1023,10 +1117,10 @@
 
     {{-- Advanced Monaco Editor Overlay --}}
     @if($editingPath)
-    <div class="fm-editor-overlay" id="monaco-full-editor">
+    <div class="fm-editor-overlay" id="monaco-full-editor" data-editor-path="{{ $editingPath }}">
         {{-- Editor Header --}}
         <div class="fm-editor-header">
-            <div style="display:flex;align-items:center;gap:16px;">
+            <div style="display:flex;align-items:center;gap:16px;min-width:0;flex:1 1 200px;">
                 <div class="fm-editor-icon">
                     <i class="fa-solid fa-code" style="color:var(--accent-light);font-size:18px;"></i>
                 </div>
@@ -1059,9 +1153,12 @@
                 <button onclick="saveMonacoContent()" class="fm-editor-save" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform='scale(1)'">
                     <i class="fa-solid fa-floppy-disk"></i> Guardar <span style="font-size:10px;opacity:0.6;background:rgba(0,0,0,0.15);padding:2px 6px;border-radius:4px;margin-left:4px;font-family:monospace;">Ctrl+S</span>
                 </button>
-                
-                <button wire:click="$set('editingPath', null)" class="btn btn-ghost fm-editor-close">
-                    Cerrar
+
+                <button @click="minimizeEditor()" class="btn btn-ghost fm-editor-close" title="Minimizar (deja el archivo abierto en la barra inferior)">
+                    <i class="fa-solid fa-minus"></i> Minimizar
+                </button>
+                <button @click="closeEditor()" class="btn btn-ghost fm-editor-close" title="Cerrar archivo">
+                    <i class="fa-solid fa-xmark"></i> Cerrar
                 </button>
             </div>
         </div>
@@ -1079,6 +1176,8 @@
         let editorIframeReady = false;
         let pendingEditorContent = null;
         let pendingEditorLang = null;
+        let fmLastIframe = null;
+        let fmReadyIframe = null;
         const FM_ALLOWED_ORIGIN = window.location.origin;
 
         // Escuchar mensajes del iframe
@@ -1087,6 +1186,8 @@
             const data = event.data;
             if (data.action === 'ready') {
                 editorIframeReady = true;
+                fmReadyIframe = document.getElementById('monaco-editor-iframe');
+                fmLastIframe = fmReadyIframe;
                 if (pendingEditorContent !== null) {
                     sendToIframe(pendingEditorContent, pendingEditorLang);
                 }
@@ -1095,35 +1196,71 @@
             }
         });
 
-        window.addEventListener('open-editor', event => {
-            const content = event.detail.content;
-            const filename = event.detail.filename;
-            let lang = 'plaintext';
-            const ext = filename.split('.').pop().toLowerCase();
-            
-            if (ext === 'js') lang = 'javascript';
-            else if (ext === 'html' || ext === 'htm') lang = 'html';
-            else if (ext === 'css') lang = 'css';
-            else if (ext === 'php') lang = 'php';
-            else if (ext === 'json') lang = 'json';
-            else if (ext === 'md') lang = 'markdown';
-            else if (ext === 'sh') lang = 'shell';
-            else if (ext === 'yaml' || ext === 'yml') lang = 'yaml';
-            else if (ext === 'xml') lang = 'xml';
+        // El evento 'open-editor' lo gestiona Alpine (x-on:open-editor.window) en el contenedor,
+        // donde se guarda el contenido en openFilesMeta.
 
-            selectedLang = lang;
+        window.__fmGuessLang = function (filename) {
+            const ext = String(filename || '').split('.').pop().toLowerCase();
+            if (ext === 'js') return 'javascript';
+            if (ext === 'html' || ext === 'htm') return 'html';
+            if (ext === 'css') return 'css';
+            if (ext === 'php') return 'php';
+            if (ext === 'json') return 'json';
+            if (ext === 'md') return 'markdown';
+            if (ext === 'sh') return 'shell';
+            if (ext === 'yaml' || ext === 'yml') return 'yaml';
+            if (ext === 'xml') return 'xml';
+            return 'plaintext';
+        };
 
-            // Livewire destróy y recrea el iframe, por lo que el nuevo iframe aún no está listo.
-            editorIframeReady = false;
+        window.__fmGetEditorValue = function () {
+            return new Promise(function (resolve) {
+                const iframe = document.getElementById('monaco-editor-iframe');
+                if (!iframe || !iframe.contentWindow) { resolve(null); return; }
+                const onValue = function (event) {
+                    if (event.data && event.data.action === 'value') {
+                        window.removeEventListener('message', onValue);
+                        resolve(event.data.content);
+                    }
+                };
+                window.addEventListener('message', onValue);
+                iframe.contentWindow.postMessage({ action: 'getValue' }, FM_ALLOWED_ORIGIN);
+            });
+        };
+
+        window.__fmPrepareEditor = function (content, lang, filename) {
             pendingEditorContent = content;
             pendingEditorLang = lang;
+            selectedLang = lang;
+            const iframe = document.getElementById('monaco-editor-iframe');
+            if (!iframe) return;
 
-            // Establecer valor del selector de lenguaje
+            const isSameReadyIframe = (iframe === fmReadyIframe);
             setTimeout(() => {
                 const select = document.getElementById('editor-language-select');
                 if (select) select.value = lang;
             }, 100);
-        });
+
+            if (isSameReadyIframe) {
+                sendToIframe(content, lang);
+            } else {
+                editorIframeReady = false;
+            }
+        };
+
+        window.__fmMinimize = function () {
+            const overlay = document.getElementById('monaco-full-editor');
+            const path = overlay ? overlay.dataset.editorPath : null;
+            if (!path) return;
+            window.__fmGetEditorValue().then(function (content) {
+                if (content !== null) {
+                    window.dispatchEvent(new CustomEvent('fm-store-content', {
+                        detail: { path: path, content: content }
+                    }));
+                }
+                @this.set('editingPath', null);
+            });
+        };
 
         function sendToIframe(content, language) {
             const iframe = document.getElementById('monaco-editor-iframe');
@@ -1196,7 +1333,7 @@
                 const modal = document.getElementById('monaco-full-editor');
                 if (modal) {
                     e.preventDefault();
-                    @this.set('editingPath', null);
+                    window.__fmMinimize && window.__fmMinimize();
                 }
             }
         });
@@ -1385,14 +1522,14 @@
     font-family: 'Outfit', sans-serif; color: var(--text-primary);
 }
 .fm-sidebar {
-    width: 280px; display: flex; flex-direction: column; padding: 0;
+    width: 280px; max-width: 100%; display: flex; flex-direction: column; padding: 0;
     border-right: 1px solid var(--glass-border); background: rgba(10, 15, 30, 0.4);
     flex-shrink: 0;
 }
 .fm-main {
     flex: 1; display: flex; flex-direction: column; padding: 0;
     overflow: hidden; background: rgba(10, 15, 30, 0.2);
-    min-width: 0;
+    min-width: 0; position: relative;
 }
 
 /* Sidebar */
@@ -1406,16 +1543,17 @@
 
 /* Toolbar */
 .fm-toolbar { padding: 16px 24px; border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; gap: 20px; background: rgba(255,255,255,0.01); }
-.fm-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 14px; overflow-x: auto; white-space: nowrap; flex: 1; }
+.fm-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 14px; overflow-x: auto; white-space: nowrap; flex: 1; min-width: 0; }
 .fm-toolbar-actions { display: flex; align-items: center; gap: 8px; }
 
 /* Alerts */
-.fm-alert { padding: 12px 24px; font-size: 13px; border-bottom: 1px solid; display: flex; align-items: center; gap: 10px; }
+.fm-alert { padding: 12px 24px; font-size: 13px; border-bottom: 1px solid; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; overflow-wrap: anywhere; }
 .fm-alert-success { background: rgba(34,197,94,0.12); color: #4ade80; border-color: rgba(34,197,94,0.2); }
 .fm-alert-error { background: rgba(239,68,68,0.12); color: #f87171; border-color: rgba(239,68,68,0.2); }
 
 /* Table */
 .fm-table { width: 100%; margin: 0; border-collapse: collapse; font-size: 13px; }
+.fm-table th, .fm-table td { overflow-wrap: anywhere; }
 .fm-table thead { position: sticky; top: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); z-index: 10; border-bottom: 1px solid var(--glass-border); }
 .fm-table th { padding: 14px 10px; text-align: left; font-weight: 700; color: var(--text-muted); }
 .fm-table td { padding: 12px 10px; vertical-align: middle; color: var(--text-secondary); }
@@ -1430,14 +1568,23 @@
 .fm-actions-bar { display: inline-flex; gap: 4px; }
 
 /* Floating action bar */
-.fm-float-bar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 90; display: flex; align-items: center; gap: 16px; background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent-light); box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 14px; padding: 12px 24px; backdrop-filter: blur(16px); animation: slideUp 0.3s ease-out; }
+.fm-float-bar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 90; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; max-width: calc(100% - 24px); background: rgba(15, 23, 42, 0.95); border: 1px solid var(--accent-light); box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 14px; padding: 12px 24px; backdrop-filter: blur(16px); animation: slideUp 0.3s ease-out; }
 .fm-float-count { width: 20px; height: 20px; border-radius: 50%; background: var(--accent-light); color: black; display: flex; align-items: center; justify-content: center; font-size: 11px; }
 .fm-float-divider { width: 1px; height: 24px; background: var(--glass-border); }
 
+/* Taskbar (archivos abiertos, minimizables tipo SO) */
+.fm-taskbar { position: absolute; left: 0; right: 0; bottom: 0; z-index: 400; display: flex; align-items: center; gap: 6px; padding: 7px 12px; background: rgba(10, 15, 30, 0.95); backdrop-filter: blur(14px); border-top: 1px solid var(--glass-border); overflow-x: auto; }
+.fm-taskbar-item { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); color: var(--text-secondary); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
+.fm-taskbar-item span { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+.fm-taskbar-item:hover { border-color: var(--accent-light); color: var(--text-primary); }
+.fm-taskbar-item.fm-taskbar-active { background: rgba(99,102,241,0.2); border-color: var(--accent-light); color: var(--accent-light); }
+.fm-taskbar-item.fm-taskbar-min { opacity: 0.6; }
+.fm-taskbar-item.fm-taskbar-min:hover { opacity: 1; }
+
 /* Modals */
 .fm-modal-backdrop { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.8); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content:center; animation: fmBackdropIn 180ms ease-out; }
-.fm-modal { width: 100%; max-width: 380px; padding: 28px; border-radius: 16px; border: 1px solid var(--glass-border); background: rgba(15,23,42,0.95); animation: fmModalIn 220ms ease-out; transform-origin: center; }
-.fm-modal-lg { max-width: 420px; }
+.fm-modal { width: 100%; max-width: min(380px, 100%); margin: 16px; padding: 28px; border-radius: 16px; border: 1px solid var(--glass-border); background: rgba(15,23,42,0.95); animation: fmModalIn 220ms ease-out; transform-origin: center; }
+.fm-modal-lg { max-width: min(420px, 100%); }
 .fm-modal-title { font-size: 18px; font-weight: 700; margin: 0 0 16px; display: flex; align-items: center; gap: 10px; }
 .fm-modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
 .fm-modal-label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 8px; }
@@ -1450,24 +1597,26 @@
 
 /* Editor */
 .fm-editor-overlay { position: fixed; inset: 0; z-index: 300; background: rgba(8,11,20,0.99); display: flex; flex-direction: column; backdrop-filter: blur(12px); }
-.fm-editor-header { background: rgba(255,255,255,0.02); padding: 14px 28px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; }
+.fm-editor-header { background: rgba(255,255,255,0.02); padding: 14px 28px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .fm-editor-icon { width: 40px; height: 40px; background: rgba(99,102,241,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(99,102,241,0.25); }
 .fm-editor-info strong { font-size: 15px; color: var(--text-primary); font-family: monospace; letter-spacing: 0.5px; }
-.fm-editor-info div { font-size: 11px; color: var(--text-muted); font-family: monospace; margin-top: 2px; }
-.fm-editor-actions { display: flex; align-items: center; gap: 18px; }
-.fm-editor-status { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+.fm-editor-info { min-width: 0; }
+.fm-editor-info strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fm-editor-info div { font-size: 11px; color: var(--text-muted); font-family: monospace; margin-top: 2px; overflow-wrap: anywhere; }
+.fm-editor-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.fm-editor-status { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .fm-editor-save { height: 36px; background: var(--accent-light); border: none; color: black; font-weight: 700; border-radius: 8px; padding: 0 18px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: transform 0.1s; }
 .fm-editor-close { height: 36px; background: rgba(255,255,255,0.05); border-radius: 8px; padding: 0 16px; color: white; border: 1px solid var(--glass-border); }
 
 /* Upload modal */
 .fm-upload-progress { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 9999; align-items: center; justify-content: center; }
-.fm-upload-card { background: rgba(15, 23, 42, 0.95); border: 1px solid var(--glass-border); border-radius: 12px; padding: 32px; width: 100%; max-width: 400px; text-align: center; }
+.fm-upload-card { background: rgba(15, 23, 42, 0.95); border: 1px solid var(--glass-border); border-radius: 12px; padding: 32px; width: 100%; max-width: min(400px, 100%); text-align: center; }
 .fm-upload-bar { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
 .fm-upload-fill { height: 100%; background: var(--accent-light); border-radius: 4px; transition: width 0.3s; }
 
 /* Drop zone overlay */
 .fm-dropzone-overlay { position: absolute; inset: 0; z-index: 50; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; pointer-events: none; border: 3px dashed var(--accent-light); border-radius: 12px; margin: 8px; }
-.fm-dropzone-card { text-align: center; padding: 48px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 16px; }
+.fm-dropzone-card { text-align: center; padding: clamp(20px, 8vw, 48px); width: 100%; max-width: 100%; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 16px; }
 .fm-dropzone-card h3 { color: var(--text-primary); }
 .fm-dropzone-card p { color: var(--text-muted); }
 .fm-dropzone-card strong { color: var(--accent-light); }
@@ -1478,10 +1627,10 @@
 
 /* Context menu (right click) */
 [x-cloak] { display: none !important; }
-.fm-ctx-menu { position: fixed; z-index: 1000; min-width: 230px; background: rgba(15, 23, 42, 0.97); border: 1px solid var(--glass-border); border-radius: 10px; padding: 6px; box-shadow: 0 12px 32px rgba(0,0,0,0.55); backdrop-filter: blur(14px); animation: fmCtxIn 120ms ease-out; transform-origin: top left; }
+.fm-ctx-menu { position: fixed; z-index: 1000; min-width: min(230px, calc(100vw - 24px)); max-width: calc(100vw - 24px); background: rgba(15, 23, 42, 0.97); border: 1px solid var(--glass-border); border-radius: 10px; padding: 6px; box-shadow: 0 12px 32px rgba(0,0,0,0.55); backdrop-filter: blur(14px); animation: fmCtxIn 120ms ease-out; transform-origin: top left; }
 @keyframes fmCtxIn { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
 .fm-ctx-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px 8px; font-size: 11px; font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--glass-border); margin-bottom: 4px; }
-.fm-ctx-header span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; font-family: monospace; }
+.fm-ctx-header span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: min(200px, 55vw); font-family: monospace; }
 .fm-ctx-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px 12px; border: none; background: transparent; color: var(--text-primary); font-size: 13px; font-weight: 500; border-radius: 7px; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .fm-ctx-item:hover { background: rgba(99, 102, 241, 0.18); color: white; }
 .fm-ctx-danger { color: #f87171; }
@@ -1521,6 +1670,13 @@ tr.fm-row:hover .fm-star-btn { opacity: 0.6; }
         flex: 1;
         justify-content: center;
     }
+    .fm-toolbar, .fm-alert { padding-left: 16px; padding-right: 16px; }
+    .fm-editor-header { padding: 12px 16px; }
+    .fm-editor-actions { gap: 8px; width: 100%; }
+    .fm-editor-actions .fm-editor-save, .fm-editor-actions .fm-editor-close { flex: 1; justify-content: center; }
+    .fm-modal { padding: 20px; }
+    .fm-float-bar { bottom: 12px; gap: 8px; padding: 10px 12px; }
+    .fm-modal-footer { flex-wrap: wrap; }
 }
 
 @keyframes slideUp {

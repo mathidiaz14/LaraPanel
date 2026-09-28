@@ -53,6 +53,9 @@ class AccountApiTest extends TestCase
 
     public function test_admin_can_access_wordpress_manager(): void
     {
+        // Isolation: this test asserts admin access to the WP manager, not 2FA.
+        config(['larapanel.security.2fa_required_for_admin' => false]);
+
         $admin = User::factory()->create(['role' => 'admin']);
 
         $this->actingAs($admin)->get('/wordpress')->assertOk();

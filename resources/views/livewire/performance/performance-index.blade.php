@@ -9,7 +9,7 @@
             <p class="page-subtitle">Optimización, seguridad y CDN por dominio — Fase 10</p>
         </div>
         {{-- Domain selector --}}
-        <select wire:model.live="domainId" class="form-input" style="width:220px;margin-bottom:0;">
+        <select wire:model.live="domainId" class="form-input" style="width:100%;max-width:220px;margin-bottom:0;">
             <option value="">Seleccionar dominio...</option>
             @foreach($domains as $d)
             <option value="{{ $d->id }}">{{ $d->name }}</option>
@@ -341,19 +341,21 @@
                 <button wire:click="addCustomHeader" class="btn btn-ghost btn-sm"><i class="fa-solid fa-plus"></i></button>
             </div>
             @if(!empty($customHeaders))
-            <div class="glass" style="overflow:hidden;">
+            <div class="glass">
+                <div class="table-responsive">
                 <table class="lp-table">
                     <thead><tr><th>Header</th><th>Valor</th><th style="text-align:right">Acción</th></tr></thead>
                     <tbody>
                         @foreach($customHeaders as $i => $h)
                         <tr wire:key="header-{{ $i }}">
-                            <td><code style="color:var(--accent-light);">{{ $h['name'] }}</code></td>
-                            <td style="font-size:12px;color:var(--text-secondary);">{{ $h['value'] }}</td>
+                            <td><code style="color:var(--accent-light);overflow-wrap:anywhere;">{{ $h['name'] }}</code></td>
+                            <td style="font-size:12px;color:var(--text-secondary);overflow-wrap:anywhere;">{{ $h['value'] }}</td>
                             <td style="text-align:right;"><button wire:click="removeCustomHeader({{ $i }})" class="btn btn-danger btn-sm"><i class="fa-solid fa-trash"></i></button></td>
                         </tr>
                         @endforeach
                     </tbody>
                 </table>
+                </div>
             </div>
             @endif
         </div>
@@ -371,20 +373,22 @@
                 <button wire:click="addRedirect" class="btn btn-ghost btn-sm"><i class="fa-solid fa-plus"></i></button>
             </div>
             @if(!empty($redirects))
-            <div class="glass" style="overflow:hidden;">
+            <div class="glass">
+                <div class="table-responsive">
                 <table class="lp-table">
                     <thead><tr><th>Desde</th><th>Hacia</th><th>Código</th><th style="text-align:right">Acción</th></tr></thead>
                     <tbody>
                         @foreach($redirects as $i => $r)
                         <tr wire:key="redirect-{{ $i }}">
-                            <td><code style="color:var(--warning);">{{ $r['from'] }}</code></td>
-                            <td style="font-size:12px;">{{ $r['to'] }}</td>
+                            <td><code style="color:var(--warning);overflow-wrap:anywhere;">{{ $r['from'] }}</code></td>
+                            <td style="font-size:12px;overflow-wrap:anywhere;">{{ $r['to'] }}</td>
                             <td><span class="badge badge-muted">{{ $r['code'] }}</span></td>
                             <td style="text-align:right;"><button wire:click="removeRedirect({{ $i }})" class="btn btn-danger btn-sm"><i class="fa-solid fa-trash"></i></button></td>
                         </tr>
                         @endforeach
                     </tbody>
                 </table>
+                </div>
             </div>
             @endif
         </div>

@@ -15,7 +15,7 @@
     <div class="alert alert-danger" style="margin-bottom:20px;"><i class="fa-solid fa-circle-exclamation"></i> {{ $errorMessage }}</div>
     @endif
 
-    <div style="display:grid;grid-template-columns:280px 1fr;gap:20px;align-items:start;">
+    <div class="lp-split" style="display:grid;grid-template-columns:280px minmax(0,1fr);gap:20px;align-items:start;">
 
         {{-- Account Selector --}}
         <div class="glass" style="padding:20px;">
@@ -147,7 +147,7 @@
 
         </div>
         @else
-        <div class="glass" style="padding:60px;text-align:center;">
+        <div class="glass" style="padding:clamp(24px,8vw,60px);;text-align:center;">
             <i class="fa-solid fa-reply" style="font-size:40px;opacity:0.2;margin-bottom:12px;display:block;"></i>
             <p style="color:var(--text-secondary);">Selecciona un buzón de la lista izquierda para gestionar sus autoresponders.</p>
         </div>

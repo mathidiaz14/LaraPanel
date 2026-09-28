@@ -16,14 +16,17 @@ class Domain extends Model
         'user_id', 'name', 'type', 'parent_domain', 'document_root',
         'php_version', 'webserver', 'ssl_enabled', 'ssl_expires_at',
         'ssl_provider', 'is_active', 'status', 'config', 'deployed_at',
+        'error_pages', 'last_ssl_alerted_at',
     ];
 
     protected $casts = [
-        'ssl_enabled'  => 'boolean',
-        'is_active'    => 'boolean',
+        'ssl_enabled'   => 'boolean',
+        'is_active'     => 'boolean',
         'ssl_expires_at'=> 'datetime',
-        'deployed_at'  => 'datetime',
-        'config'       => 'array',
+        'last_ssl_alerted_at' => 'datetime',
+        'deployed_at'   => 'datetime',
+        'config'        => 'array',
+        'error_pages'   => 'array',
     ];
 
     public function user(): BelongsTo
@@ -67,6 +70,29 @@ class Domain extends Model
     public function getProxyPort(): ?int
     {
         return $this->config['proxy_port'] ?? null;
+    }
+
+    /**
+     * List of upstream backend addresses for staging / load-balancing groups.
+     * Stored inside the `config` JSON column to avoid extra migrations.
+     */
+    public function getStagingUpstreams(): array
+    {
+        $upstreams = $this->config['staging_upstreams'] ?? [];
+        return is_array($upstreams) ? array_values(array_filter($upstreams)) : [];
+    }
+
+    public function usesStagingUpstream(): bool
+    {
+        return $this->getStagingUpstreams() !== [];
+    }
+
+    /**
+     * Whether the domain is currently serving the staging upstream group.
+     */
+    public function onStaging(): bool
+    {
+        return (bool) ($this->config['on_staging'] ?? false);
     }
 
     public function sslExpiresInDays(): ?int

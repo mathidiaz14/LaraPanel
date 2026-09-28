@@ -18,8 +18,10 @@ class TerminalService
      * Security: only whitelisted base commands are allowed and shell
      * separators (;, |, &&, ||, `, $(), newline) are rejected.
      */
-    public function execute(string $command, string $cwd = '/var/www'): array
+    public function execute(string $command, ?string $cwd = null): array
     {
+        $cwd ??= config('larapanel.paths.webroots', '/var/www');
+
         if (!app()->isProduction()) {
             return $this->getSimulatedOutput($command, $cwd);
         }
@@ -28,7 +30,7 @@ class TerminalService
         if (preg_match('/^cd\s*(.*)$/', trim($command), $matches)) {
             $path = trim($matches[1]);
             if (empty($path)) {
-                $path = '/var/www';
+                $path = config('larapanel.paths.webroots', '/var/www');
             }
             $candidate = str_starts_with($path, '/') ? $path : rtrim($cwd, '/') . '/' . $path;
             $resolved = realpath($candidate);
@@ -153,7 +155,7 @@ return [
         if (preg_match('/^cd\s*(.*)$/', $cmd, $matches)) {
             $path = trim($matches[1]);
             if (empty($path)) {
-                $cwd = '/var/www';
+                $cwd = config('larapanel.paths.webroots', '/var/www');
             } elseif ($path === '..') {
                 $cwd = dirname($cwd);
             } elseif (str_starts_with($path, '/')) {

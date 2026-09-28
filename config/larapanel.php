@@ -53,6 +53,9 @@ return [
         'antivirus'  => true,
         'resellers'  => false,  // Phase 4
         'multiserver'=> true,
+        'cache'      => true,   // Redis / Memcached manager
+        'dependencies'=> true,  // Dependency & CVE monitor
+        'health'     => true,   // Server health score
     ],
 
     /*
@@ -78,6 +81,11 @@ return [
             'systemctl',
             'nginx',
             'php-fpm',
+            // OS package updates & CVE scanning (DependencyMonitorService, HealthScoreService)
+            'apt',      // `apt list --upgradable` — list available package updates
+            'apt-get',  // Simulated / real package upgrades (`--simulate`, `upgrade <pkgs>`)
+            'dpkg',     // `dpkg -s <pkg>` — inspect installed package versions
+            'debsecan', // Debian Security Analyzer — CVE hints per package/suite
             'mysql',
             'certbot',
             'ufw',
@@ -119,6 +127,14 @@ return [
             'lftp',
             'which', 'test', 'gunzip', 'unzip', 'touch', 'su', 'wp',
             'kill',
+            // `bash` es seguro: PipelineService ejecuta siempre scripts de etapa
+            // generados en el servidor (storage/app/tmp) copiados a /tmp con
+            // `cp`+`chown`, nunca interpola input del usuario como argumento.
+            'bash',
+            // Cache manager (Feature 4): redis-cli para stats/claves/flush y
+            // memcached-tool para estadísticas de solo lectura de Memcached.
+            'redis-cli',
+            'memcached-tool',
         ],
         'allowed_terminal_commands' => [
             // Navegacion y lectura
@@ -166,6 +182,17 @@ return [
         'backups'      => '/var/larapanel/backups',
         'logs'         => '/var/log',
         'vmail'        => '/var/vmail',
+        // Additional infrastructure paths, centralized so Services never
+        // hard-code absolute locations. env() support mirrors the newer
+        // blocks (mail, docker, antivirus, ...).
+        'letsencrypt_webroot' => env('LARAPANEL_LETSENCRYPT_WEBROOT', '/var/www/letsencrypt'),
+        'acme_sh'             => env('LARAPANEL_ACME_SH', '/root/.acme.sh/acme.sh'),
+        'roundcube_root'      => env('LARAPANEL_ROUNDCUBE_ROOT', '/usr/share/roundcube'),
+        'nginx_logs'          => env('LARAPANEL_NGINX_LOGS', '/var/log/nginx'),
+        'php_fpm'             => env('LARAPANEL_PHP_FPM', '/run/php'),
+        // phpMyAdmin single sign-on token directory (shared between the SSO
+        // route and the CleanupPmaSsoCommand cleaner).
+        'pma_sso_root'        => env('LARAPANEL_PMA_SSO_ROOT', sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'larapanel_pma_sso'),
     ],
 
     /*

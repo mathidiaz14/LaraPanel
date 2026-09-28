@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\AuditLog;
 use App\Models\Domain;
 use App\Services\GoAccessService;
 use Illuminate\Bus\Queueable;
@@ -18,6 +19,11 @@ class GenerateGoAccessReport implements ShouldQueue
     public int $tries   = 2;
     public int $timeout = 120;
 
+    public function backoff(): array
+    {
+        return [30];
+    }
+
     public function __construct(
         public readonly int $domainId,
     ) {}
@@ -26,11 +32,21 @@ class GenerateGoAccessReport implements ShouldQueue
     {
         $domain = Domain::findOrFail($this->domainId);
 
-        try {
-            $service->generateReport($domain);
-        } catch (\Throwable $e) {
-            Log::error("[GoAccess] Failed to generate report for {$domain->name}: " . $e->getMessage());
-            $this->fail($e);
-        }
+        $service->generateReport($domain);
+    }
+
+    public function failed(\Throwable $e): void
+    {
+        $domain = Domain::find($this->domainId);
+
+        Log::error(
+            "[GoAccess] Report generation permanently failed for domain {$this->domainId}: " . $e->getMessage(),
+            ['domain_id' => $this->domainId]
+        );
+
+        AuditLog::record('goaccess.report.failed', $domain?->name ?? (string) $this->domainId, [
+            'domain_id' => $this->domainId,
+            'error'     => $e->getMessage(),
+        ], 'warning');
     }
 }

@@ -8,6 +8,7 @@ use App\Models\AuditLog;
 use App\Shell\SudoExecutor;
 use App\Shell\ShellExecutor;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -38,12 +39,21 @@ class SslService
      * Issue a Let's Encrypt certificate using the webroot challenge.
      * Works even with Nginx running (no downtime).
      *
+     * When $viaDns is true the DNS-01 challenge is used (via the local
+     * PowerDNS API through the acme.sh dns_pdns plugin). DNS-01 is required
+     * for wildcard certs, but can also be forced for regular domains that are
+     * not (yet) pointing their HTTP traffic to this server.
+     *
      * @param  Domain  $domain
      * @param  array   $sanDomains  Additional SANs e.g. ['www.example.com']
      * @param  bool    $includeWww  Auto-add www. variant
+     * @param  bool    $viaDns      Force DNS-01 (PowerDNS) challenge
      */
-    public function issueLetsEncrypt(Domain $domain, array $sanDomains = [], bool $includeWww = true, bool $isWildcard = false): SslCertificate
+    public function issueLetsEncrypt(Domain $domain, array $sanDomains = [], bool $includeWww = true, bool $isWildcard = false, bool $viaDns = false): SslCertificate
     {
+        // Wildcards always require the DNS-01 challenge (PowerDNS).
+        $viaDns = $viaDns || $isWildcard;
+
         // Build the full SAN list
         $allDomains = [$domain->name];
         if ($isWildcard) {
@@ -60,11 +70,12 @@ class SslService
         $cert = SslCertificate::updateOrCreate(
             ['domain_id' => $domain->id],
             [
-                'provider'    => 'letsencrypt',
-                'status'      => 'pending',
-                'auto_renew'  => true,
-                'san_domains' => $allDomains,
-                'last_error'  => null,
+                'provider'       => 'letsencrypt',
+                'status'         => 'pending',
+                'auto_renew'     => true,
+                'challenge_type' => $viaDns ? 'dns_pdns' : 'webroot',
+                'san_domains'    => $allDomains,
+                'last_error'     => null,
             ]
         );
 
@@ -72,7 +83,7 @@ class SslService
 
         try {
             if (app()->isProduction()) {
-                $this->runAcmeSh($domain, $allDomains, $cert, $isWildcard);
+                $this->runAcmeSh($domain, $allDomains, $cert, $isWildcard, $viaDns);
             } else {
                 // Development mode: simulate certificate issuance
                 $this->simulateCertificate($domain, $cert, 'letsencrypt');
@@ -147,6 +158,7 @@ class SslService
                 ['domain_id' => $sub->id],
                 [
                     'provider'        => 'letsencrypt',
+                    'challenge_type'  => $cert->challenge_type,
                     'status'          => 'active',
                     'certificate'     => $cert->certificate,
                     'private_key'     => $cert->private_key,
@@ -182,13 +194,13 @@ class SslService
 
     /**
      * Run acme.sh to issue the certificate (production only).
+     *
+     * DNS-01 (PowerDNS / dns_pdns) is used for wildcard certificates and for
+     * regular certificates issued with the DNS challenge.
      */
-    protected function runAcmeSh(Domain $domain, array $allDomains, SslCertificate $cert, bool $isWildcard = false): void
+    protected function runAcmeSh(Domain $domain, array $allDomains, SslCertificate $cert, bool $isWildcard = false, bool $viaDns = false): void
     {
-        // Build -d flags
-        $dFlags = implode(' ', array_map(fn($d) => "-d {$d}", $allDomains));
-
-        if ($isWildcard) {
+        if ($isWildcard || $viaDns) {
             // Extracción y sanitización de credenciales de PowerDNS local para acme.sh
             $pdnsUrl = config('larapanel.powerdns.api_url', 'http://127.0.0.1:8053/api/v1');
             $basePdnsUrl = preg_replace('/\/api\/v1\/?$/i', '', $pdnsUrl);
@@ -457,45 +469,67 @@ class SslService
     // ────────────────────────────────────────────────────────────────
 
     /**
-     * Renew all Let's Encrypt certs expiring within 30 days.
+     * Renew a single Let's Encrypt certificate, reusing the challenge method
+     * (and SAN list) originally used so renewals actually succeed.
+     *
+     * For wildcard certs whose authoritative DNS is NOT the local PowerDNS
+     * (e.g. Cloudflare-hosted apex domains), DNS-01 can never complete, so it
+     * transparently falls back to individual HTTP-01 certs for the main domain
+     * and every active subdomain.
      */
-    public function renewAll(): array
+    public function renewCertificate(Domain $domain): SslCertificate
+    {
+        $cert = $domain->sslCertificate;
+        if (!$cert || $cert->provider !== 'letsencrypt') {
+            throw new \RuntimeException("El dominio {$domain->name} no tiene un certificado Let's Encrypt renovable.");
+        }
+
+        [$isWildcard, $extraSans, $includeWww, $viaDns] = $this->renewalParamsFor($cert);
+
+        if ($isWildcard && $viaDns && !$this->isPowerDnsAuthoritative($domain)) {
+            return $this->issueWildcardFallback($domain);
+        }
+
+        return $this->issueLetsEncrypt(
+            domain:     $domain,
+            sanDomains: $extraSans,
+            includeWww: $includeWww,
+            isWildcard: $isWildcard,
+            viaDns:     $viaDns,
+        );
+    }
+
+    /**
+     * Renew all Let's Encrypt certs that need it:
+     *  - active certs expiring within the next 30 days
+     *  - certs in failed / expired status (retried automatically)
+     *
+     * @param  bool  $force  When true, renew every auto-renewable Let's Encrypt cert
+     *                       regardless of expiry (used by the `--force` flag).
+     */
+    public function renewAll(bool $force = false): array
     {
         $results = ['renewed' => [], 'failed' => [], 'skipped' => []];
 
         $expiring = SslCertificate::where('provider', 'letsencrypt')
-            ->where('status', 'active')
             ->where('auto_renew', true)
-            ->where('expires_at', '<=', now()->addDays(30))
-            ->with('domain')
-            ->get();
+            ->whereIn('status', ['active', 'failed', 'expired'])
+            ->with('domain');
 
-        foreach ($expiring as $cert) {
+        if (!$force) {
+            $expiring->where(function ($q) {
+                $q->where('expires_at', '<=', now()->addDays(30))
+                  ->orWhereIn('status', ['failed', 'expired']);
+            });
+        }
+
+        foreach ($expiring->get() as $cert) {
             if (!$cert->domain) {
                 $results['skipped'][] = $cert->id;
                 continue;
             }
             try {
-                $isWildcard = false;
-                $sans = $cert->san_domains ?? [];
-                foreach ($sans as $san) {
-                    if (str_starts_with($san, '*.')) {
-                        $isWildcard = true;
-                        break;
-                    }
-                }
-
-                // Filtrar el dominio base y www para reconstruir los SAN adicionales
-                $extraSans = array_values(array_filter($sans, function($d) use ($cert) {
-                    return $d !== $cert->domain->name && $d !== 'www.' . $cert->domain->name && !str_starts_with($d, '*.');
-                }));
-
-                $this->issueLetsEncrypt(
-                    domain:     $cert->domain,
-                    sanDomains: $extraSans,
-                    includeWww: in_array('www.' . $cert->domain->name, $sans, true),
-                    isWildcard: $isWildcard
-                );
+                $this->renewCertificate($cert->domain);
                 $cert->update(['last_renewed_at' => now()]);
                 $results['renewed'][] = $cert->domain->name;
             } catch (\Throwable $e) {
@@ -505,6 +539,120 @@ class SslService
         }
 
         return $results;
+    }
+
+    /**
+     * Rebuild the issuance parameters for a certificate from its stored SANs.
+     *
+     * @return array{0: bool, 1: array, 2: bool, 3: bool} [isWildcard, extraSans, includeWww, viaDns]
+     */
+    protected function renewalParamsFor(SslCertificate $cert): array
+    {
+        $sans       = $cert->san_domains ?? [];
+        $domainName = $cert->domain?->name;
+
+        $isWildcard = collect($sans)->contains(fn ($san) => str_starts_with((string) $san, '*.'));
+
+        $extraSans = array_values(array_filter($sans, function ($d) use ($domainName) {
+            return $d !== $domainName && $d !== 'www.' . $domainName && !str_starts_with((string) $d, '*.');
+        }));
+
+        $includeWww = in_array('www.' . $domainName, $sans, true);
+
+        $viaDns = $isWildcard || $cert->usesDnsChallenge();
+
+        return [$isWildcard, $extraSans, $includeWww, $viaDns];
+    }
+
+    /**
+     * Issue individual (non-wildcard) HTTP-01 certificates for the main domain
+     * and every active subdomain. Used when a wildcard cannot be validated via
+     * DNS-01 because the domain's authoritative DNS is not the local PowerDNS.
+     */
+    protected function issueWildcardFallback(Domain $domain): SslCertificate
+    {
+        Log::info('SSL auto-renew: DNS autoritativo no es PowerDNS local; emitiendo certificados individuales HTTP-01', ['domain' => $domain->name]);
+
+        $parent = $this->issueLetsEncrypt(domain: $domain, includeWww: true, isWildcard: false);
+
+        $subdomains = Domain::where('user_id', $domain->user_id)
+            ->where('id', '!=', $domain->id)
+            ->where('is_active', true)
+            ->get()
+            ->filter(fn (Domain $d) => str_ends_with($d->name, '.' . $domain->name))
+            ->reject(fn (Domain $d) => $d->sslCertificate?->provider === 'custom');
+
+        foreach ($subdomains as $sub) {
+            try {
+                $this->issueLetsEncrypt(domain: $sub, includeWww: true, isWildcard: false);
+            } catch (\Throwable $e) {
+                Log::error("SSL wildcard fallback failed for subdomain {$sub->name}: " . $e->getMessage());
+            }
+        }
+
+        // Los subdominios que seguían cubiertos por el wildcard (copias con
+        // auto_renew=false) deben quedarse con auto-renovación propia para que
+        // el scheduler los siga reintentando hasta tener su certificado.
+        Domain::where('user_id', $domain->user_id)
+            ->where('id', '!=', $domain->id)
+            ->where('is_active', true)
+            ->get()
+            ->filter(fn (Domain $d) => str_ends_with($d->name, '.' . $domain->name)
+                && $d->sslCertificate
+                && $d->sslCertificate->provider === 'letsencrypt'
+                && in_array('*.' . $domain->name, $d->sslCertificate->san_domains ?? [], true))
+            ->each(fn (Domain $sub) => $sub->sslCertificate->update([
+                'auto_renew'      => true,
+                'challenge_type'  => 'webroot',
+                'san_domains'     => [$sub->name, 'www.' . $sub->name],
+            ]));
+
+        return $parent;
+    }
+
+    /**
+     * Whether the local PowerDNS instance is the authoritative nameserver for
+     * the given domain. DNS-01 via dns_pdns only works when that holds.
+     *
+     * We compare the public SOA serial with the zone serial stored in the
+     * local PowerDNS: when the domain's delegation ends up served by this
+     * same PowerDNS (even through a "misconfigured" delegation), the serials
+     * match — when a real registrar/Cloudflare serves the zone, they don't.
+     */
+    protected function isPowerDnsAuthoritative(Domain $domain): bool
+    {
+        if (!config('larapanel.powerdns.enabled', true)) {
+            return false;
+        }
+
+        try {
+            $token = config('larapanel.powerdns.api_key');
+            if (!$token) {
+                return false;
+            }
+
+            $base   = rtrim((string) config('larapanel.powerdns.api_url', 'http://127.0.0.1:8053/api/v1'), '/');
+            $server = config('larapanel.powerdns.server', 'localhost');
+            $zone   = Http::withToken($token)
+                ->acceptJson()
+                ->timeout(5)
+                ->get("{$base}/servers/" . urlencode($server) . '/zones/' . urlencode(rtrim($domain->name, '.') . '.'))
+                ->json();
+            if (!is_array($zone) || !isset($zone['serial'])) {
+                return false;
+            }
+            $localSerial = (int) $zone['serial'];
+
+            $soa = @dns_get_record($domain->name, DNS_SOA);
+            if (!$soa) {
+                return false;
+            }
+            $publicSerial = (int) ($soa[0]['serial'] ?? 0);
+
+            return $localSerial > 0 && $publicSerial === $localSerial;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     // ────────────────────────────────────────────────────────────────

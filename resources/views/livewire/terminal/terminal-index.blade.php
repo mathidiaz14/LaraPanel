@@ -8,7 +8,7 @@
             <p class="page-subtitle">Ejecución segura de comandos sin WebSocket, con historial, tareas y herramientas rápidas.</p>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
-            <select wire:model.live="selectedServerId" class="form-input" style="min-width:210px;">
+            <select wire:model.live="selectedServerId" class="form-input" style="width:100%;max-width:260px;min-width:0;">
                 <option value="">Servidor local</option>
                 @foreach($servers as $server)
                     <option value="{{ $server->id }}">{{ $server->is_local ? 'Local' : $server->name }} · {{ $server->hostname }}</option>
@@ -33,10 +33,10 @@
 
     <section class="glass lp-panel" style="padding:0;overflow:hidden;border-color:rgba(79,70,229,.3);">
             <div style="background:var(--bg-base);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--glass-border);gap:12px;flex-wrap:wrap;">
-                <div style="display:flex;gap:6px;align-items:center;">
-                    <span style="font-family:monospace;font-size:11px;color:var(--text-muted);">{{ $cwd }}</span>
+                <div style="display:flex;gap:6px;align-items:center;min-width:0;flex:1 1 160px;">
+                    <span style="font-family:monospace;font-size:11px;color:var(--text-muted);overflow-wrap:anywhere;">{{ $cwd }}</span>
                 </div>
-                <div style="display:flex;gap:10px;align-items:center;font-size:11px;color:var(--text-muted);">
+                <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:11px;color:var(--text-muted);">
                     <label style="display:flex;gap:5px;align-items:center;cursor:pointer;">
                         <input type="checkbox" wire:model="background"> Ejecutar en segundo plano
                     </label>
@@ -49,7 +49,7 @@
             <div wire:ignore style="height:calc(100vh - 300px);min-height:460px;max-height:900px;padding:12px 12px 24px;box-sizing:border-box;background:#090b10;">
                 <div id="terminal-container" style="height:100%;width:100%;"></div>
             </div>
-            <div style="padding:8px 14px;display:flex;gap:14px;font-size:11px;color:var(--text-muted);">
+            <div style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:14px;font-size:11px;color:var(--text-muted);">
                 <span><kbd>Tab</kbd> autocompletar</span><span><kbd>↑ ↓</kbd> historial</span><span><kbd>Ctrl+L</kbd> limpiar</span><span><kbd>Ctrl+C</kbd> cancelar línea</span>
                 @if($exitCode !== null)<span style="margin-left:auto;color:{{ $exitCode === 0 ? '#a6e3a1' : '#f38ba8' }};">Salida: {{ $exitCode }} · {{ $durationMs ?? 0 }} ms</span>@endif
                 <button onclick="copyTerminalOutput(this)" data-output="{{ base64_encode($output) }}" class="btn btn-ghost btn-sm" title="Copiar salida"><i class="fa-solid fa-copy"></i></button>

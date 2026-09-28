@@ -349,7 +349,7 @@
                 <i class="fa-solid fa-triangle-exclamation" style="font-size:40px;color:var(--danger);margin-bottom:12px;display:block;"></i>
                 <h3 style="font-size:17px;font-weight:700;color:var(--danger);margin-bottom:8px;">Resetear Firewall</h3>
                 <p style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:20px;">Esto eliminará <strong>todas las reglas UFW</strong> y reiniciará el firewall a valores por defecto. <strong>El acceso SSH (puerto 22) se re-aplicará automáticamente.</strong></p>
-                <div style="display:flex;gap:10px;justify-content:center;">
+                <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;">
                     <button wire:click="$set('confirmReset',false)" class="btn btn-ghost">Cancelar</button>
                     <button wire:click="resetFirewall" class="btn btn-danger">
                         <i class="fa-solid fa-rotate-left"></i> Sí, resetear

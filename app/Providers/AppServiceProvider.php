@@ -13,10 +13,17 @@ use App\Listeners\NotifySuspiciousLogin;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Reverb\Events\ChannelRemoved;
 use Laravel\Reverb\Events\MessageReceived;
+use App\Models\DatabaseInstance;
+use App\Models\Domain;
+use App\Models\User;
+use App\Policies\DatabasePolicy;
+use App\Policies\DomainPolicy;
+use App\Policies\UserPolicy;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -54,10 +61,25 @@ class AppServiceProvider extends ServiceProvider
         // Phase 10
         $this->app->singleton(\App\Services\GoAccessService::class);
         $this->app->singleton(\App\Services\GeoWafService::class);
+        // Phase 11 (refactor + monitoring)
+        $this->app->singleton(\App\Services\NginxConfigGenerator::class);
+        $this->app->singleton(\App\Services\ErrorPageService::class);
+        $this->app->singleton(\App\Services\CacheService::class);
+        $this->app->singleton(\App\Services\CertificateMonitorService::class);
+        $this->app->singleton(\App\Services\BackupVerificationService::class);
+        $this->app->singleton(\App\Services\DependencyMonitorService::class);
+        $this->app->singleton(\App\Services\HealthScoreService::class);
+        $this->app->singleton(\App\Services\LogAggregationService::class);
+        $this->app->singleton(\App\Services\PipelineService::class);
+        $this->app->singleton(\App\Services\ClusterService::class);
     }
 
     public function boot(): void
     {
+        // 0. Central authorization policies (granular, out of services)
+        Gate::policy(Domain::class, DomainPolicy::class);
+        Gate::policy(DatabaseInstance::class, DatabasePolicy::class);
+        Gate::policy(User::class, UserPolicy::class);
         // 1. Auto-curación de permisos y carpetas de storage y database en boot
         $frameworkPaths = [
             storage_path('framework/views'),

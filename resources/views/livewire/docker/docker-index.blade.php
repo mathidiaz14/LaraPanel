@@ -19,7 +19,7 @@
     </div>
 
     @if(!$daemonRunning)
-        <div class="glass lp-panel" style="text-align:center;padding:40px;">
+        <div class="glass lp-panel" style="text-align:center;padding:clamp(20px,6vw,40px);">
             <i class="fa-brands fa-docker" style="font-size:48px;color:var(--info);margin-bottom:16px;opacity:0.5;"></i>
             <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--text-primary);">Docker no está corriendo</h3>
             <p style="color:var(--text-secondary);font-size:13px;max-width:500px;margin:0 auto;">
@@ -29,7 +29,7 @@
     @else
         {{-- TAB: CONTAINERS --}}
         @if($activeTab === 'containers')
-            <div style="display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start;">
+            <div class="lp-split" style="display:grid;grid-template-columns:300px minmax(0,1fr);gap:24px;align-items:start;">
                 {{-- Sidebar: Containers list --}}
                 <div class="glass lp-panel" style="padding:16px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">

@@ -26,7 +26,7 @@
             <i class="fa-solid fa-plus" style="color:var(--accent-light);margin-right:6px;"></i>
             Agregar Registro
         </h2>
-        <div style="display:grid;grid-template-columns:1.5fr 100px 3fr 80px 80px;gap:10px;align-items:end;">
+        <div class="lp-form-row" style="display:grid;grid-template-columns:minmax(0,1.5fr) 100px minmax(0,3fr) 80px 80px;gap:10px;align-items:end;">
             <div>
                 <label class="form-label" style="font-size:11px;">Nombre</label>
                 <input type="text" wire:model="newName" class="form-input" placeholder="@ o subdomain" style="font-family:monospace;font-size:12px;">
@@ -69,8 +69,8 @@
                 @endif
             </div>
         </div>
-        <div style="display:flex;justify-content:flex-end;margin-top:12px;gap:8px;">
-            <input type="text" wire:model="newComment" class="form-input" placeholder="Comentario opcional" style="flex:1;font-size:12px;">
+        <div style="display:flex;flex-wrap:wrap;justify-content:flex-end;margin-top:12px;gap:8px;">
+            <input type="text" wire:model="newComment" class="form-input" placeholder="Comentario opcional" style="flex:1 1 180px;min-width:0;font-size:12px;">
             <button wire:click="addRecord" class="btn btn-primary btn-sm" wire:loading.attr="disabled">
                 <span wire:loading.remove><i class="fa-solid fa-plus"></i> Agregar</span>
                 <span wire:loading><i class="fa-solid fa-spinner fa-spin"></i></span>
@@ -88,7 +88,7 @@
         </div>
 
         @if($records->isEmpty())
-        <div style="text-align:center;padding:40px;color:var(--text-muted);">
+        <div style="text-align:center;padding:clamp(20px,6vw,40px);color:var(--text-muted);">
             <i class="fa-solid fa-database" style="font-size:32px;opacity:0.2;margin-bottom:10px;display:block;"></i>
             Esta zona no tiene registros aún. Agrégalos usando el formulario de arriba.
         </div>

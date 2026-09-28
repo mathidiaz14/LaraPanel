@@ -16,7 +16,7 @@
     <div class="alert alert-danger" style="margin-bottom:20px;"><i class="fa-solid fa-circle-exclamation"></i> {{ $errorMessage }}</div>
     @endif
 
-    <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;align-items:start;">
+    <div class="lp-ratio-split" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:20px;align-items:start;">
 
         {{-- Create Alias Form --}}
         <div class="glass" style="padding:24px;">
@@ -91,7 +91,7 @@
             </h2>
 
             @if($aliases->isEmpty())
-            <div style="text-align:center;padding:40px;color:var(--text-muted);">
+            <div style="text-align:center;padding:clamp(20px,6vw,40px);color:var(--text-muted);">
                 <i class="fa-solid fa-at" style="font-size:36px;opacity:0.2;margin-bottom:12px;display:block;"></i>
                 No hay aliases configurados.
             </div>

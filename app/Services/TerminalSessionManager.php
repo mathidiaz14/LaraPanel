@@ -203,7 +203,7 @@ class TerminalSessionManager
                 2 => ['pipe', 'w'],
             ];
 
-            $cwd = $session->cwd ?: config('larapanel.security.terminal.default_cwd', '/var/www');
+            $cwd = $session->cwd ?: config('larapanel.security.terminal.default_cwd', config('larapanel.paths.webroots', '/var/www'));
             if (! is_dir($cwd) && PHP_OS_FAMILY === 'Windows') {
                 $cwd = base_path();
             }

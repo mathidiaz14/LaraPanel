@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 
 class ImpersonationController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Start impersonating a user.
      */
@@ -20,16 +22,8 @@ class ImpersonationController extends Controller
             return redirect()->back()->with('error', 'No puedes impersonarte a ti mismo.');
         }
 
-        // Authorization checks:
-        // 1. Admin can impersonate anyone
-        // 2. Reseller can only impersonate their own client users
-        if ($currentUser->isAdmin()) {
-            // Authorized
-        } elseif ($currentUser->isReseller() && $user->parent_id === $currentUser->id) {
-            // Authorized
-        } else {
-            abort(403, 'No tienes permiso para impersonar a este usuario.');
-        }
+        // Authorization centralized in UserPolicy@impersonate
+        $this->authorize('impersonate', $user);
 
         // Store current user ID in session
         $request->session()->put('impersonated_by', $currentUser->id);

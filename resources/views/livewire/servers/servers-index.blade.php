@@ -11,7 +11,7 @@
         </div>
     @endif
 
-    <div style="display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start;">
+    <div class="lp-split" style="display:grid;grid-template-columns:300px minmax(0,1fr);gap:24px;align-items:start;">
 
         {{-- Left column: Server list --}}
         <div>

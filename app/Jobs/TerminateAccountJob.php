@@ -29,8 +29,32 @@ class TerminateAccountJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 1;
-    public int $timeout = 900;
+    public int $tries   = 3;
+    public int $timeout = 600;
+
+    /**
+     * Termination removes resources one by one and the User row last, so a
+     * retry only processes what is still present. A growing backoff lets a
+     * transient infra failure settle instead of hammering the server.
+     */
+    public function backoff(): array
+    {
+        return [60, 300];
+    }
+
+    public function failed(\Throwable $e): void
+    {
+        Log::error('TerminateAccountJob failed permanently', [
+            'user_id' => $this->userId,
+            'error'   => $e->getMessage(),
+        ]);
+
+        AuditLog::record('account.terminate.failed', $this->email ?? "user:{$this->userId}", [
+            'user_id' => $this->userId,
+            'name'    => $this->name,
+            'error'   => $e->getMessage(),
+        ], 'critical', $this->userId);
+    }
 
     public function __construct(
         public readonly int $userId,
@@ -54,11 +78,14 @@ class TerminateAccountJob implements ShouldQueue
             return;
         }
 
+        $failures = 0;
+
         // 1. Domains — remove vhosts AND document root files.
         foreach ($user->domains as $domain) {
             try {
                 $domainService->delete($domain, true);
             } catch (\Throwable $e) {
+                $failures++;
                 Log::error('TerminateAccountJob: failed to delete domain', [
                     'domain_id' => $domain->id,
                     'error'     => $e->getMessage(),
@@ -71,6 +98,7 @@ class TerminateAccountJob implements ShouldQueue
             try {
                 $databaseService->delete($database);
             } catch (\Throwable $e) {
+                $failures++;
                 Log::error('TerminateAccountJob: failed to delete database', [
                     'database_id' => $database->id,
                     'error'       => $e->getMessage(),
@@ -83,6 +111,7 @@ class TerminateAccountJob implements ShouldQueue
             try {
                 $emailService->delete($account);
             } catch (\Throwable $e) {
+                $failures++;
                 Log::error('TerminateAccountJob: failed to delete email account', [
                     'email_id' => $account->id,
                     'error'    => $e->getMessage(),
@@ -95,6 +124,7 @@ class TerminateAccountJob implements ShouldQueue
             try {
                 $ftpService->delete($ftp);
             } catch (\Throwable $e) {
+                $failures++;
                 Log::error('TerminateAccountJob: failed to delete ftp account', [
                     'ftp_id' => $ftp->id,
                     'error'  => $e->getMessage(),
@@ -107,6 +137,7 @@ class TerminateAccountJob implements ShouldQueue
             try {
                 $cronService->delete($cron);
             } catch (\Throwable $e) {
+                $failures++;
                 Log::error('TerminateAccountJob: failed to delete cron job', [
                     'cron_id' => $cron->id,
                     'error'   => $e->getMessage(),
@@ -118,6 +149,7 @@ class TerminateAccountJob implements ShouldQueue
         try {
             $forceLogout->logoutUser($user->id);
         } catch (\Throwable $e) {
+            $failures++;
             Log::error('TerminateAccountJob: failed to force logout sessions', [
                 'user_id' => $user->id,
                 'error'   => $e->getMessage(),
@@ -128,12 +160,17 @@ class TerminateAccountJob implements ShouldQueue
             'account.terminate',
             $email,
             [
-                'user_id' => $user->id,
-                'name'    => $this->name ?? $user->name,
+                'user_id'          => $user->id,
+                'name'             => $this->name ?? $user->name,
+                'partial_failures' => $failures,
             ],
             'warning',
             $user->id,
         );
+
+        if ($failures > 0) {
+            Log::warning("TerminateAccountJob: terminated user {$user->id} with {$failures} partial failure(s).");
+        }
 
         // 7. Finally delete the user row itself.
         $user->delete();

@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreTerminalSessionRequest;
 use App\Models\AuditLog;
 use App\Models\Server;
 use App\Models\TerminalSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class TerminalSessionController extends Controller
 {
@@ -15,7 +15,7 @@ class TerminalSessionController extends Controller
      * Create a new interactive terminal session.
      * POST /terminal/session
      */
-    public function store(Request $request): JsonResponse
+    public function store(StoreTerminalSessionRequest $request): JsonResponse
     {
         if (! config('larapanel.security.terminal.enabled', true)) {
             return response()->json([
@@ -24,11 +24,7 @@ class TerminalSessionController extends Controller
             ], 403);
         }
 
-        $validated = $request->validate([
-            'type' => ['required', Rule::in(['local', 'ssh'])],
-            'server_id' => ['required_if:type,ssh', 'nullable', 'integer'],
-            'cwd' => ['nullable', 'string', 'max:255'],
-        ]);
+        $validated = $request->validated();
 
         $type = $validated['type'];
         $serverId = null;

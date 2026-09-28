@@ -33,7 +33,7 @@ class BackupService
             return $path;
         }
 
-        return config('larapanel.paths.backups', '/var/backups/larapanel') . '/' . $user->id;
+        return config('larapanel.paths.backups', '/var/larapanel/backups') . '/' . $user->id;
     }
 
     /**
@@ -69,14 +69,25 @@ class BackupService
                 $this->configureS3();
                 $remotePath = 'backups/' . $user->id . '/' . $filename;
                 
-                // Upload to S3
+                // Upload to S3 (lectura: los archivos son de root vía sudo)
                 \Illuminate\Support\Facades\Storage::disk('s3')->put(
                     $remotePath,
-                    fopen($fullPath, 'r+')
+                    fopen($fullPath, 'rb')
                 );
                 
-                // Remove local file
-                @unlink($fullPath);
+                // Remove local file (los archivos son de root vía sudo)
+                if (app()->isProduction()) {
+                    $this->sudo->run(['rm', '-f', $fullPath], checkExit: false);
+                    if ($type === 'full') {
+                        // En 'full' el dump SQL quedó embebido en el tar; sobra el staging.
+                        $this->sudo->run(['rm', '-f', str_replace('.tar.gz', '.sql.gz', $fullPath)], checkExit: false);
+                    }
+                } else {
+                    @unlink($fullPath);
+                    if ($type === 'full') {
+                        @unlink(str_replace('.tar.gz', '.sql.gz', $fullPath));
+                    }
+                }
             }
 
             $backup->update([
@@ -99,6 +110,14 @@ class BackupService
 
             Log::error("BackupService: Backup failed: " . $e->getMessage());
 
+            // Limpieza: si el backup falló NO deben quedar archivos locales
+            // (staging) que llenen el disco. Creados por sudo (root).
+            if (app()->isProduction() && isset($fullPath)) {
+                $this->sudo->run(['rm', '-f', $fullPath], checkExit: false);
+                $this->sudo->run(['rm', '-f', $fullPath . '.new'], checkExit: false);
+                $this->sudo->run(['rm', '-f', str_replace('.tar.gz', '.sql.gz', $fullPath)], checkExit: false);
+            }
+
             Notifier::send(new BackupFailedNotification($label, $e->getMessage()));
 
             throw $e;
@@ -116,8 +135,8 @@ class BackupService
         
         $config = [
             'driver' => 's3',
-            'key' => \App\Models\Setting::get('aws_access_key_id'),
-            'secret' => \App\Models\Setting::get('aws_secret_access_key'),
+            'key' => \App\Models\Setting::getSecret('aws_access_key_id'),
+            'secret' => \App\Models\Setting::getSecret('aws_secret_access_key'),
             'region' => \App\Models\Setting::get('aws_default_region', 'us-east-1'),
             'bucket' => \App\Models\Setting::get('aws_bucket'),
             'url' => null,
@@ -152,9 +171,9 @@ class BackupService
         if (!is_dir($backupRoot)) {
             if (app()->isProduction()) {
                 $this->sudo->run(['mkdir', '-p', $backupRoot]);
-                $this->sudo->run(['chmod', '700', $backupRoot]);
+                $this->sudo->run(['chmod', '755', $backupRoot]);
             } else {
-                @mkdir($backupRoot, 0700, true);
+                @mkdir($backupRoot, 0755, true);
             }
         }
 
@@ -168,27 +187,57 @@ class BackupService
 
             // If full backup, combine both into one archive
             if ($type === 'full' && file_exists($dbFilename)) {
-                // Append SQL dump to the main archive
-                // Create temp dir for combining
                 $tmpDir = sys_get_temp_dir() . '/lp_backup_' . uniqid();
-                @mkdir($tmpDir, 0700, true);
-
-                // Move sql.gz into temp dir then add to archive
-                $sqlDest = $tmpDir . '/database_dump.sql.gz';
-                @rename($dbFilename, $sqlDest);
 
                 if (app()->isProduction()) {
-                    // Append existing sql file to tar
+                    // Los archivos y el dump fueron creados por sudo (root).
+                    // Operamos todo con sudo para no fallar por permisos.
+                    $sqlDest = $tmpDir . '/database_dump.sql.gz';
+                    $this->sudo->run(['mkdir', '-p', $tmpDir]);
+                    $this->sudo->run(['chmod', '755', $tmpDir]);
+                    $this->sudo->run(['cp', $dbFilename, $sqlDest]);
+
+                    // Armar el archivo definitivo: dump SQL + archivos web (www) + buzones (vmail)
+                    $tarArgs = [
+                        'tar', '-czf', $destPath . '.new',
+                        '-C', $tmpDir, 'database_dump.sql.gz',
+                        '-C', '/var', 'www',
+                    ];
+
+                    // Incluir buzones de correo si el servidor tiene email (/var/vmail)
+                    if ($this->sudo->run(['test', '-d', '/var/vmail'], checkExit: false)->successful()) {
+                        $tarArgs[] = '-C';
+                        $tarArgs[] = '/var';
+                        $tarArgs[] = 'vmail';
+                    }
+
                     $this->sudo->withTimeout(config('larapanel.backups.timeout', 3600))
-                        ->run(['tar', '-czf', $destPath . '.new', '-C', $tmpDir, '.']);
+                        ->run($tarArgs);
                     $this->sudo->withTimeout(config('larapanel.backups.timeout', 3600))
                         ->run(['mv', $destPath . '.new', $destPath]);
-                } else {
-                    @rename($sqlDest, $dbFilename);
-                }
+                    $this->sudo->run(['chmod', '755', $destPath]);
 
-                @unlink($tmpDir . '/database_dump.sql.gz');
-                @rmdir($tmpDir);
+                    $this->sudo->run(['rm', '-rf', $tmpDir], checkExit: false);
+                } else {
+                    // Dev: incorporar el dump al archivo de archivos en un zip
+                    $combinedDest = $destPath . '.comb';
+                    @mkdir($tmpDir, 0700, true);
+                    @copy($dbFilename, $tmpDir . '/database_dump.sql.gz');
+                    @rename($destPath, $tmpDir . '/files.tar.gz');
+
+                    $zip = new \ZipArchive();
+                    if ($zip->open($combinedDest, \ZipArchive::CREATE) === true) {
+                        foreach (glob($tmpDir . '/*') as $f) {
+                            $zip->addFile($f, basename($f));
+                        }
+                        $zip->close();
+                        @rename($combinedDest, $destPath);
+                    }
+                    @unlink($tmpDir . '/database_dump.sql.gz');
+                    @unlink($tmpDir . '/files.tar.gz');
+                    @unlink($tmpDir . '/files.tar');
+                    @rmdir($tmpDir);
+                }
             }
         }
 
@@ -321,6 +370,12 @@ class BackupService
                 $docRoot = $domain->document_root;
                 $this->sudo->withTimeout(config('larapanel.backups.timeout', 3600))
                     ->run(['tar', '-xzf', $localPath, '-C', dirname($docRoot)]);
+            }
+
+            // Restore mailboxes (solo backups "full all": el archivo incluye vmail/)
+            if ($type === 'full' && !$domain) {
+                $this->sudo->withTimeout(config('larapanel.backups.timeout', 3600))
+                    ->run(['tar', '-xzf', $localPath, '-C', '/var', 'vmail'], checkExit: false);
             }
 
             // Restore Database

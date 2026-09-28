@@ -22,6 +22,7 @@ class NotificationPreferences
         'backup_completed'  => 'Backup completado',
         'update_available'  => 'Actualización del panel disponible',
         'domain_changed'    => 'Sitio/dominio creado o eliminado',
+        'ssl_expiring'      => 'Certificado SSL próximo a expirar',
         'user_created'      => 'Nuevo usuario creado',
     ];
 
@@ -40,6 +41,7 @@ class NotificationPreferences
         'backup_completed'  => false,
         'update_available'  => true,
         'domain_changed'    => true,
+        'ssl_expiring'      => true,
         'user_created'      => true,
     ];
 

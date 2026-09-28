@@ -19,7 +19,7 @@ class CleanupPmaSsoCommand extends Command
 
     public function handle(): int
     {
-        $dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'larapanel_pma_sso';
+        $dir = config('larapanel.paths.pma_sso_root', sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'larapanel_pma_sso');
 
         if (!is_dir($dir)) {
             return self::SUCCESS;

@@ -146,7 +146,7 @@
         @endphp
 
         @if($allDomains->isEmpty())
-        <div style="text-align:center;padding:40px;color:var(--text-muted);">
+        <div style="text-align:center;padding:clamp(20px,6vw,40px);color:var(--text-muted);">
             <i class="fa-solid fa-globe" style="font-size:32px;opacity:0.3;margin-bottom:10px;display:block;"></i>
             No hay dominios activos creados todavía.
         </div>
@@ -166,7 +166,7 @@
                     <tr>
                         <td>
                             <strong style="color:var(--text-primary);">{{ $domain->name }}</strong>
-                            <div style="font-size:11px;color:var(--text-muted);">{{ $domain->document_root }}</div>
+                            <div style="font-size:11px;color:var(--text-muted);overflow-wrap:anywhere;">{{ $domain->document_root }}</div>
                         </td>
                         <td>
                             <span class="badge badge-muted">{{ strtoupper($domain->type) }}</span>

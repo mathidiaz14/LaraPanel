@@ -63,10 +63,8 @@ class DatabaseIndex extends Component
         $this->errorMessage = '';
 
         try {
-            // Check plan quota
-            if (!auth()->user()->canAddDatabase()) {
-                throw new \RuntimeException('Has alcanzado el límite de bases de datos de tu plan.');
-            }
+            // Check plan quota (centralized in DatabasePolicy@create)
+            $this->authorize('create', DatabaseInstance::class);
 
             // Check disk quota before provisioning the database
             app(QuotaService::class)->enforceDiskQuota(auth()->user());
@@ -114,9 +112,8 @@ class DatabaseIndex extends Component
             'newPassword' => 'required|string|min:8|max:64',
         ]);
 
-        $instance = DatabaseInstance::where('id', $this->changingPasswordId)
-            ->where('user_id', auth()->id())
-            ->firstOrFail();
+        $instance = DatabaseInstance::findOrFail($this->changingPasswordId);
+        $this->authorize('update', $instance);
 
         try {
             $dbService->changePassword($instance, $this->newPassword);
@@ -136,9 +133,8 @@ class DatabaseIndex extends Component
 
     public function deleteDatabase(DatabaseService $dbService): void
     {
-        $instance = DatabaseInstance::where('id', $this->deletingId)
-            ->where('user_id', auth()->id())
-            ->firstOrFail();
+        $instance = DatabaseInstance::findOrFail($this->deletingId);
+        $this->authorize('delete', $instance);
 
         try {
             $dbService->delete($instance);
@@ -163,7 +159,8 @@ class DatabaseIndex extends Component
      */
     public function exportDatabase(int $id, DatabaseService $dbService)
     {
-        $instance = DatabaseInstance::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+        $instance = DatabaseInstance::findOrFail($id);
+        $this->authorize('view', $instance);
         $this->successMessage = '';
         $this->errorMessage = '';
 
@@ -197,9 +194,8 @@ class DatabaseIndex extends Component
             'importFile' => 'required|file|mimes:sql,txt|max:51200', // 50MB max
         ]);
 
-        $instance = DatabaseInstance::where('id', $this->importingId)
-            ->where('user_id', auth()->id())
-            ->firstOrFail();
+        $instance = DatabaseInstance::findOrFail($this->importingId);
+        $this->authorize('update', $instance);
 
         try {
             $sqlPath = $this->importFile->getRealPath();

@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Crypt;
 class SslCertificate extends Model
 {
     protected $fillable = [
-        'domain_id', 'provider', 'status', 'certificate', 'private_key',
+        'domain_id', 'provider', 'challenge_type', 'status', 'certificate', 'private_key',
         'chain', 'issued_at', 'expires_at', 'auto_renew', 'last_renewed_at',
         'last_error', 'san_domains',
     ];
@@ -21,6 +21,11 @@ class SslCertificate extends Model
         'auto_renew'      => 'boolean',
         'san_domains'     => 'array',
     ];
+
+    public function usesDnsChallenge(): bool
+    {
+        return $this->challenge_type === 'dns_pdns';
+    }
 
     // Never expose private_key in JSON serialization
     protected $hidden = ['private_key'];

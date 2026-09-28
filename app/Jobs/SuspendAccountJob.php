@@ -28,8 +28,30 @@ class SuspendAccountJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 1;
+    public int $tries   = 3;
     public int $timeout = 600;
+
+    /**
+     * Suspend operations are idempotent (re-applying the disabled state is
+     * safe), so a transient failure can be retried with a growing backoff.
+     */
+    public function backoff(): array
+    {
+        return [60, 300];
+    }
+
+    public function failed(\Throwable $e): void
+    {
+        Log::error('SuspendAccountJob failed permanently', [
+            'user_id' => $this->userId,
+            'error'   => $e->getMessage(),
+        ]);
+
+        AuditLog::record('account.suspend.failed', "user:{$this->userId}", [
+            'user_id' => $this->userId,
+            'error'   => $e->getMessage(),
+        ], 'warning', $this->userId);
+    }
 
     public function __construct(public readonly int $userId) {}
 
@@ -47,6 +69,7 @@ class SuspendAccountJob implements ShouldQueue
         }
 
         $reason = $user->suspension_reason ?? 'Suspended via account lifecycle';
+        $failures = 0;
 
         // 1. Domains — disable Nginx vhosts (files/document roots kept intact).
         foreach ($user->domains as $domain) {
@@ -55,6 +78,7 @@ class SuspendAccountJob implements ShouldQueue
                     $domainService->suspend($domain, $reason);
                 }
             } catch (\Throwable $e) {
+                $failures++;
                 Log::error('SuspendAccountJob: failed to suspend domain', [
                     'domain_id' => $domain->id,
                     'error'     => $e->getMessage(),
@@ -69,6 +93,7 @@ class SuspendAccountJob implements ShouldQueue
                     $cronService->toggleStatus($cron);
                 }
             } catch (\Throwable $e) {
+                $failures++;
                 Log::error('SuspendAccountJob: failed to pause cron job', [
                     'cron_id' => $cron->id,
                     'error'   => $e->getMessage(),
@@ -83,6 +108,7 @@ class SuspendAccountJob implements ShouldQueue
                     $emailService->toggleStatus($email);
                 }
             } catch (\Throwable $e) {
+                $failures++;
                 Log::error('SuspendAccountJob: failed to suspend email account', [
                     'email_id' => $email->id,
                     'error'    => $e->getMessage(),
@@ -97,6 +123,7 @@ class SuspendAccountJob implements ShouldQueue
                     $ftp->update(['is_active' => false]);
                 }
             } catch (\Throwable $e) {
+                $failures++;
                 Log::error('SuspendAccountJob: failed to disable ftp account', [
                     'ftp_id' => $ftp->id,
                     'error'  => $e->getMessage(),
@@ -111,6 +138,7 @@ class SuspendAccountJob implements ShouldQueue
                     $database->update(['is_active' => false]);
                 }
             } catch (\Throwable $e) {
+                $failures++;
                 Log::error('SuspendAccountJob: failed to freeze database', [
                     'database_id' => $database->id,
                     'error'       => $e->getMessage(),
@@ -122,6 +150,7 @@ class SuspendAccountJob implements ShouldQueue
         try {
             $forceLogout->logoutUser($user->id);
         } catch (\Throwable $e) {
+            $failures++;
             Log::error('SuspendAccountJob: failed to force logout sessions', [
                 'user_id' => $user->id,
                 'error'   => $e->getMessage(),
@@ -132,12 +161,17 @@ class SuspendAccountJob implements ShouldQueue
             'account.suspend',
             $user->email,
             [
-                'user_id'   => $user->id,
-                'resources' => 'domains,crons,emails,ftp,databases',
-                'reason'    => $reason,
+                'user_id'          => $user->id,
+                'resources'        => 'domains,crons,emails,ftp,databases',
+                'reason'           => $reason,
+                'partial_failures' => $failures,
             ],
-            'info',
+            $failures > 0 ? 'warning' : 'info',
             $user->id,
         );
+
+        if ($failures > 0) {
+            Log::warning("SuspendAccountJob: suspended user {$user->id} with {$failures} partial failure(s).");
+        }
     }
 }

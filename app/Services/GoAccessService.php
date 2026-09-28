@@ -42,7 +42,7 @@ class GoAccessService
      */
     public function generateReport(Domain $domain): string
     {
-        $logPath    = "/var/log/nginx/{$domain->name}.access.log";
+        $logPath    = rtrim(config('larapanel.paths.nginx_logs', '/var/log/nginx'), '/') . "/{$domain->name}.access.log";
         $outputDir  = config('larapanel.goaccess.reports_path', '/var/larapanel/goaccess');
         $outputPath = "{$outputDir}/{$domain->name}.html";
 

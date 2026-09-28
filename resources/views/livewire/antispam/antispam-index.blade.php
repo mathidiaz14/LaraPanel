@@ -181,7 +181,7 @@
         <div class="glass lp-panel">
             <h2 class="panel-title" style="margin-bottom:14px;">Reglas Activas ({{ $rules->count() }})</h2>
             @if($rules->isEmpty())
-            <div style="text-align:center;padding:40px;color:var(--text-muted);">Sin reglas configuradas.</div>
+            <div style="text-align:center;padding:clamp(20px,6vw,40px);color:var(--text-muted);">Sin reglas configuradas.</div>
             @else
             <div style="overflow-x:auto;">
                 <table class="lp-table">
@@ -264,7 +264,7 @@
                     <div style="margin-top:12px;font-size:11px;color:var(--text-muted);background:var(--bg-elevated);padding:var(--sp-2);border-radius:var(--radius-sm);">{{ $testResult['message'] }}</div>
             @endif
             @else
-            <div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
+            <div style="text-align:center;padding:clamp(24px,8vw,60px) 16px;color:var(--text-muted);">
                 <i class="fa-solid fa-flask" style="font-size:40px;opacity:0.2;margin-bottom:12px;display:block;"></i>
                 Ingresa un mensaje y pulsa "Analizar" para ver los resultados.
             </div>

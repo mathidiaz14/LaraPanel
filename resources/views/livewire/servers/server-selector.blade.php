@@ -13,7 +13,7 @@
          x-transition:leave="transition ease-in duration-75"
          x-transition:leave-start="opacity-100 transform scale-100"
          x-transition:leave-end="opacity-0 transform scale-95"
-         style="position:absolute;right:0;top:100%;margin-top:var(--sp-1);width:240px;background:var(--bg-elevated);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--glass-border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:100;padding:var(--sp-1);display:none;"
+         style="position:absolute;right:0;top:100%;margin-top:var(--sp-1);width:240px;max-width:calc(100vw - 32px);background:var(--bg-elevated);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--glass-border);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);z-index:100;padding:var(--sp-1);display:none;"
          :style="{ display: open ? 'block' : 'none' }">
         
         <div style="font-size:10px;color:var(--text-muted);font-weight:700;padding:var(--sp-1) var(--sp-2);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--glass-bg);margin-bottom:var(--sp-1);">

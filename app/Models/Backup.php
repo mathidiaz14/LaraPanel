@@ -13,6 +13,7 @@ class Backup extends Model
     protected $fillable = [
         'user_id', 'domain_id', 'label', 'type', 'disk', 'remote_path', 'status',
         'filename', 'size_bytes', 'notes', 'error_message',
+        'verification_status', 'verified_at',
         'started_at', 'completed_at',
     ];
 
@@ -20,6 +21,7 @@ class Backup extends Model
         'size_bytes' => 'integer',
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'verified_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
@@ -30,6 +32,24 @@ class Backup extends Model
     public function domain(): BelongsTo
     {
         return $this->belongsTo(Domain::class);
+    }
+
+    public function verificationLabel(): string
+    {
+        return match ($this->verification_status) {
+            'verified' => 'Verificado',
+            'failed'   => 'Fallido',
+            default    => 'Pendiente',
+        };
+    }
+
+    public function verificationBadge(): string
+    {
+        return match ($this->verification_status) {
+            'verified' => 'badge-success',
+            'failed'   => 'badge-danger',
+            default    => 'badge-muted',
+        };
     }
 
     public function sizeFormatted(): string

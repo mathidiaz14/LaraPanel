@@ -24,16 +24,27 @@ class AuditLog extends Model
         array   $meta = [],
         string  $severity = 'info',
         ?int    $userId = null,
-    ): static {
-        return static::create([
-            'user_id'    => $userId ?? auth()->id(),
-            'action'     => $action,
-            'subject'    => $subject,
-            'meta'       => $meta,
-            'severity'   => $severity,
-            'ip_address' => request()?->ip(),
-            'user_agent' => request()?->userAgent(),
-        ]);
+    ): ?static {
+        try {
+            return static::create([
+                'user_id'    => $userId ?? auth()->id(),
+                'action'     => $action,
+                'subject'    => $subject,
+                'meta'       => $meta,
+                'severity'   => $severity,
+                'ip_address' => request()?->ip(),
+                'user_agent' => request()?->userAgent(),
+            ]);
+        } catch (\Throwable $e) {
+            // Audit logging must never break business logic (DB unavailable,
+            // schema missing during install, unit tests without migrations).
+            \Illuminate\Support\Facades\Log::warning(
+                'AuditLog::record failed',
+                ['action' => $action, 'error' => $e->getMessage()]
+            );
+
+            return null;
+        }
     }
 
     public function user()

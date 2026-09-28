@@ -54,7 +54,28 @@ Schedule::command('backups:run-scheduled')
     ->hourly()
     ->withoutOverlapping();
 
+// SSL certificate expiry monitoring: alert admins hourly
+Schedule::command('panel:check-ssl')
+    ->hourly()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/panel-check-ssl.log'));
+
+// Database backup integrity verification (restore into scratch DB)
+Schedule::command('panel:verify-backups')
+    ->dailyAt('02:30')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/panel-verify-backups.log'));
+
 // Prune stale phpMyAdmin SSO tokens (DB credentials must not linger in /tmp)
 Schedule::command('larapanel:cleanup-pma-sso')
     ->everyFiveMinutes()
     ->withoutOverlapping();
+
+// Composite server health score snapshot (server_health_snapshots)
+Schedule::command('panel:health-score')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/panel-health.log'));

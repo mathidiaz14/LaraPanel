@@ -3,9 +3,17 @@
 use App\Livewire\Dashboard;
 use App\Livewire\Domains\DomainIndex;
 use App\Livewire\Domains\DomainCreate;
+use App\Livewire\Domains\ErrorPages;
+use App\Livewire\Domains\StagingManager;
 use App\Livewire\SSL\SslIndex;
 use App\Livewire\SSL\SslIssue;
 use App\Livewire\SSL\SslInstall;
+use App\Livewire\SSL\SslMonitor;
+use App\Livewire\Cache\CacheIndex;
+use App\Livewire\Dependency\DependencyIndex;
+use App\Livewire\Health\HealthIndex;
+use App\Livewire\Logs\LogAggregate;
+use App\Livewire\Git\PipelineIndex;
 use App\Livewire\PHP\PhpIndex;
 use App\Livewire\Databases\DatabaseIndex;
 use App\Livewire\Files\FileManager;
@@ -71,11 +79,44 @@ Route::middleware(['auth'])->group(function () {
     // Domains
     Route::get('/domains',        DomainIndex::class)->name('domains.index');
     Route::get('/domains/create', DomainCreate::class)->name('domains.create');
+    Route::get('/domains/{domain}/error-pages', ErrorPages::class)
+        ->name('domains.error-pages')
+        ->whereNumber('domain');
+
+    Route::get('/domains/{domain}/staging', StagingManager::class)
+        ->name('domains.staging')
+        ->whereNumber('domain');
 
     // SSL
     Route::get('/ssl',         SslIndex::class)->name('ssl.index');
     Route::get('/ssl/issue',   SslIssue::class)->name('ssl.issue');
     Route::get('/ssl/install', SslInstall::class)->name('ssl.install');
+    Route::get('/ssl/monitor', SslMonitor::class)
+        ->name('ssl.monitor')
+        ->middleware(['role:admin']);
+
+    // Deploy pipelines (Git)
+    Route::get('/deploy/pipelines', PipelineIndex::class)->name('deploy.pipelines.index');
+
+    // Cache manager (Redis / Memcached) — admin only
+    Route::get('/cache', CacheIndex::class)
+        ->name('cache.index')
+        ->middleware(['role:admin', '2fa']);
+
+    // Aggregate logs across sources — admin only
+    Route::get('/logs/aggregate', LogAggregate::class)
+        ->name('logs.aggregate')
+        ->middleware(['role:admin', '2fa']);
+
+    // Dependencies / CVE monitor — admin only
+    Route::get('/dependencies', DependencyIndex::class)
+        ->name('dependencies.index')
+        ->middleware(['role:admin', '2fa']);
+
+    // Server health score — admin only
+    Route::get('/health', HealthIndex::class)
+        ->name('health.index')
+        ->middleware(['role:admin', '2fa']);
 
 
 
@@ -120,14 +161,14 @@ Route::middleware(['auth'])->group(function () {
     // Profile
     Route::get('/profile', \App\Livewire\Profile::class)->name('profile');
 
-    // Impersonation routes
+    // Impersonation routes (privileged: throttle against brute-force)
     Route::get('/admin/impersonate/{user}', [\App\Http\Controllers\Admin\ImpersonationController::class, 'start'])
         ->name('admin.impersonate.start')
-        ->middleware(['role:admin,reseller', 'password.confirm']);
+        ->middleware(['role:admin,reseller', 'password.confirm', 'throttle:10,1']);
 
     Route::get('/impersonate/stop', [\App\Http\Controllers\Admin\ImpersonationController::class, 'stop'])
         ->name('impersonate.stop')
-        ->middleware('role:admin,reseller');
+        ->middleware('auth');
 
     // ── Admin-Only Global & System Routes ────────────────────────────
     Route::middleware(['role:admin', '2fa'])->group(function () {
@@ -183,7 +224,7 @@ Route::middleware(['auth'])->group(function () {
           ->middleware(['role:admin', '2fa']);
         Route::get('/wordpress', WordPressIndex::class)->name('wordpress.index');
         
-        // Root phpMyAdmin Sign-on
+        // Root phpMyAdmin Sign-on (token issuance throttled)
         Route::get('/admin/db', function () {
             $token = Str::random(40);
             $tokenDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'larapanel_pma_sso';
@@ -200,7 +241,7 @@ Route::middleware(['auth'])->group(function () {
             chmod("$tokenDir/$token", 0600);
 
             return redirect('/pma/signon.php?token=' . $token);
-        })->name('admin.db');
+        })->name('admin.db')->middleware('throttle:20,1');
     });
 
     // ── Reseller & Admin routes ──────────────────────────────────────
@@ -222,5 +263,7 @@ Route::post('/api/webhooks/git/{uuid}', [GitWebhookController::class, 'handle'])
     ->middleware('throttle:60,1');
 
 // ── Webmail Auto-Login (Signed, Public) ───────────────────────────
-Route::get('/webmail/autologin/{token}', [WebmailAutoLoginController::class, 'autologin'])->name('webmail.autologin');
+Route::get('/webmail/autologin/{token}', [WebmailAutoLoginController::class, 'autologin'])
+    ->name('webmail.autologin')
+    ->middleware('throttle:30,1');
 

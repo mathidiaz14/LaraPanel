@@ -14,6 +14,7 @@ class SslIssue extends Component
     public ?int    $domainId   = null;
     public bool    $includeWww = true;
     public bool    $isWildcard = true;
+    public bool    $viaDns     = false;
     public array   $extraSans  = [];
     public string  $newSan     = '';
     public string  $errorMsg   = '';
@@ -24,6 +25,7 @@ class SslIssue extends Component
         'domainId'   => 'required|integer|exists:domains,id',
         'includeWww' => 'boolean',
         'isWildcard' => 'boolean',
+        'viaDns'     => 'boolean',
         'newSan'     => 'nullable|string|max:253',
     ];
 
@@ -52,6 +54,14 @@ class SslIssue extends Component
 
         $d = Domain::find($value);
         $this->isWildcard = $d && $d->type === 'main';
+    }
+
+    public function updatedIsWildcard($value): void
+    {
+        // Wildcards always require the DNS-01 challenge.
+        if ($value) {
+            $this->viaDns = true;
+        }
     }
 
     public function addSan(): void
@@ -85,9 +95,13 @@ class SslIssue extends Component
                 sanDomains: $this->extraSans,
                 includeWww: $this->includeWww,
                 isWildcard: $this->isWildcard,
+                viaDns:     $this->viaDns || $this->isWildcard,
             );
 
             $this->success = true;
+            $validatedVia = $this->viaDns || $this->isWildcard
+                ? 'Validación DNS-01 (PowerDNS)'
+                : 'Validación HTTP (webroot)';
 
             if ($this->isWildcard) {
                 $covered = Domain::where('user_id', auth()->id())
@@ -101,7 +115,7 @@ class SslIssue extends Component
                     . ($covered > 0 ? " ({$covered} subdominio(s) protegidos con HTTPS)" : '')
                     . ". Expira el {$cert->expires_at?->format('d/m/Y')}.";
             } else {
-                $this->successMsg = "¡Certificado SSL emitido correctamente para {$domain->name}! Expira el {$cert->expires_at?->format('d/m/Y')}.";
+                $this->successMsg = "¡Certificado SSL emitido correctamente para {$domain->name}! ({$validatedVia}) Expira el {$cert->expires_at?->format('d/m/Y')}.";
             }
 
         } catch (\Throwable $e) {

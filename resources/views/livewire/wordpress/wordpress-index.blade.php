@@ -1,4 +1,4 @@
-<div style="display:grid;grid-template-columns:300px 1fr;gap:24px;align-items:start;">
+<div class="lp-split" style="display:grid;grid-template-columns:300px minmax(0,1fr);gap:24px;align-items:start;">
     {{-- Sidebar: Instalaciones y Dominios --}}
     <div class="glass lp-panel" style="padding:var(--sp-4);">
         <h2 class="panel-title" style="margin-bottom:16px;"><i class="fa-brands fa-wordpress" style="color:var(--info);margin-right:8px;"></i> Dominios</h2>
@@ -24,7 +24,7 @@
     {{-- Main Panel --}}
     <div>
         @if(!$selectedDomain)
-            <div class="glass lp-panel" style="padding:60px 20px;text-align:center;">
+            <div class="glass lp-panel" style="padding:clamp(24px,8vw,60px) 16px;text-align:center;">
                 <i class="fa-brands fa-wordpress" style="font-size:48px;color:var(--info);opacity:0.2;margin-bottom:16px;display:block;"></i>
                 <h3 class="panel-title" style="font-size:18px;margin-bottom:8px;">Instalador 1-Click</h3>
                 <p style="color:var(--text-secondary);font-size:13px;max-width:400px;margin:0 auto;">

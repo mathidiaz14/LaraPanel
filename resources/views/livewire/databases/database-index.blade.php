@@ -89,7 +89,7 @@
             </h2>
 
             @if($databases->isEmpty())
-            <div style="text-align:center;padding:60px 20px;color:var(--text-secondary);">
+            <div style="text-align:center;padding:clamp(24px,8vw,60px) 16px;color:var(--text-secondary);">
                 <i class="fa-solid fa-database" style="font-size:40px;opacity:0.25;margin-bottom:14px;display:block;"></i>
                 No tiene bases de datos creadas. Use el formulario de la izquierda para comenzar.
             </div>

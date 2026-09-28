@@ -113,17 +113,21 @@ class RemoteShellExecutor
 
         // Mirror the local ShellExecutor audit trail for remote commands.
         if (class_exists(\App\Models\AuditLog::class)) {
-            \App\Models\AuditLog::record(
-                'shell.remote',
-                $cmdString,
-                [
-                    'server'   => $this->server->hostname,
-                    'exit_code' => $result->exitCode,
-                    'stdout'   => mb_substr($result->stdout, 0, 2000),
-                    'stderr'   => mb_substr($result->stderr, 0, 2000),
-                ],
-                $result->successful() ? 'info' : 'warning',
-            );
+            try {
+                \App\Models\AuditLog::record(
+                    'shell.remote',
+                    $cmdString,
+                    [
+                        'server'   => $this->server->hostname,
+                        'exit_code' => $result->exitCode,
+                        'stdout'   => mb_substr($result->stdout, 0, 2000),
+                        'stderr'   => mb_substr($result->stderr, 0, 2000),
+                    ],
+                    $result->successful() ? 'info' : 'warning',
+                );
+            } catch (\Throwable) {
+                // DB might not be available (install / unit tests without migrations).
+            }
         }
 
         return $result;

@@ -5,6 +5,7 @@ namespace App\Livewire\Backups;
 use App\Models\Backup;
 use App\Models\Domain;
 use App\Services\BackupService;
+use App\Services\BackupVerificationService;
 use Livewire\Component;
 
 class BackupIndex extends Component
@@ -85,6 +86,23 @@ class BackupIndex extends Component
             $this->viewingId = null;
         } catch (\Throwable $e) {
             $this->errorMessage = "Error al restaurar: " . $e->getMessage();
+        }
+    }
+
+    public function verifyBackup(int $id, BackupVerificationService $verificationService): void
+    {
+        $backup = Backup::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+
+        try {
+            $result = $verificationService->verify($backup);
+
+            if ($result['verified']) {
+                $this->successMessage = 'Verificación correcta: ' . $result['message'];
+            } else {
+                $this->errorMessage = 'Falló la verificación: ' . $result['message'];
+            }
+        } catch (\Throwable $e) {
+            $this->errorMessage = 'Error al verificar el backup: ' . $e->getMessage();
         }
     }
 

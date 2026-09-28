@@ -3,8 +3,13 @@
 namespace App\Livewire\Files;
 
 use App\Models\Setting;
+use App\Services\FileOperationsHelper;
 use App\Services\FileService;
+use App\Services\FileTreeBuilder;
 use App\Services\MonitoringService;
+use App\Shell\SudoExecutor;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -51,6 +56,9 @@ class FileManager extends Component
     public string $chmodOctal = '';
 
     public ?string $editingPath = null;
+
+    // Archivos abiertos (para la barra inferior / taskbar)
+    public array $openFiles = [];
 
     // Success/error alerts
     public string $successMessage = '';
@@ -117,6 +125,7 @@ class FileManager extends Component
     public function navigate(string $path): void
     {
         $this->currentPath = $path;
+        $this->expandTreePath($this->currentPath);
         $this->selectedItems = [];
         $this->showTrash = false;
         $this->resetModals();
@@ -131,9 +140,31 @@ class FileManager extends Component
         $parts = explode('/', trim($this->currentPath, '/'));
         array_pop($parts);
         $this->currentPath = implode('/', $parts);
+        $this->expandTreePath($this->currentPath);
         $this->selectedItems = [];
         $this->resetModals();
         $this->resetErrorAlerts();
+    }
+
+    /**
+     * Asegura que todos los niveles de una ruta estén expandidos en el árbol lateral.
+     */
+    protected function expandTreePath(string $path): void
+    {
+        $path = trim($path, '/');
+        $cumulative = '';
+        foreach (explode('/', $path) as $part) {
+            if ($part === '' || $part === '.' || $part === '..') {
+                continue;
+            }
+            $cumulative = $cumulative === '' ? $part : $cumulative . '/' . $part;
+            $this->expandedPaths[] = $cumulative;
+        }
+
+        // Root is always expanded
+        $this->expandedPaths[] = '';
+
+        $this->expandedPaths = FileTreeBuilder::normalizeExpandedPaths($this->expandedPaths);
     }
 
     protected function resetModals(): void
@@ -314,11 +345,17 @@ class FileManager extends Component
      */
     public function editFile(string $name, FileService $fileService): void
     {
-        $this->editingPath = $this->currentPath . '/' . $name;
+        $path = ltrim($this->currentPath . '/' . $name, '/');
+
+        if (! in_array($path, $this->openFiles, true)) {
+            $this->openFiles[] = $path;
+        }
+
+        $this->editingPath = $path;
         try {
-            $content = $fileService->getFileContent($this->editingPath);
+            $content = $fileService->getFileContent($path);
             $this->resetErrorAlerts();
-            $this->dispatch('open-editor', content: $content, filename: $name);
+            $this->dispatch('open-editor', content: $content, filename: $name, path: $path);
         } catch (\Throwable $e) {
             $this->errorMessage = $e->getMessage();
             $this->editingPath = null;
@@ -336,10 +373,22 @@ class FileManager extends Component
                 throw new \RuntimeException('No se pudo guardar el archivo.');
             }
             $this->successMessage = "Archivo guardado correctamente.";
-            $this->editingPath = null;
         } catch (\Throwable $e) {
             $this->errorMessage = $e->getMessage();
         }
+    }
+
+    /**
+     * Cerrar un archivo abierto y quitarlo de la barra inferior.
+     */
+    public function closeFile(string $path): void
+    {
+        $path = ltrim(str_replace(['..', "\0"], '', (string) $path), '/');
+        $this->openFiles = array_values(array_diff($this->openFiles, [$path]));
+        if ($this->editingPath === $path) {
+            $this->editingPath = null;
+        }
+        $this->dispatch('close-editor', path: $path);
     }
 
     /**
@@ -429,20 +478,7 @@ class FileManager extends Component
      */
     public function updatedUploads(FileService $fileService): void
     {
-        $allowedExtensions = [
-            'txt', 'log', 'md', 'csv', 'xml', 'json', 'yaml', 'yml',
-            'php', 'phtml', 'php5', 'php7', 'php8', 'inc',
-            'js', 'ts', 'jsx', 'tsx', 'css', 'scss', 'less',
-            'html', 'htm', 'shtml', 'xhtml',
-            'htaccess', 'htpasswd', 'env', 'ini', 'conf', 'cfg',
-            'sh', 'bash', 'zsh', 'py', 'rb', 'pl',
-            'sql', 'db', 'sqlite', 'sqlite3',
-            'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico', 'bmp', 'avif',
-            'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
-            'zip', 'tar', 'gz', 'bz2', 'xz', 'rar', '7z',
-            'mp3', 'mp4', 'avi', 'mov', 'mkv', 'webm', 'ogg', 'wav',
-            'ttf', 'otf', 'woff', 'woff2', 'eot',
-        ];
+        $allowedExtensions = FileService::UPLOAD_EXTENSIONS;
 
         $this->validate([
             'uploads.*' => 'file|max:10485760',
@@ -470,7 +506,7 @@ class FileManager extends Component
                 // Unique temp name to avoid collisions between files of the same name
                 $tmpName = $index . '_' . $filename;
                 $tmpPath = $upload->storeAs('livewire-tmp', $tmpName);
-                $fullTmpPath = \Illuminate\Support\Facades\Storage::disk('local')->path($tmpPath);
+                $fullTmpPath = Storage::disk('local')->path($tmpPath);
 
                 // Folders dropped as a whole keep their relative structure
                 $relativePath = $this->uploadPaths[$index] ?? null;
@@ -489,10 +525,10 @@ class FileManager extends Component
 
                     if (! is_dir($destDirAbs)) {
                         if (PHP_OS_FAMILY !== 'Windows') {
-                            app(\App\Shell\SudoExecutor::class)->run(['mkdir', '-p', $destDirAbs]);
-                            app(\App\Shell\SudoExecutor::class)->run(['chown', 'www-data:www-data', $destDirAbs]);
+                            app(SudoExecutor::class)->run(['mkdir', '-p', $destDirAbs]);
+                            app(SudoExecutor::class)->run(['chown', 'www-data:www-data', $destDirAbs]);
                         } else {
-                            @mkdir($destDirAbs, 0755, true);
+                            File::makeDirectory($destDirAbs, 0755, true, true);
                         }
                     }
 
@@ -502,11 +538,11 @@ class FileManager extends Component
                 }
 
                 if (PHP_OS_FAMILY !== 'Windows') {
-                    app(\App\Shell\SudoExecutor::class)->run(['cp', $fullTmpPath, $destPath]);
-                    app(\App\Shell\SudoExecutor::class)->run(['chown', 'www-data:www-data', $destPath]);
+                    app(SudoExecutor::class)->run(['cp', $fullTmpPath, $destPath]);
+                    app(SudoExecutor::class)->run(['chown', 'www-data:www-data', $destPath]);
                     unlink($fullTmpPath);
                 } else {
-                    @mkdir(dirname($destPath), 0755, true);
+                    File::makeDirectory(dirname($destPath), 0755, true, true);
                     rename($fullTmpPath, $destPath);
                 }
             }
@@ -726,22 +762,19 @@ class FileManager extends Component
                 $this->errorMessage = $e->getMessage();
                 return;
             }
-            if ($isDir) {
-                $srcNorm = rtrim($src, '/');
-                if ($dest === $srcNorm || str_starts_with($dest . '/', $srcNorm . '/')) {
-                    $this->errorMessage = 'No puedes copiar o mover un directorio dentro de sí mismo.';
-                    return;
-                }
+            if ($isDir && FileOperationsHelper::wouldNestDestination($dest, $src)) {
+                $this->errorMessage = 'No puedes copiar o mover un directorio dentro de sí mismo.';
+                return;
             }
         }
 
         $processed = 0;
         $hadError = false;
         foreach ($this->clipboardItems as $src) {
-            $name = basename(\App\Services\FileService::normalizeSeparators($src));
+            $name = basename(FileService::normalizeSeparators($src));
 
             // Mover al mismo directorio no hace nada.
-            $srcParent = trim(dirname(\App\Services\FileService::normalizeSeparators($src)), '/');
+            $srcParent = trim(dirname(FileService::normalizeSeparators($src)), '/');
             if ($mode === 'cut' && $srcParent === $dest) {
                 $processed++;
                 continue;
@@ -791,6 +824,7 @@ class FileManager extends Component
     public function pasteClipboardTo(string $folderPath, FileService $fileService): void
     {
         $this->currentPath = trim(str_replace(['..', "\0"], '', $folderPath), '/');
+        $this->expandTreePath($this->currentPath);
         $this->pasteClipboard($fileService);
     }
 
@@ -799,7 +833,7 @@ class FileManager extends Component
      */
     public function toggleSelection(string $name): void
     {
-        $name = basename(\App\Services\FileService::normalizeSeparators(trim((string) $name)));
+        $name = FileOperationsHelper::normalizeName((string) $name);
         if ($name === '' || $name === '.' || $name === '..') {
             return;
         }
@@ -817,15 +851,7 @@ class FileManager extends Component
      */
     protected function buildClipboardPaths(array $names): array
     {
-        $paths = [];
-        foreach ($names as $name) {
-            $name = basename(\App\Services\FileService::normalizeSeparators(trim((string) $name)));
-            if ($name === '' || $name === '.' || $name === '..' || $name === '.larapanel-trash') {
-                continue;
-            }
-            $paths[] = ltrim($this->currentPath . '/' . $name, '/');
-        }
-        return array_values(array_unique($paths));
+        return FileOperationsHelper::buildClipboardPaths($names, $this->currentPath);
     }
 
     /**
@@ -833,29 +859,7 @@ class FileManager extends Component
      */
     protected function uniqueDestinationName(FileService $fileService, string $destParent, string $name): string
     {
-        $destParent = trim($destParent, '/');
-        $prefix = $destParent === '' ? '' : $destParent . '/';
-
-        if (! file_exists($fileService->resolvePath($prefix . $name))) {
-            return $name;
-        }
-
-        $dotParts = explode('.', $name);
-        $ext = count($dotParts) > 1 && $dotParts[count($dotParts) - 1] !== '' ? '.' . array_pop($dotParts) : '';
-        $base = implode('.', $dotParts);
-        if ($base === '') {
-            $base = $name;
-            $ext = '';
-        }
-
-        for ($i = 2; $i <= 9999; $i++) {
-            $candidate = $base . ' (' . $i . ')' . $ext;
-            if (! file_exists($fileService->resolvePath($prefix . $candidate))) {
-                return $candidate;
-            }
-        }
-
-        throw new \RuntimeException("No se pudo generar un nombre libre para '{$name}' en el destino.");
+        return FileOperationsHelper::uniqueDestinationName($fileService, $destParent, $name);
     }
 
     /**
@@ -880,7 +884,7 @@ class FileManager extends Component
 
         $sources = [];
         foreach ($items as $name) {
-            $name = basename(\App\Services\FileService::normalizeSeparators(trim((string) $name, '/')));
+            $name = FileOperationsHelper::normalizeName((string) $name, '/');
             if ($name === '' || $name === '.' || $name === '..') {
                 continue;
             }
@@ -899,7 +903,7 @@ class FileManager extends Component
 
         // Prevenir mover/copiar un directorio dentro de sí mismo o de sus subdirectorios.
         foreach ($sources as $source) {
-            if (is_dir($fileService->resolvePath($source)) && str_starts_with(rtrim($destPath, '/') . '/', rtrim($source, '/') . '/')) {
+            if (is_dir($fileService->resolvePath($source)) && FileOperationsHelper::wouldNestDestination($destPath, $source)) {
                 $this->errorMessage = 'No puedes mover un directorio dentro de sí mismo.';
                 return;
             }
@@ -994,7 +998,7 @@ class FileManager extends Component
 
     protected function buildTreeLevel(string $path, FileService $fileService, int $depth = 0): array
     {
-        $maxDepth = 6;
+        $maxDepth = 12;
         $tree = [];
         try {
             $items = $fileService->listDirectory($path);
@@ -1104,6 +1108,7 @@ class FileManager extends Component
             'favoritesList' => $favoritesList,
             'trashItems' => $trashItems,
             'trashCount' => $trashCount,
+            'openFiles' => $this->openFiles,
         ])->layout('layouts.app', [
             'title'      => 'Administrador de Archivos',
             'breadcrumb' => '<span>Hosting</span> / <strong>Administrador de Archivos</strong>',

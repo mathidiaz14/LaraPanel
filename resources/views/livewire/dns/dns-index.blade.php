@@ -29,7 +29,7 @@
 
     @if($zones->isEmpty())
     {{-- Empty state --}}
-    <div class="glass lp-panel" style="text-align:center;padding:60px;">
+    <div class="glass lp-panel" style="text-align:center;padding:clamp(24px,8vw,60px);;">
         <div style="width:72px;height:72px;border-radius:var(--radius-pill);background:color-mix(in srgb, var(--accent) 10%, transparent);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
             <i class="fa-solid fa-server" style="font-size:28px;color:var(--accent-light);"></i>
         </div>

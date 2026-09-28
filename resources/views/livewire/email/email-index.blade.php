@@ -93,7 +93,7 @@
             </div>
 
             @if($emailsByDomain->isEmpty())
-            <div style="text-align:center;padding:60px 20px;color:var(--text-secondary);">
+            <div style="text-align:center;padding:clamp(24px,8vw,60px) 16px;color:var(--text-secondary);">
                 <i class="fa-solid fa-envelope-open" style="font-size:40px;opacity:0.25;margin-bottom:14px;display:block;"></i>
                 @if($search)
                     No se encontraron cuentas que coincidan con "<strong>{{ $search }}</strong>".

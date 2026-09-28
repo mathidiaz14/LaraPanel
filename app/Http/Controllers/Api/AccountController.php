@@ -3,32 +3,23 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\CreateAccountRequest;
+use App\Http\Requests\Api\ManageAccountRequest;
 use App\Jobs\SuspendAccountJob;
 use App\Jobs\TerminateAccountJob;
 use App\Models\AuditLog;
-use App\Models\Plan;
 use App\Models\User;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class AccountController extends Controller
 {
     /**
      * Create a new hosting account (User + Base Domain limits)
      * POST /api/v1/accounts/create
-     *
-     * @throws \Illuminate\Validation\ValidationException
      */
-    public function create(Request $request)
+    public function create(CreateAccountRequest $request)
     {
-        $validated = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email',
-            'password' => 'required|min:8|max:72',
-            'plan_id'  => 'required|exists:plans,id',
-            'domain'   => 'nullable|string', // Primary domain
-        ]);
+        $validated = $request->validated();
 
         $user = User::create([
             'name'      => $validated['name'],
@@ -59,7 +50,7 @@ class AccountController extends Controller
      * Suspend a hosting account
      * POST /api/v1/accounts/{id}/suspend
      */
-    public function suspend(Request $request, int $id)
+    public function suspend(ManageAccountRequest $request, int $id)
     {
         $user = $this->manageableAccount($request, $id);
 
@@ -88,7 +79,7 @@ class AccountController extends Controller
      * Unsuspend a hosting account
      * POST /api/v1/accounts/{id}/unsuspend
      */
-    public function unsuspend(Request $request, int $id)
+    public function unsuspend(ManageAccountRequest $request, int $id)
     {
         $user = $this->manageableAccount($request, $id);
 
@@ -114,7 +105,7 @@ class AccountController extends Controller
      * Terminate (delete) a hosting account and all its data
      * DELETE /api/v1/accounts/{id}
      */
-    public function terminate(Request $request, int $id)
+    public function terminate(ManageAccountRequest $request, int $id)
     {
         $user = $this->manageableAccount($request, $id);
 
@@ -138,7 +129,7 @@ class AccountController extends Controller
      * Load the target account and enforce that the caller cannot manage
      * self-declared admins or its own account via the API.
      */
-    private function manageableAccount(Request $request, int $id): User
+    private function manageableAccount(ManageAccountRequest $request, int $id): User
     {
         $user = User::findOrFail($id);
 

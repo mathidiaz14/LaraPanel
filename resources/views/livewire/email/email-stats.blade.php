@@ -28,7 +28,7 @@
         </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:220px 1fr;gap:20px;align-items:start;">
+    <div class="lp-split" style="display:grid;grid-template-columns:220px minmax(0,1fr);gap:20px;align-items:start;">
 
         {{-- Domain selector --}}
         <div class="glass" style="padding:18px;">
@@ -149,12 +149,12 @@
 
         </div>
         @elseif($selectedDomainId && $accounts->isEmpty())
-        <div class="glass" style="padding:40px;text-align:center;">
+        <div class="glass" style="padding:clamp(20px,6vw,40px);text-align:center;">
             <i class="fa-solid fa-inbox" style="font-size:36px;opacity:0.2;margin-bottom:12px;display:block;"></i>
                 <p style="color:var(--text-secondary);">No hay buzones en este dominio. <a href="{{ route('email.index') }}" class="btn btn-ghost btn-sm">Crear uno</a>.</p>
         </div>
         @else
-        <div class="glass" style="padding:60px;text-align:center;">
+        <div class="glass" style="padding:clamp(24px,8vw,60px);;text-align:center;">
             <i class="fa-solid fa-chart-bar" style="font-size:40px;opacity:0.2;margin-bottom:12px;display:block;"></i>
             <p style="color:var(--text-secondary);">Selecciona un dominio para ver las estadísticas de sus buzones.</p>
         </div>

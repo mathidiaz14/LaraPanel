@@ -10,6 +10,13 @@ class MultiTenantTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // These tests cover role boundaries/impersonation, not 2FA enrollment.
+        config(['larapanel.security.2fa_required_for_admin' => false]);
+    }
+
     public function test_role_middleware_blocks_clients_from_admin_routes()
     {
         $client = User::factory()->create(['role' => 'client']);
@@ -36,6 +43,7 @@ class MultiTenantTest extends TestCase
         $client2 = User::factory()->create(['role' => 'client', 'parent_id' => $reseller2->id]);
 
         // Reseller 1 CAN impersonate Client 1
+        session(['auth.password_confirmed_at' => now()->timestamp]);
         $response = $this->actingAs($reseller1)->get("/admin/impersonate/{$client1->id}");
         $response->assertRedirect('/');
         $this->assertEquals($client1->id, auth()->id());
