@@ -79,7 +79,29 @@ mkdir -p "$PANEL_DIR/storage/framework/"{sessions,views,cache/data} "$PANEL_DIR/
 touch "$PANEL_DIR/database/database.sqlite" || true
 
 chown -R www-data:www-data "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache" "$PANEL_DIR/database"
-chmod -R 777 "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache" "$PANEL_DIR/database"
+
+# Hardening 2026-09-30: era `chmod -R 777`. Consecuencia: en cada actualización
+# del panel, storage/app/public/dkim/ (claves privadas DKIM de todos los
+# tenants, servidas vía el symlink public/storage) quedaba 0777 y las claves se
+# descargaban por HTTP. Lo mismo con bootstrap/cache, que permite a cualquier
+# usuario local envenenar packages.php/services.php y ejecutar código.
+#
+# 0770 en directorios y 0660 en archivos: www-data (php-fpm) y larapanel
+# (queue/scheduler) siguen pudiendo escribir, pero el resto del sistema no.
+chmod -R 770 "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache" "$PANEL_DIR/database"
+find "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache" "$PANEL_DIR/database" -type f -exec chmod 660 {} +
+
+# El `chown` de arriba es recursivo y en esta pasada algunos archivos los había
+# creado root (p. ej. si el updater previo se ejecutó como root). php-fpm corre
+# como www-data y necesita leer packages.php/services.php; con 0660 y dueño root
+# el panel devolvía 500 con "Failed to open stream: Permission denied".
+# Normalizamos dueño y grupo en toda la estructura.
+chown -R www-data:www-data "$PANEL_DIR/storage" "$PANEL_DIR/bootstrap/cache" "$PANEL_DIR/database"
+
+# El .env lo lee php-fpm (www-data) y la cola (larapanel) vía grupo www-data,
+# pero no lo escribe ninguno de los dos: solo root, con `install`/deploys.
+chown root:www-data "$PANEL_DIR/.env"
+chmod 640 "$PANEL_DIR/.env"
 
 # ─── 8. Reiniciar worker de colas ─────────────────────────────────────────────
 log_info "Reiniciando el worker de colas (Queue Worker)..."

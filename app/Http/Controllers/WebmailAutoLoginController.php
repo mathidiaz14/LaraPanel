@@ -29,8 +29,14 @@ class WebmailAutoLoginController extends Controller
         $tokenDir = '/tmp/larapanel_autologin';
         if (!is_dir($tokenDir)) {
             @mkdir($tokenDir, 0770, true);
-            @chmod($tokenDir, 0770);
         }
+
+        // El directorio y los tokens los lee PHP-FPM como www-data. Si el
+        // directorio quedo con otro owner (p.ej. 777 de install.sh, o root:root
+        // tras un restore), FPM no puede escribir y el autologin falla en
+        // silencio. Forzamos owner/grupo de forma explicita.
+        @chown($tokenDir, 'www-data');
+        @chgrp($tokenDir, 'www-data');
         @chmod($tokenDir, 0770);
 
         $roundcubeToken = \Illuminate\Support\Str::random(40);

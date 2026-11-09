@@ -177,7 +177,37 @@ class BackupService
             }
         }
 
-        if ($type === 'files' || $type === 'full') {
+        if (app()->isProduction() && is_dir($backupRoot)) {
+            // Limpiar restos de backups interrumpidos (procesos muertos por OOM/disco lleno).
+            foreach (glob($backupRoot . '/*.new') ?: [] as $stale) {
+                if (@filemtime($stale) < time() - 3600) {
+                    $this->sudo->run(['rm', '-f', $stale], checkExit: false);
+                }
+            }
+        }
+
+        // Un backup full se genera en una sola pasada (archivos + buzones + dump).
+        // Antes se creaba primero un tar solo de archivos y luego el tar final,
+        // duplicando el espacio necesario en disco.
+        if (app()->isProduction() && $type === 'full') {
+            $lastSize = (int) Backup::where('user_id', $user->id)
+                ->where('type', 'full')
+                ->where('status', 'completed')
+                ->latest('id')
+                ->value('size_bytes');
+            $required = max(5 * 1024 ** 3, (int) ceil($lastSize * 1.25));
+            $free     = @disk_free_space($backupRoot) ?: 0;
+
+            if ($free < $required) {
+                throw new \RuntimeException(sprintf(
+                    'Espacio insuficiente para backup full: libre %.2f GB, requerido ~%.2f GB.',
+                    $free / 1073741824,
+                    $required / 1073741824
+                ));
+            }
+        }
+
+        if ($type === 'files' || ($type === 'full' && !app()->isProduction())) {
             $this->backupFiles($destPath, $domainId, $user, $data);
         }
 
@@ -238,6 +268,9 @@ class BackupService
                     @unlink($tmpDir . '/files.tar');
                     @rmdir($tmpDir);
                 }
+            } elseif ($type === 'full') {
+                // Sin bases de datos: el backup full contiene solo archivos.
+                $this->backupFiles($destPath, $domainId, $user, $data);
             }
         }
 

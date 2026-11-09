@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Shell\ShellExecutor;
+use App\Shell\SudoExecutor;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -13,7 +13,7 @@ class DockerService
     private const IMAGE_FORMAT     = '{"id":"{{.ID}}","repo":"{{.Repository}}","tag":"{{.Tag}}","size":"{{.Size}}","created":"{{.CreatedAt}}"}';
 
     public function __construct(
-        protected ShellExecutor $shell
+        protected SudoExecutor $shell
     ) {}
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -164,7 +164,7 @@ class DockerService
         }
 
         try {
-            $result = $this->shell->withTimeout(300)->withEnv(['HOME' => '/tmp'])->run(['docker', 'pull', $image], checkExit: false);
+            $result = $this->shell->withTimeout(300)->run(['docker', 'pull', $image], checkExit: false);
             return trim($result->stdout . "\n" . $result->stderr);
         } catch (\Throwable $e) {
             return "Error: " . $e->getMessage();
@@ -217,7 +217,6 @@ class DockerService
         try {
             $result = $this->shell
                 ->withTimeout(300)
-                ->withEnv(['HOME' => $path])
                 ->inDirectory($path)
                 ->run(['docker', 'compose', '-f', $file, 'up', '-d', '--remove-orphans'], checkExit: false);
 
@@ -243,7 +242,6 @@ class DockerService
         try {
             $result = $this->shell
                 ->withTimeout(60)
-                ->withEnv(['HOME' => $path])
                 ->run(['docker', 'compose', '-f', $file, 'down'], checkExit: false);
             return trim($result->stdout . "\n" . $result->stderr);
         } catch (\Throwable $e) {
@@ -267,7 +265,6 @@ class DockerService
         try {
             $result = $this->shell
                 ->withTimeout(15)
-                ->withEnv(['HOME' => $path])
                 ->run(['docker', 'compose', '-f', $file, 'logs', '--tail', (string)$lines, '--timestamps'], checkExit: false);
             return trim($result->stdout . "\n" . $result->stderr);
         } catch (\Throwable $e) {
@@ -296,7 +293,6 @@ class DockerService
         try {
             $result = $this->shell
                 ->withTimeout(300)
-                ->withEnv(['HOME' => $path])
                 ->inDirectory($path)
                 ->run($cmd, checkExit: false);
 

@@ -106,7 +106,14 @@ class GitService
                 $outputBuffer .= "\n>>> Executing custom deployment script...\n";
                 // Write script to a temporary file, run it, and delete it
                 $scriptPath = $domainPath . '/.deploy_script.sh';
-                file_put_contents($scriptPath, $deployment->deploy_script);
+                
+                // Prepend environment cleanup to prevent PHP-FPM env vars from leaking
+                $cleanEnvScript = "# Clean inherited environment variables from PHP-FPM\n" .
+                    "unset DB_DATABASE DB_USERNAME DB_PASSWORD DB_HOST DB_PORT DB_CONNECTION\n" .
+                    "unset APP_KEY APP_ENV APP_DEBUG APP_URL APP_NAME\n\n" .
+                    $deployment->deploy_script;
+                
+                file_put_contents($scriptPath, $cleanEnvScript);
                 chmod($scriptPath, 0755);
                 
                 $result = Process::path($domainPath)

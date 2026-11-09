@@ -83,6 +83,11 @@ class SslService
 
         try {
             if (app()->isProduction()) {
+                // Self-heal stale vhosts that predate the ACME challenge block,
+                // otherwise every renewal attempt would fail before the config
+                // could be regenerated after issuance.
+                $this->ensureAcmeChallengeServed($domain);
+
                 $this->runAcmeSh($domain, $allDomains, $cert, $isWildcard, $viaDns);
             } else {
                 // Development mode: simulate certificate issuance
@@ -260,7 +265,7 @@ class SslService
 
         // Asegurar que PHP pueda leer los archivos generados por root (acme.sh)
         $this->sudo->run(['chown', '-R', 'www-data:www-data', $certDir]);
-        $this->sudo->run(['chmod', '600', $keyFile]);
+        $this->sudo->run(['chmod', '640', $keyFile]);
 
         // Read the issued cert to extract expiry
         $certContent  = file_get_contents($certFile);
@@ -391,7 +396,7 @@ class SslService
 
         // Asegurar que PHP pueda leer los archivos generados por root (openssl)
         $this->sudo->run(['chown', '-R', 'www-data:www-data', $certDir]);
-        $this->sudo->run(['chmod', '600', "{$certDir}/privkey.pem"]);
+        $this->sudo->run(['chmod', '640', "{$certDir}/privkey.pem"]);
 
         $certContent = file_get_contents("{$certDir}/fullchain.pem");
         $keyContent  = file_get_contents("{$certDir}/privkey.pem");
@@ -668,18 +673,79 @@ class SslService
         if (app()->isProduction()) {
             // Generate and deploy SSL vhost config
             $config = $this->domains->generateNginxSslConfig($domain, $certFile, $keyFile);
-            $sitesAvail   = config('larapanel.paths.nginx_sites');
-            $sitesEnabled = config('larapanel.paths.nginx_enabled');
+            $this->writeVhost($domain, $config, $reload);
+        }
+    }
 
-            $tmp = tempnam(sys_get_temp_dir(), 'lp_ssl_');
-            file_put_contents($tmp, $config);
-            $this->sudo->run(['cp', $tmp, "{$sitesAvail}/{$domain->name}"]);
-            @unlink($tmp);
-            $this->sudo->run(['ln', '-sf', "{$sitesAvail}/{$domain->name}", "{$sitesEnabled}/{$domain->name}"]);
+    /**
+     * Ensure the live Nginx vhost serves the ACME HTTP-01 challenge before a
+     * certificate is requested.
+     *
+     * Older generated vhosts may lack the /.well-known/acme-challenge/ location.
+     * Because the vhost is only redeployed *after* a successful issuance, such a
+     * stale config makes every renewal fail forever. This method regenerates the
+     * vhost (preserving the certificate paths currently in use, which matters
+     * for subdomains covered by a parent wildcard certificate) so the next
+     * renewal can succeed without manual intervention.
+     */
+    protected function ensureAcmeChallengeServed(Domain $domain): void
+    {
+        if (!app()->isProduction()) {
+            return;
+        }
 
-            if ($reload) {
-                $this->sudo->reloadNginx();
+        $sitesEnabled = config('larapanel.paths.nginx_enabled');
+        $configFile   = "{$sitesEnabled}/{$domain->name}";
+
+        if (!is_file($configFile)) {
+            return;
+        }
+
+        $config = (string) file_get_contents($configFile);
+
+        // Already fine, or not managed by LaraPanel (never touch manual configs).
+        if (str_contains($config, '.well-known/acme-challenge') || !str_contains($config, 'LaraPanel')) {
+            return;
+        }
+
+        if (preg_match('/ssl_certificate\s+([^;]+);/', $config, $certMatch)
+            && preg_match('/ssl_certificate_key\s+([^;]+);/', $config, $keyMatch)) {
+            $certFile = trim($certMatch[1]);
+            $keyFile  = trim($keyMatch[1]);
+
+            // Only redeploy over an existing, valid certificate. Without one a
+            // reload would fail (e.g. brand-new domains).
+            if (!is_file($certFile) || !is_file($keyFile)) {
+                return;
             }
+
+            $newConfig = $this->domains->generateNginxSslConfig($domain, $certFile, $keyFile);
+        } else {
+            $newConfig = $this->domains->generateNginxConfig($domain);
+        }
+
+        $this->writeVhost($domain, $newConfig);
+
+        Log::info('SSL: vhost regenerated to serve ACME challenge', ['domain' => $domain->name]);
+    }
+
+    /**
+     * Write a generated vhost to sites-available, enable it and (optionally)
+     * reload Nginx.
+     */
+    protected function writeVhost(Domain $domain, string $config, bool $reload = true): void
+    {
+        $sitesAvail   = config('larapanel.paths.nginx_sites');
+        $sitesEnabled = config('larapanel.paths.nginx_enabled');
+
+        $tmp = tempnam(sys_get_temp_dir(), 'lp_vhost_');
+        file_put_contents($tmp, $config);
+        $this->sudo->run(['cp', $tmp, "{$sitesAvail}/{$domain->name}"]);
+        @unlink($tmp);
+        $this->sudo->run(['ln', '-sf', "{$sitesAvail}/{$domain->name}", "{$sitesEnabled}/{$domain->name}"]);
+
+        if ($reload) {
+            $this->sudo->reloadNginx();
         }
     }
 
@@ -702,7 +768,7 @@ class SslService
         @unlink($tmpKey);
         @unlink($tmpChain);
         $this->sudo->run(['chown', '-R', 'www-data:www-data', $certDir]);
-        $this->sudo->run(['chmod', '600', "{$certDir}/privkey.pem"]);
+        $this->sudo->run(['chmod', '640', "{$certDir}/privkey.pem"]);
     }
 
     // ────────────────────────────────────────────────────────────────

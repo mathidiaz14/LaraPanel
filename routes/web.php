@@ -255,6 +255,9 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/settings',   \App\Livewire\Admin\Settings::class)->name('settings');
         });
     });
+
+    // ── OpenCode AI Assistant ───────────────────────────────────────
+
 });
 
 // ── Webhooks (Public) ─────────────────────────────────────────────

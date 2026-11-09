@@ -363,7 +363,6 @@ fi
 
 usermod -aG www-data "$PANEL_USER"
 usermod -aG docker "$PANEL_USER"
-usermod -aG docker www-data
 
 success "Usuario '$PANEL_USER' configurado."
 
@@ -444,7 +443,13 @@ PDNS_API_KEY=${PDNS_API_KEY}
 RSPAMD_PASSWORD=${RSPAMD_PASSWORD}
 ENV_EOF
 
-# Cambiar el propietario de .env al usuario del panel para que pueda escribir la clave
+# El .env lo leen php-fpm (www-data) y la cola/scheduler (PANEL_USER) vía el
+# grupo www-data. El dueño es root para que ninguno de los dos pueda escribirlo
+# en caliente: si un RCE consigue editar APP_KEY, puede falsificar cualquier
+# cookie o la firma de los snapshot de Livewire. Hardening 2026-09-30.
+# Durante la instalación el .env tiene que ser escribible por el usuario del
+# panel (key:generate, DB_PASSWORD, etc.). Se endurece a root:www-data 640 más
+# abajo, ya con las migraciones y los caches hechos.
 chown "${PANEL_USER}:www-data" "${INSTALL_DIR}/.env"
 chmod 640 "${INSTALL_DIR}/.env"
 
@@ -474,7 +479,25 @@ sudo -u "$PANEL_USER" php artisan event:cache
 mkdir -p "${INSTALL_DIR}/storage/framework/"{sessions,views,cache/data} "${INSTALL_DIR}/storage/logs" "${INSTALL_DIR}/bootstrap/cache" "${INSTALL_DIR}/database"
 touch "${INSTALL_DIR}/database/database.sqlite" || true
 chown -R www-data:www-data "${INSTALL_DIR}/storage" "${INSTALL_DIR}/bootstrap/cache" "${INSTALL_DIR}/database"
-chmod -R 777 "${INSTALL_DIR}/storage" "${INSTALL_DIR}/bootstrap/cache" "${INSTALL_DIR}/database"
+# Hardening 2026-09-30: era `chmod -R 777`. Eso dejaba world-writable
+# storage/app/public (servido por HTTP vía el symlink public/storage, donde
+# viven las claves privadas DKIM) y bootstrap/cache (cualquier usuario local
+# puede envenenar packages.php y ejecutar código como www-data, que tiene sudo).
+# 0770 directorios / 0660 archivos: www-data (php-fpm) y el usuario del panel
+# (queue/scheduler) siguen escribiendo; el resto del sistema, no.
+chmod -R 770 "${INSTALL_DIR}/storage" "${INSTALL_DIR}/bootstrap/cache" "${INSTALL_DIR}/database"
+find "${INSTALL_DIR}/storage" "${INSTALL_DIR}/bootstrap/cache" "${INSTALL_DIR}/database" -type f -exec chmod 660 {} +
+
+# Reafirmar dueño www-data: si algún artefacto quedó creado por root (p. ej. un
+# artisan previo), con 0660 y dueño root php-fpm no puede leer packages.php y el
+# panel devuelve 500.
+chown -R www-data:www-data "${INSTALL_DIR}/storage" "${INSTALL_DIR}/bootstrap/cache" "${INSTALL_DIR}/database"
+
+# Endurecer el .env recién ahora, cuando la instalación ya no necesita escribirlo.
+# Dueño root: si un RCE en el panel edita APP_KEY, puede falsificar cookies,
+# sesiones y la firma HMAC de los snapshot de Livewire.
+chown root:www-data "${INSTALL_DIR}/.env"
+chmod 640 "${INSTALL_DIR}/.env"
 
 success "Aplicación Laravel configurada."
 
@@ -1218,7 +1241,8 @@ chown -R root:root "${PLUGIN_DIR}"
 chmod -R 755 "${PLUGIN_DIR}"
 
 mkdir -p /tmp/larapanel_autologin
-chmod 777 /tmp/larapanel_autologin
+chown www-data:www-data /tmp/larapanel_autologin
+chmod 770 /tmp/larapanel_autologin
 
 chown -R root:www-data /etc/roundcube
 chmod 640 /etc/roundcube/config.inc.php

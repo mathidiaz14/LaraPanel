@@ -254,6 +254,8 @@
                     </a>
                 @endif
 
+
+
                 @if(auth()->user()?->isAdmin())
                     @if(config('larapanel.modules.monitoring') || config('larapanel.modules.phpmanager') || config('larapanel.modules.logs'))
                         <div class="nav-section-title">Sistema</div>

@@ -76,6 +76,9 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // OpenCode permissions
+
+
         // 0. Central authorization policies (granular, out of services)
         Gate::policy(Domain::class, DomainPolicy::class);
         Gate::policy(DatabaseInstance::class, DatabasePolicy::class);
@@ -91,21 +94,31 @@ class AppServiceProvider extends ServiceProvider
             database_path(),
         ];
 
+        // Hardening 2026-09-30: these were 0777, which is world-writable on
+        // every request. That reverts any tightening an admin applies (self-
+        // healing in the wrong direction) and lets any local user tamper with
+        // bootstrap/cache/packages.php (service-provider manifest poisoning ->
+        // code execution as www-data -> sudo) or write into storage.
+        //
+        // 0770 is required, not 0750: www-data and larapanel are distinct
+        // accounts (php-fpm vs queue workers) and share group www-data, so the
+        // group needs write to create compiled views and cache entries.
         foreach ($frameworkPaths as $path) {
             if (!is_dir($path)) {
-                @mkdir($path, 0777, true);
+                @mkdir($path, 0770, true);
             }
             if (is_dir($path) && !is_writable($path)) {
-                @chmod($path, 0777);
+                @chmod($path, 0770);
             }
         }
 
+        // 0660 rather than 0666: same reasoning, without the world bit.
         $sqliteFile = database_path('database.sqlite');
         if (!file_exists($sqliteFile)) {
             @touch($sqliteFile);
-            @chmod($sqliteFile, 0666);
+            @chmod($sqliteFile, 0660);
         } elseif (!is_writable($sqliteFile)) {
-            @chmod($sqliteFile, 0666);
+            @chmod($sqliteFile, 0660);
         }
 
         // Enforce 2FA for admin users (Phase 0 stub — full impl in Phase 1)
@@ -161,5 +174,8 @@ class AppServiceProvider extends ServiceProvider
         } catch (\Exception $e) {
             // Ignore if the database is not ready (e.g. during migrate).
         }
+        // OpenCode integration
+        $this->app->singleton(\App\Services\OpenCodeService::class);
+        $this->app->singleton(\App\Services\OpenCodeBackgroundService::class);
     }
 }

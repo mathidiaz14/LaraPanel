@@ -154,6 +154,9 @@ class CronService
             "# DO NOT EDIT THIS BLOCK DIRECTLY - IT WILL BE OVERWRITTEN",
             // Cron runs with a minimal environment; make common binaries resolvable.
             "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            // Never let cron try to email job output to the unix user (www-data),
+            // which does not exist as a mailbox and produces bounce floods.
+            'MAILTO=""',
         ];
 
         foreach ($activeJobs as $job) {
@@ -169,7 +172,7 @@ class CronService
             // command (which would not be tracked), route it through the panel's
             // runner so every automatic execution is recorded in the DB.
             $crontabLines[] = sprintf(
-                '%s cd %s && php artisan cron:run %d --no-interaction # LaraPanel_Job_ID_%d',
+                '%s cd %s && php artisan cron:run %d --no-interaction >> /dev/null 2>&1 # LaraPanel_Job_ID_%d',
                 $job->schedule,
                 escapeshellarg(base_path()),
                 $job->id,

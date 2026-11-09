@@ -481,7 +481,7 @@ class FileManager extends Component
         $allowedExtensions = FileService::UPLOAD_EXTENSIONS;
 
         $this->validate([
-            'uploads.*' => 'file|max:10485760',
+            'uploads.*' => 'file|max:10737418240',
         ]);
 
         try {

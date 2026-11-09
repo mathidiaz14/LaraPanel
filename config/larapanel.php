@@ -329,4 +329,16 @@ return [
         'disk_threshold_percent' => env('NOTIFY_DISK_THRESHOLD', 85),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | OpenCode Integration
+    |--------------------------------------------------------------------------
+    |
+    | Integración con OpenCode Web corriendo en local (opencode web --port 3333)
+    | para gestionar sesiones, mensajes y modelos desde el panel.
+    |
+    */
+
+
+
 ];

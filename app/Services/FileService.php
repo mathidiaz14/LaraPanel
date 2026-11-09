@@ -8,6 +8,21 @@ use Illuminate\Support\Facades\Log;
 
 class FileService
 {
+    public const UPLOAD_EXTENSIONS = [
+        'txt', 'log', 'md', 'csv', 'xml', 'json', 'yaml', 'yml',
+        'php', 'phtml', 'php5', 'php7', 'php8', 'inc',
+        'js', 'ts', 'jsx', 'tsx', 'css', 'scss', 'less',
+        'html', 'htm', 'shtml', 'xhtml',
+        'htaccess', 'htpasswd', 'env', 'ini', 'conf', 'cfg',
+        'sh', 'bash', 'zsh', 'py', 'rb', 'pl',
+        'sql', 'db', 'sqlite', 'sqlite3',
+        'jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'ico', 'bmp', 'avif',
+        'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+        'zip', 'tar', 'gz', 'bz2', 'xz', 'rar', '7z',
+        'mp3', 'mp4', 'avi', 'mov', 'mkv', 'webm', 'ogg', 'wav',
+        'ttf', 'otf', 'woff', 'woff2', 'eot',
+    ];
+
     public function __construct(
         protected SudoExecutor $sudo,
     ) {}
