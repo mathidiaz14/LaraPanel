@@ -76,9 +76,6 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // OpenCode permissions
-
-
         // 0. Central authorization policies (granular, out of services)
         Gate::policy(Domain::class, DomainPolicy::class);
         Gate::policy(DatabaseInstance::class, DatabasePolicy::class);
@@ -174,8 +171,5 @@ class AppServiceProvider extends ServiceProvider
         } catch (\Exception $e) {
             // Ignore if the database is not ready (e.g. during migrate).
         }
-        // OpenCode integration
-        $this->app->singleton(\App\Services\OpenCodeService::class);
-        $this->app->singleton(\App\Services\OpenCodeBackgroundService::class);
     }
 }
