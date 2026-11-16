@@ -11,6 +11,7 @@ use App\Notifications\BackupCompletedNotification;
 use App\Notifications\BackupFailedNotification;
 use App\Services\Notifier;
 use App\Shell\SudoExecutor;
+use Aws\S3\S3Client;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -59,33 +60,44 @@ class BackupService
             'started_at' => now(),
         ]);
 
+        $fullPath = null;
+
         try {
-            $filename = $this->runBackup($backup, $user, $data);
-            $fullPath = $this->getBackupRoot($user) . '/' . $filename;
-            $size = file_exists($fullPath) ? filesize($fullPath) : 0;
-            
-            $remotePath = null;
-            if ($disk === 's3' && file_exists($fullPath)) {
-                $this->configureS3();
-                $remotePath = 'backups/' . $user->id . '/' . $filename;
-                
-                // Upload to S3 (lectura: los archivos son de root vía sudo)
-                \Illuminate\Support\Facades\Storage::disk('s3')->put(
-                    $remotePath,
-                    fopen($fullPath, 'rb')
-                );
-                
-                // Remove local file (los archivos son de root vía sudo)
-                if (app()->isProduction()) {
-                    $this->sudo->run(['rm', '-f', $fullPath], checkExit: false);
-                    if ($type === 'full') {
-                        // En 'full' el dump SQL quedó embebido en el tar; sobra el staging.
-                        $this->sudo->run(['rm', '-f', str_replace('.tar.gz', '.sql.gz', $fullPath)], checkExit: false);
-                    }
-                } else {
-                    @unlink($fullPath);
-                    if ($type === 'full') {
-                        @unlink(str_replace('.tar.gz', '.sql.gz', $fullPath));
+            if (app()->isProduction() && $disk === 's3' && in_array($type, ['full', 'files'], true)) {
+                // Backups grandes a S3: se generan y suben en streaming (multipart),
+                // sin crear un archivo de decenas de GB en el disco local.
+                $streamed   = $this->runStreamingBackupToS3($backup, $user, $data);
+                $filename   = $streamed['filename'];
+                $remotePath = $streamed['remote_path'];
+                $size       = $streamed['size'];
+            } else {
+                $filename = $this->runBackup($backup, $user, $data);
+                $fullPath = $this->getBackupRoot($user) . '/' . $filename;
+                $size = file_exists($fullPath) ? filesize($fullPath) : 0;
+
+                $remotePath = null;
+                if ($disk === 's3' && file_exists($fullPath)) {
+                    $this->configureS3();
+                    $remotePath = 'backups/' . $user->id . '/' . $filename;
+
+                    // Upload to S3 (lectura: los archivos son de root vía sudo)
+                    \Illuminate\Support\Facades\Storage::disk('s3')->put(
+                        $remotePath,
+                        fopen($fullPath, 'rb')
+                    );
+
+                    // Remove local file (los archivos son de root vía sudo)
+                    if (app()->isProduction()) {
+                        $this->sudo->run(['rm', '-f', $fullPath], checkExit: false);
+                        if ($type === 'full') {
+                            // En 'full' el dump SQL quedó embebido en el tar; sobra el staging.
+                            $this->sudo->run(['rm', '-f', str_replace('.tar.gz', '.sql.gz', $fullPath)], checkExit: false);
+                        }
+                    } else {
+                        @unlink($fullPath);
+                        if ($type === 'full') {
+                            @unlink(str_replace('.tar.gz', '.sql.gz', $fullPath));
+                        }
                     }
                 }
             }
@@ -149,6 +161,235 @@ class BackupService
     }
 
     /**
+     * Build an S3 client from the stored settings (used for multipart streaming).
+     */
+    protected function buildS3Client(): S3Client
+    {
+        $endpoint = \App\Models\Setting::get('aws_endpoint');
+
+        return new S3Client([
+            'version' => 'latest',
+            'region' => \App\Models\Setting::get('aws_default_region', 'us-east-1'),
+            'endpoint' => empty($endpoint) ? null : $endpoint,
+            'use_path_style_endpoint' => !empty($endpoint),
+            'credentials' => [
+                'key' => \App\Models\Setting::getSecret('aws_access_key_id'),
+                'secret' => \App\Models\Setting::getSecret('aws_secret_access_key'),
+            ],
+            'http' => [
+                'connect_timeout' => 15,
+                'timeout' => 0,
+            ],
+        ]);
+    }
+
+    /**
+     * Generate a full/files backup and stream it straight to S3.
+     *
+     * The tar output is read from the process pipe in blocks and uploaded as an
+     * S3 multipart upload. This avoids staging a 20+ GB file on the local disk,
+     * which is what made full backups fail when free space was tight.
+     *
+     * @return array{filename:string,remote_path:string,size:int}
+     */
+    protected function runStreamingBackupToS3(Backup $backup, User $user, array $data): array
+    {
+        $type      = $backup->type;
+        $domainId  = $data['domain_id'] ?? null;
+        $timestamp = now()->format('Ymd_His');
+
+        $domain     = null;
+        $domainSlug = 'all';
+        if ($domainId) {
+            $domain = Domain::find($domainId);
+            $domainSlug = $domain ? Str::slug($domain->name, '_') : 'domain_' . $domainId;
+        }
+
+        $filename   = "larapanel_{$type}_{$domainSlug}_{$timestamp}.tar.gz";
+        $remotePath = 'backups/' . $user->id . '/' . $filename;
+
+        $tmpDir = sys_get_temp_dir() . '/lp_stream_' . uniqid();
+        $this->sudo->run(['mkdir', '-p', $tmpDir]);
+        $this->sudo->run(['chmod', '755', $tmpDir]);
+
+        try {
+            $tarArgs = ['tar', '-czf', '-'];
+
+            // Incluir el dump SQL en backups full (staging pequeño en /tmp).
+            if ($type === 'full') {
+                $dumpName = 'database_dump.sql.gz';
+                $dumpPath = $tmpDir . '/' . $dumpName;
+                $this->backupDatabases($dumpPath, $domainId, $user, $data);
+
+                if ($this->sudo->run(['test', '-f', $dumpPath], checkExit: false)->successful()) {
+                    $tarArgs[] = '-C';
+                    $tarArgs[] = $tmpDir;
+                    $tarArgs[] = $dumpName;
+                }
+            }
+
+            $sourcePath = $domain
+                ? $domain->document_root
+                : config('larapanel.paths.webroots', '/var/www');
+
+            if (! $this->sudo->run(['test', '-d', $sourcePath], checkExit: false)->successful()) {
+                throw new \RuntimeException("El directorio de origen no existe: {$sourcePath}");
+            }
+
+            $tarArgs[] = '-C';
+            $tarArgs[] = dirname($sourcePath);
+            $tarArgs[] = basename($sourcePath);
+
+            // Los buzones solo se incluyen en un full de todas las cuentas.
+            if ($type === 'full' && ! $domain
+                && $this->sudo->run(['test', '-d', '/var/vmail'], checkExit: false)->successful()) {
+                $tarArgs[] = '-C';
+                $tarArgs[] = '/var';
+                $tarArgs[] = 'vmail';
+            }
+
+            $size = $this->streamCommandToS3(array_merge(['sudo', '-n'], $tarArgs), $remotePath);
+
+            return [
+                'filename'    => $filename,
+                'remote_path' => $remotePath,
+                'size'        => $size,
+            ];
+        } finally {
+            $this->sudo->run(['rm', '-rf', $tmpDir], checkExit: false);
+        }
+    }
+
+    /**
+     * Run a command whose stdout is a tar stream and upload it to S3 in parts.
+     *
+     * @return int uploaded bytes
+     */
+    protected function streamCommandToS3(array $command, string $remotePath): int
+    {
+        $client = $this->buildS3Client();
+        $bucket = \App\Models\Setting::get('aws_bucket');
+
+        if (empty($bucket)) {
+            throw new \RuntimeException('No hay un bucket S3 configurado.');
+        }
+
+        $stderrFile = tempnam(sys_get_temp_dir(), 'lp_s3err_');
+
+        $process = proc_open($command, [
+            1 => ['pipe', 'w'],
+            2 => ['file', $stderrFile, 'w'],
+        ], $pipes);
+
+        if (! is_resource($process)) {
+            @unlink($stderrFile);
+            throw new \RuntimeException('No se pudo iniciar el proceso de backup.');
+        }
+
+        $uploadId   = null;
+        $parts      = [];
+        $partNumber = 1;
+        $buffer     = '';
+        $minPart    = 32 * 1024 * 1024; // 32 MiB (> 5 MiB mínimo de S3)
+        $total      = 0;
+
+        try {
+            $uploadId = $client->createMultipartUpload([
+                'Bucket' => $bucket,
+                'Key'    => $remotePath,
+            ])['UploadId'];
+
+            while (! feof($pipes[1])) {
+                $chunk = fread($pipes[1], 1024 * 1024);
+                if ($chunk === false) {
+                    throw new \RuntimeException('Error leyendo el stream del backup.');
+                }
+                if ($chunk === '') {
+                    continue;
+                }
+
+                $buffer .= $chunk;
+                $total  += strlen($chunk);
+
+                if (strlen($buffer) >= $minPart) {
+                    $result = $client->uploadPart([
+                        'Bucket'     => $bucket,
+                        'Key'        => $remotePath,
+                        'UploadId'   => $uploadId,
+                        'PartNumber' => $partNumber,
+                        'Body'       => $buffer,
+                    ]);
+                    $parts[] = ['PartNumber' => $partNumber, 'ETag' => $result['ETag']];
+                    $partNumber++;
+                    $buffer = '';
+                }
+            }
+
+            if ($buffer !== '') {
+                $result = $client->uploadPart([
+                    'Bucket'     => $bucket,
+                    'Key'        => $remotePath,
+                    'UploadId'   => $uploadId,
+                    'PartNumber' => $partNumber,
+                    'Body'       => $buffer,
+                ]);
+                $parts[] = ['PartNumber' => $partNumber, 'ETag' => $result['ETag']];
+                $buffer = '';
+            }
+
+            fclose($pipes[1]);
+            $exitCode = proc_close($process);
+            $stderr = trim((string) @file_get_contents($stderrFile));
+
+            // GNU tar devuelve 1 cuando algún archivo cambió mientras se leía
+            // (logs, buzones, .git). Eso no invalida el archivo: solo 2+ es fatal.
+            if ($exitCode < 0 || $exitCode >= 2) {
+                throw new \RuntimeException(
+                    'El comando de backup falló (código ' . $exitCode . '): ' . $stderr
+                );
+            }
+
+            if ($exitCode === 1 && $stderr !== '') {
+                Log::warning('Backup completado con advertencias de tar: ' . Str::limit($stderr, 2000));
+            }
+
+            if ($total === 0) {
+                throw new \RuntimeException('El backup generó un archivo vacío.');
+            }
+
+            $client->completeMultipartUpload([
+                'Bucket'          => $bucket,
+                'Key'             => $remotePath,
+                'UploadId'        => $uploadId,
+                'MultipartUpload' => ['Parts' => $parts],
+            ]);
+
+            return $total;
+        } catch (\Throwable $e) {
+            if ($uploadId) {
+                try {
+                    $client->abortMultipartUpload([
+                        'Bucket'   => $bucket,
+                        'Key'      => $remotePath,
+                        'UploadId' => $uploadId,
+                    ]);
+                } catch (\Throwable) {
+                    // Ignorar: el abort es best-effort.
+                }
+            }
+
+            if (is_resource($process)) {
+                @proc_terminate($process);
+                @proc_close($process);
+            }
+
+            throw $e;
+        } finally {
+            @unlink($stderrFile);
+        }
+    }
+
+    /**
      * Internal method that performs the actual backup.
      */
     protected function runBackup(Backup $backup, User $user, array $data): string
@@ -195,7 +436,11 @@ class BackupService
                 ->where('status', 'completed')
                 ->latest('id')
                 ->value('size_bytes');
-            $required = max(5 * 1024 ** 3, (int) ceil($lastSize * 1.25));
+            // El pico real en disco es el tar final (~$lastSize) más el dump SQL
+            // que queda como staging (~cientos de MB), no un 25% extra. Se deja
+            // 1 GiB (o 5% del tamaño) de margen para logs/BD durante la copia.
+            $margin   = max(1024 ** 3, (int) ceil($lastSize * 0.05));
+            $required = max(5 * 1024 ** 3, $lastSize + $margin);
             $free     = @disk_free_space($backupRoot) ?: 0;
 
             if ($free < $required) {
@@ -272,6 +517,11 @@ class BackupService
                 // Sin bases de datos: el backup full contiene solo archivos.
                 $this->backupFiles($destPath, $domainId, $user, $data);
             }
+        }
+
+        // Un backup de solo base de datos se guarda como .sql.gz, no como .tar.gz.
+        if ($type === 'database') {
+            return str_replace('.tar.gz', '.sql.gz', $filename);
         }
 
         return $filename;
@@ -424,11 +674,17 @@ class BackupService
                     $tmpDir = sys_get_temp_dir() . '/lp_restore_' . uniqid();
                     $this->sudo->run(['mkdir', '-p', $tmpDir]);
                     
-                    // The tar has a file named database_dump.sql.gz inside
-                    $this->sudo->withTimeout(config('larapanel.backups.timeout', 3600))
-                        ->run(['tar', '-xzf', $localPath, '-C', $tmpDir, 'database_dump.sql.gz'], checkExit: false);
-                    
                     $sqlGzPath = $tmpDir . '/database_dump.sql.gz';
+
+                    if (str_ends_with(strtolower($localPath), '.sql.gz')) {
+                        // Backup de solo base de datos: el archivo ya es el dump.
+                        $this->sudo->run(['cp', $localPath, $sqlGzPath]);
+                    } else {
+                        // El tar contiene un archivo llamado database_dump.sql.gz.
+                        $this->sudo->withTimeout(config('larapanel.backups.timeout', 3600))
+                            ->run(['tar', '-xzf', $localPath, '-C', $tmpDir, 'database_dump.sql.gz'], checkExit: false);
+                    }
+
                     if (file_exists($sqlGzPath) || $this->sudo->run(['test', '-f', $sqlGzPath], false)->successful()) {
                         // Unzip and restore
                         // We assume the dump already contains `USE db_name;` or we just source it.

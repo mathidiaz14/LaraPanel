@@ -30,6 +30,24 @@ class RunScheduledBackupsCommand extends Command
         }
 
         foreach ($schedules as $schedule) {
+            // Marcar como fallidos los backups "running" que quedaron colgados
+            // (proceso interrumpido) para no bloquear futuras ejecuciones.
+            \App\Models\Backup::where('user_id', $schedule->user_id)
+                ->where('status', 'running')
+                ->where('created_at', '<', now()->subHours(6))
+                ->update([
+                    'status'        => 'failed',
+                    'error_message' => 'Ejecución interrumpida (stale)',
+                    'completed_at'  => now(),
+                ]);
+
+            // Evitar solapar con otro backup en curso (manual o programado).
+            if (\App\Models\Backup::where('user_id', $schedule->user_id)->where('status', 'running')->exists()) {
+                $this->warn("Schedule #{$schedule->id} skipped: ya hay un backup en ejecución.");
+                $schedule->update(['next_run_at' => now()->addMinutes(30)]);
+                continue;
+            }
+
             $this->info("Running schedule #{$schedule->id} for User #{$schedule->user_id}");
             
             try {

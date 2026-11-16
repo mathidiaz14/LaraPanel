@@ -81,6 +81,16 @@
                     </div>
                 </div>
 
+                {{-- Storage Destination --}}
+                <div class="form-group">
+                    <label class="form-label">Destino</label>
+                    <select wire:model="disk" class="form-input">
+                        <option value="s3">S3 (recomendado: streaming, sin usar disco local)</option>
+                        <option value="local">Local (disco del servidor)</option>
+                    </select>
+                    @error('disk') <div class="form-error">{{ $message }}</div> @enderror
+                </div>
+
                 {{-- Domain Filter --}}
                 <div class="form-group">
                     <label class="form-label">Dominio <span style="color:var(--text-muted);font-weight:400;">— opcional, vacío = todos</span></label>

@@ -13,6 +13,7 @@ class BackupIndex extends Component
     // Create form
     public string $label = '';
     public string $type = 'full';
+    public string $disk = 's3';
     public ?int $domainId = null;
     public string $notes = '';
 
@@ -33,6 +34,7 @@ class BackupIndex extends Component
     protected array $rules = [
         'label'    => 'required|string|min:3|max:64',
         'type'     => 'required|in:full,files,database',
+        'disk'     => 'required|in:local,s3',
         'domainId' => 'nullable|integer|exists:domains,id',
         'notes'    => 'nullable|string|max:255',
     ];
@@ -51,6 +53,7 @@ class BackupIndex extends Component
         try {
             $backup = $backupService->create(auth()->user(), [
                 'type'      => $this->type,
+                'disk'      => $this->disk,
                 'domain_id' => $this->domainId,
                 'label'     => $this->label,
                 'notes'     => $this->notes,
