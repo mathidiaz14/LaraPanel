@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\PanelNotification;
 use App\Models\User;
 use App\Notifications\LaraPanelTelegramNotification;
 use App\Notifications\TelegramTextNotification;
@@ -31,12 +32,14 @@ class Notifier
      */
     public static function send(LaraPanelTelegramNotification $notification): void
     {
-        if (! self::enabled()) {
+        $type = $notification->noticeType();
+        if ($type !== null && ! NotificationPreferences::isEnabled($type)) {
             return;
         }
 
-        $type = $notification->noticeType();
-        if ($type !== null && ! NotificationPreferences::isEnabled($type)) {
+        self::persistInApp($notification);
+
+        if (! self::enabled()) {
             return;
         }
 
@@ -44,6 +47,15 @@ class Notifier
             Notification::send(new AnonymousNotifiable(), $notification);
         } catch (\Throwable $e) {
             Log::warning('Telegram notification failed: ' . $e->getMessage());
+        }
+    }
+
+    protected static function persistInApp(LaraPanelTelegramNotification $notification): void
+    {
+        try {
+            PanelNotification::forAdmins($notification->inAppNotification());
+        } catch (\Throwable $e) {
+            Log::warning('In-app notification failed: ' . $e->getMessage());
         }
     }
 

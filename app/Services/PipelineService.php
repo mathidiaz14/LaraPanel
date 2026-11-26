@@ -47,7 +47,7 @@ class PipelineService
             throw new \RuntimeException('Usuario no autenticado.');
         }
 
-        $data = $this->validatePayload($data);
+        $data = $this->validatePayload($data, $user);
 
         $pipeline = DeployPipeline::create(array_merge($data, ['user_id' => $user->id]));
 
@@ -63,7 +63,7 @@ class PipelineService
     {
         $this->authorize($pipeline, $user);
 
-        $data = $this->validatePayload($data);
+        $data = $this->validatePayload($data, $user ?? auth()->user());
         $pipeline->update($data);
 
         AuditLog::record('pipeline.update', $pipeline->name, [
@@ -223,7 +223,7 @@ class PipelineService
         return $this->sanitizeStages(is_array($pipeline->stages) ? $pipeline->stages : []);
     }
 
-    protected function validatePayload(array $data): array
+    protected function validatePayload(array $data, ?User $user = null): array
     {
         $name = trim((string) ($data['name'] ?? ''));
         if (mb_strlen($name) < 2 || mb_strlen($name) > 120) {
@@ -238,8 +238,15 @@ class PipelineService
         $gitDeploymentId = $data['git_deployment_id'] ?? null;
         if ($gitDeploymentId !== null && $gitDeploymentId !== '' && (int) $gitDeploymentId > 0) {
             $gitDeploymentId = (int) $gitDeploymentId;
-            if (! GitDeployment::whereKey($gitDeploymentId)->exists()) {
-                throw new \InvalidArgumentException('El despliegue Git seleccionado no existe.');
+            $query = GitDeployment::whereKey($gitDeploymentId);
+            $user ??= auth()->user();
+
+            if (! $user || ! $user->isAdmin()) {
+                $query->where('user_id', $user?->id ?? auth()->id());
+            }
+
+            if (! $query->exists()) {
+                throw new \InvalidArgumentException('El despliegue Git seleccionado no existe o no pertenece a tu cuenta.');
             }
         } else {
             $gitDeploymentId = null;

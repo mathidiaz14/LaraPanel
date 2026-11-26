@@ -6,6 +6,8 @@ use Livewire\Component;
 use Illuminate\Support\Facades\File;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
+use App\Models\PanelNotification;
+use App\Models\Setting;
 use App\Notifications\TelegramTextNotification;
 use App\Notifications\UpdateAvailableNotification;
 use App\Services\Notifier;
@@ -34,6 +36,7 @@ class Settings extends Component
 
     // Telegram Notifications
     public bool $telegramEnabled = false;
+    public bool $telegramTokenConfigured = false;
     public string $telegramBotToken = '';
     public string $telegramChatId = '';
     public string $telegramTestMessage = '';
@@ -81,9 +84,10 @@ class Settings extends Component
         $this->awsBucket = \App\Models\Setting::get('aws_bucket', '');
         $this->awsEndpoint = \App\Models\Setting::get('aws_endpoint', '');
 
-        $this->telegramEnabled = filter_var(\App\Models\Setting::get('telegram_enabled', '0'), FILTER_VALIDATE_BOOLEAN);
-        $this->telegramBotToken = \App\Models\Setting::getSecret('telegram_bot_token', '');
-        $this->telegramChatId = \App\Models\Setting::get('telegram_chat_id', '');
+        $this->telegramEnabled = filter_var(Setting::get('telegram_enabled', '0'), FILTER_VALIDATE_BOOLEAN);
+        $this->telegramTokenConfigured = ! empty(Setting::getSecret('telegram_bot_token', ''));
+        $this->telegramBotToken = '';
+        $this->telegramChatId = Setting::get('telegram_chat_id', '');
 
         foreach (array_keys(NotificationPreferences::types()) as $type) {
             $this->notificationPrefs[$type] = NotificationPreferences::isEnabled($type);
@@ -125,9 +129,12 @@ class Settings extends Component
             \App\Models\Setting::set('aws_bucket', $this->awsBucket);
             \App\Models\Setting::set('aws_endpoint', $this->awsEndpoint);
 
-            \App\Models\Setting::set('telegram_enabled', $this->telegramEnabled ? '1' : '0');
-            \App\Models\Setting::setSecret('telegram_bot_token', $this->telegramBotToken);
-            \App\Models\Setting::set('telegram_chat_id', $this->telegramChatId);
+            Setting::set('telegram_enabled', $this->telegramEnabled ? '1' : '0');
+            if (trim($this->telegramBotToken) !== '') {
+                Setting::setSecret('telegram_bot_token', $this->telegramBotToken);
+                $this->telegramTokenConfigured = true;
+            }
+            Setting::set('telegram_chat_id', $this->telegramChatId);
 
             foreach (array_keys(NotificationPreferences::types()) as $type) {
                 NotificationPreferences::setEnabled($type, ! empty($this->notificationPrefs[$type]));
@@ -301,15 +308,27 @@ class Settings extends Component
         $this->telegramTestMessage = '';
 
         $this->validate([
-            'telegramBotToken' => 'required|string|max:512',
-            'telegramChatId'    => 'required|string|max:255',
+            'telegramBotToken' => 'nullable|string|max:512',
+            'telegramChatId'    => 'nullable|string|max:255',
         ]);
 
-        // Override runtime config with the form values for this request only.
+        $token = trim($this->telegramBotToken) !== ''
+            ? $this->telegramBotToken
+            : Setting::getSecret('telegram_bot_token', '');
+        $chatId = trim($this->telegramChatId) !== ''
+            ? $this->telegramChatId
+            : Setting::get('telegram_chat_id', '');
+
+        if ($token === '' || $chatId === '') {
+            $this->telegramTestMessage = 'Error: cargá el Bot Token y el Chat ID (o guardalos antes de probar).';
+
+            return;
+        }
+
         config([
             'larapanel.notifications.telegram.enabled'   => true,
-            'larapanel.notifications.telegram.bot_token' => $this->telegramBotToken,
-            'larapanel.notifications.telegram.chat_id'   => $this->telegramChatId,
+            'larapanel.notifications.telegram.bot_token' => $token,
+            'larapanel.notifications.telegram.chat_id'   => $chatId,
         ]);
 
         try {
@@ -321,7 +340,16 @@ class Settings extends Component
                 )
             );
 
-            $this->telegramTestMessage = 'Mensaje de prueba enviado. Revisa tu chat de Telegram.';
+            if (auth()->user()) {
+                PanelNotification::forUsers([auth()->user()], [
+                    'type' => 'test',
+                    'title' => 'Prueba de Telegram',
+                    'message' => 'El envío de Telegram se ejecutó correctamente. Revisá el chat configurado.',
+                    'action_url' => route('admin.settings'),
+                ]);
+            }
+
+            $this->telegramTestMessage = 'Mensaje de prueba enviado. Revisa tu chat de Telegram y la campana del panel.';
         } catch (\Throwable $e) {
             $this->telegramTestMessage = 'Error al enviar la prueba: ' . $e->getMessage();
         }

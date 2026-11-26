@@ -3,10 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\GitDeployment;
+use App\Services\GitDeployDispatcher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\Process\PhpExecutableFinder;
-use Symfony\Component\Process\Process;
 
 class GitWebhookController extends Controller
 {
@@ -88,24 +87,7 @@ class GitWebhookController extends Controller
 
     protected function spawnDeploy(int $deploymentId, ?string $commitHash): void
     {
-        $php = (new PhpExecutableFinder())->find() ?: 'php';
-        $artisan = base_path('artisan');
-        $logFile = storage_path('logs/git-deploy.log');
-
-        $runUser = config('larapanel.server.sudo_user', 'www-data');
-        $useSudo = PHP_OS_FAMILY === 'Linux' && is_file('/usr/bin/sudo');
-
-        $command = sprintf(
-            ($useSudo ? 'sudo -n -u %s ' : '') . 'setsid nohup %s %s git:deploy %d --trigger=webhook %s >> %s 2>&1 &',
-            escapeshellarg($runUser),
-            escapeshellarg($php),
-            escapeshellarg($artisan),
-            $deploymentId,
-            $commitHash ? '--commit=' . escapeshellarg($commitHash) : '',
-            escapeshellarg($logFile),
-        );
-
-        Process::fromShellCommandline($command)->setTimeout(5)->run();
+        app(GitDeployDispatcher::class)->dispatch($deploymentId, 'webhook', $commitHash);
 
         Log::info("Git deploy spawned for deployment #{$deploymentId}" . ($commitHash ? " (commit {$commitHash})" : ''));
     }

@@ -173,7 +173,11 @@ class PipelineIndex extends Component
         }
 
         try {
-            $pipeline = DeployPipeline::find($this->selectedPipeline->id);
+            $query = DeployPipeline::whereKey($this->selectedPipeline->id);
+            if (! auth()->user()?->isAdmin()) {
+                $query->where('user_id', auth()->id());
+            }
+            $pipeline = $query->firstOrFail();
 
             $run = $service->runStreaming($pipeline, function (string $chunk) {
                 $this->stream(
@@ -201,7 +205,11 @@ class PipelineIndex extends Component
     {
         $run = DeployPipelineRun::with('pipeline')->find($runId);
 
-        if (! $run || $run->pipeline->user_id !== auth()->id()) {
+        if (! $run) {
+            return;
+        }
+
+        if ($run->pipeline->user_id !== auth()->id() && ! auth()->user()?->isAdmin()) {
             return;
         }
 

@@ -3,7 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\Domain;
+use App\Models\Setting;
 use App\Notifications\DomainDownAlert;
+use App\Services\Notifier;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -85,9 +87,11 @@ class CheckDomainsUptimeCommand extends Command
         Log::warning("Domain DOWN alert for {$domain->name}: {$reason}");
         $this->error("Domain {$domain->name} is DOWN. Reason: {$reason}");
 
-        if ($domain->user) {
-            $domain->user->notify(new DomainDownAlert($domain->name, $reason));
+        if (! filter_var(Setting::get('alerts_enabled', '1'), FILTER_VALIDATE_BOOLEAN)) {
+            return;
         }
+
+        Notifier::send(new DomainDownAlert($domain->name, $reason));
     }
 
     private function cooldownKey(Domain $domain): string

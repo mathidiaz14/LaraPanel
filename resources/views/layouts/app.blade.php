@@ -412,9 +412,7 @@
                 <button class="topbar-btn" id="theme-toggle" title="Cambiar tema">
                     <i class="fa-solid fa-moon" id="theme-icon"></i>
                 </button>
-                <button class="topbar-btn" title="Notificaciones">
-                    <i class="fa-solid fa-bell"></i>
-                </button>
+                <livewire:notifications.notification-bell />
                 <div class="user-chip">
                     <div class="user-avatar">{{ substr(auth()->user()?->name ?? 'A', 0, 1) }}</div>
                     <span class="user-name hide-mobile">{{ auth()->user()?->name ?? 'Admin' }}</span>
@@ -499,6 +497,40 @@
                 sidebar.classList.remove('open');
                 if (overlay) overlay.classList.remove('show');
                 document.body.style.overflow = '';
+            }
+        });
+
+        document.addEventListener('click', async (event) => {
+            const copyButton = event.target.closest('[data-copy-target]');
+            if (copyButton) {
+                const input = document.getElementById(copyButton.dataset.copyTarget);
+                if (input) {
+                    try {
+                        if (navigator.clipboard?.writeText) {
+                            await navigator.clipboard.writeText(input.value);
+                        } else {
+                            input.select();
+                            document.execCommand('copy');
+                        }
+                        const original = copyButton.innerHTML;
+                        copyButton.innerHTML = '<i class="fa-solid fa-check"></i> Copiado';
+                        setTimeout(() => { copyButton.innerHTML = original; }, 1400);
+                    } catch (error) {
+                        input.select();
+                    }
+                }
+                return;
+            }
+
+            const toggleButton = event.target.closest('[data-toggle-target]');
+            if (toggleButton) {
+                const input = document.getElementById(toggleButton.dataset.toggleTarget);
+                if (input) {
+                    const visible = input.type === 'text';
+                    input.type = visible ? 'password' : 'text';
+                    const icon = toggleButton.querySelector('i');
+                    if (icon) icon.className = visible ? 'fa-regular fa-eye' : 'fa-regular fa-eye-slash';
+                }
             }
         });
 

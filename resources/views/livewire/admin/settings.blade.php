@@ -335,7 +335,14 @@
 
                         <div class="form-group" style="margin:0;">
                             <label style="display:block;font-size:var(--text-sm);font-weight:600;margin-bottom:var(--sp-2);color:var(--text-secondary);">Bot Token</label>
-                            <input type="password" wire:model.defer="telegramBotToken" class="form-input" placeholder="123456789:AAE...">
+                            <input type="password" wire:model.defer="telegramBotToken" class="form-input" placeholder="{{ $telegramTokenConfigured ? 'Token guardado: déjalo vacío para conservarlo' : '123456789:AAE...' }}">
+                            <p style="font-size:var(--text-xs);color:var(--text-muted);margin-top:var(--sp-1);">
+                                @if($telegramTokenConfigured)
+                                    <i class="fa-solid fa-shield-check"></i> Ya hay un token guardado. Solo escribí uno nuevo si querés reemplazarlo.
+                                @else
+                                    El token se guarda cifrado y no se muestra nuevamente.
+                                @endif
+                            </p>
                             @error('telegramBotToken') <span style="color:var(--danger);font-size:var(--text-xs);margin-top:var(--sp-1);display:block;">{{ $message }}</span> @enderror
                         </div>
 

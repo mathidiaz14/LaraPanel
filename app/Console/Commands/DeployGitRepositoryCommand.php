@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\GitDeployment;
+use App\Services\GitDeployDispatcher;
 use App\Services\GitService;
 use App\Services\PipelineService;
 use Illuminate\Console\Command;
@@ -26,14 +27,18 @@ class DeployGitRepositoryCommand extends Command
             return self::FAILURE;
         }
 
-        $log = $gitService->deploy(
-            $deployment,
-            (string) $this->option('trigger'),
-            $this->option('commit'),
-        );
+        $deploymentId = (int) $deployment->id;
 
-        // Feature 7 — Pipelines: tras un deploy disparado por webhook, ejecuta
-        // los pipelines asociados cuya rama coincida y tengan webhook habilitado.
+        try {
+            $log = $gitService->deploy(
+                $deployment,
+                (string) $this->option('trigger'),
+                $this->option('commit'),
+            );
+        } finally {
+            GitDeployDispatcher::forget($deploymentId);
+        }
+
         if ($log->status === 'success' && (string) $this->option('trigger') === 'webhook') {
             try {
                 $run = app(PipelineService::class)->handleWebhook(

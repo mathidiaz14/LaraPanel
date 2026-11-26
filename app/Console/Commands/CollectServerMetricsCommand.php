@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\ServerMetric;
-use App\Models\User;
+use App\Models\Setting;
 use App\Notifications\DiskThresholdNotification;
 use App\Notifications\RamThresholdNotification;
 use App\Notifications\ServerResourceAlert;
@@ -71,9 +71,13 @@ class CollectServerMetricsCommand extends Command
 
         $this->info("Metrics collected: CPU {$cpuUsage}% | RAM {$ramUsage}%");
 
+        if (! filter_var(Setting::get('alerts_enabled', '1'), FILTER_VALIDATE_BOOLEAN)) {
+            return;
+        }
+
         // Threshold checks
-        $thresholdCpu = config('larapanel.monitoring.alerts.cpu_threshold', 90);
-        $thresholdRam = config('larapanel.monitoring.alerts.ram_threshold', 90);
+        $thresholdCpu = (float) config('larapanel.monitoring.alerts.cpu_threshold', 90);
+        $thresholdRam = (float) Setting::get('ram_threshold', config('larapanel.monitoring.alerts.ram_threshold', 90));
 
         if ($cpuUsage > $thresholdCpu) {
             $this->notifyAdmins('CPU', $cpuUsage, "El uso de CPU alcanzó el {$cpuUsage}% (Umbral: {$thresholdCpu}%).");
@@ -91,7 +95,7 @@ class CollectServerMetricsCommand extends Command
         }
 
         // Disk threshold check (Telegram) with cooldown to avoid alert spam.
-        $thresholdDisk = config('larapanel.notifications.disk_threshold_percent', 85);
+        $thresholdDisk = (float) Setting::get('disk_threshold', config('larapanel.notifications.disk_threshold_percent', 85));
         if ($diskUsage > $thresholdDisk) {
             $cacheKey = 'telegram_disk_alert_last';
             if (! Cache::has($cacheKey)) {
@@ -111,14 +115,6 @@ class CollectServerMetricsCommand extends Command
     {
         Log::warning("ALERT: $message");
 
-        $admins = User::role('admin')->get();
-        if ($admins->isEmpty()) {
-            // Fallback if no roles are set up properly, get the first user
-            $admins = User::limit(1)->get();
-        }
-
-        foreach ($admins as $admin) {
-            $admin->notify(new ServerResourceAlert($resource, $usage, $message));
-        }
+        Notifier::send(new ServerResourceAlert($resource, $usage, $message));
     }
 }

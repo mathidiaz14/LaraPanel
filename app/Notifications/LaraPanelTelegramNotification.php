@@ -2,7 +2,9 @@
 
 namespace App\Notifications;
 
+use App\Services\NotificationPreferences;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Str;
 use NotificationChannels\Telegram\TelegramChannel;
 use NotificationChannels\Telegram\TelegramMessage;
 
@@ -46,4 +48,25 @@ abstract class LaraPanelTelegramNotification extends Notification
      * Return the plain-text body of the notification.
      */
     abstract protected function message(): string;
+
+    /**
+     * Payload used by the in-app notification inbox. Subclasses may override it.
+     *
+     * @return array<string, mixed>
+     */
+    public function inAppNotification(): array
+    {
+        $type = $this->noticeType();
+        $title = $type
+            ? (NotificationPreferences::types()[$type] ?? 'Notificación de LaraPanel')
+            : 'Notificación de LaraPanel';
+
+        return [
+            'type' => $type,
+            'title' => $title,
+            'message' => Str::limit(trim(preg_replace('/\s+/', ' ', strip_tags($this->message())) ?? ''), 400),
+            'action_url' => null,
+            'data' => [],
+        ];
+    }
 }

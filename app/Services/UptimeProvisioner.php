@@ -24,7 +24,7 @@ class UptimeProvisioner
      */
     public function enrollDomain(Domain $domain): ?UptimeMonitor
     {
-        if (!$domain->is_active) {
+        if (!$domain->is_active || $this->isProxyDomain($domain)) {
             return null;
         }
 
@@ -114,6 +114,8 @@ class UptimeProvisioner
         $liveDocker = collect($this->liveDockerNames())->map(fn ($n) => ltrim($n, '/'));
         $activeDomainTargets = Domain::where('is_active', true)
             ->when($user, fn ($q) => $q->where('user_id', $user->id))
+            ->get()
+            ->reject(fn (Domain $domain) => $this->isProxyDomain($domain))
             ->pluck('name')
             ->map(fn ($n) => 'https://' . $n)
             ->all();
@@ -133,6 +135,11 @@ class UptimeProvisioner
         }
 
         return $removed;
+    }
+
+    protected function isProxyDomain(Domain $domain): bool
+    {
+        return $domain->type === 'proxy' || ! empty($domain->config['proxy_port']);
     }
 
     protected function autoExists(string $type, string $target, ?int $userId): bool

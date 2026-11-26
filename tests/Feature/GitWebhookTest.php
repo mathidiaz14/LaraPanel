@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\GitWebhookController;
 use App\Models\GitDeployment;
 use App\Models\User;
-use App\Services\GitService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
 use Tests\TestCase;
@@ -32,10 +32,11 @@ class GitWebhookTest extends TestCase
             'webhook_secret' => 'my-secret-key'
         ]);
         
-        // Mock GitService so we don't actually run git commands
-        $gitServiceMock = Mockery::mock(GitService::class);
-        $gitServiceMock->shouldReceive('deploy')->andReturn();
-        $this->app->instance(GitService::class, $gitServiceMock);
+        $controller = Mockery::mock(GitWebhookController::class)
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
+        $controller->shouldReceive('spawnDeploy')->andReturnUsing(fn () => null);
+        $this->app->instance(GitWebhookController::class, $controller);
     }
 
     public function test_it_rejects_missing_signature()
