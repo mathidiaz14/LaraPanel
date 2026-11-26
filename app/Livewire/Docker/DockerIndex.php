@@ -311,7 +311,7 @@ class DockerIndex extends Component
             $domainService->deployConfigs($domain);
 
             // 4. Run Docker Compose in the path
-            $result = $docker->runComposeInPath($this->deployPath, 'up', ['-d', '--remove-orphans']);
+            $result = $docker->runComposeInPath($this->deployPath, 'up', ['-d', '--remove-orphans'], $this->deployDomain);
             
             $this->deployOutput = "✅ App desplegada correctamente.\n\n" . 
                                   "Dominio: http://{$this->deployDomain} -> Puerto {$this->deployPort}\n\n" .

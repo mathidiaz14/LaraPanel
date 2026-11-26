@@ -218,7 +218,7 @@ class DockerService
             $result = $this->shell
                 ->withTimeout(300)
                 ->inDirectory($path)
-                ->run(['docker', 'compose', '-f', $file, 'up', '-d', '--remove-orphans'], checkExit: false);
+                ->run(['docker', 'compose', '-p', $this->normalizeProjectName($stackName), '-f', $file, 'up', '-d', '--remove-orphans'], checkExit: false);
 
             return trim($result->stdout . "\n" . $result->stderr);
         } catch (\Throwable $e) {
@@ -242,7 +242,7 @@ class DockerService
         try {
             $result = $this->shell
                 ->withTimeout(60)
-                ->run(['docker', 'compose', '-f', $file, 'down'], checkExit: false);
+                ->run(['docker', 'compose', '-p', $this->normalizeProjectName($stackName), '-f', $file, 'down'], checkExit: false);
             return trim($result->stdout . "\n" . $result->stderr);
         } catch (\Throwable $e) {
             return "Error: " . $e->getMessage();
@@ -265,7 +265,7 @@ class DockerService
         try {
             $result = $this->shell
                 ->withTimeout(15)
-                ->run(['docker', 'compose', '-f', $file, 'logs', '--tail', (string)$lines, '--timestamps'], checkExit: false);
+                ->run(['docker', 'compose', '-p', $this->normalizeProjectName($stackName), '-f', $file, 'logs', '--tail', (string)$lines, '--timestamps'], checkExit: false);
             return trim($result->stdout . "\n" . $result->stderr);
         } catch (\Throwable $e) {
             return "Error: " . $e->getMessage();
@@ -282,13 +282,20 @@ class DockerService
     /**
      * Run a docker compose command in an arbitrary directory.
      */
-    public function runComposeInPath(string $path, string $command, array $args = []): string
+    public function runComposeInPath(string $path, string $command, array $args = [], ?string $projectName = null): string
     {
         if (!is_dir($path)) {
             throw new \InvalidArgumentException("El directorio especificado no existe: {$path}");
         }
 
-        $cmd = array_merge(['docker', 'compose', $command], $args);
+        if ($projectName !== null && trim($projectName) !== '') {
+            $project = $this->normalizeProjectName($projectName);
+        } else {
+            $base = basename(rtrim($path, '/')) ?: 'app';
+            $project = $this->normalizeProjectName($base . '-' . substr(sha1($path), 0, 8));
+        }
+
+        $cmd = array_merge(['docker', 'compose', '-p', $project, $command], $args);
 
         try {
             $result = $this->shell
@@ -357,6 +364,22 @@ class DockerService
             }
         }
         return $results;
+    }
+
+    private function normalizeProjectName(string $name): string
+    {
+        $slug = strtolower((string) preg_replace('/[^a-zA-Z0-9_-]+/', '-', $name));
+        $slug = trim($slug, '-_');
+
+        if ($slug === '') {
+            $slug = 'app';
+        }
+
+        if (!preg_match('/^[a-z0-9]/', $slug)) {
+            $slug = 'app-' . $slug;
+        }
+
+        return substr($slug, 0, 60);
     }
 
     private function validateName(string $name): void
