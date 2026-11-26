@@ -14,7 +14,8 @@ class DockerIndex extends Component
 
     // ── Containers tab ────────────────────────────────────────────────────────
     public array  $containers        = [];
-    public array  $groupedContainers = []; // Containers grouped by prefix
+    public array  $composeProjects   = [];
+    public array  $groupedContainers = []; // Containers grouped by Compose project (or prefix)
     public ?array $selectedContainer = null;
     public string $containerLogs    = '';
     public int    $logLines         = 100;
@@ -79,22 +80,34 @@ class DockerIndex extends Component
     public function loadContainers(DockerService $docker): void
     {
         $this->containers = $docker->listContainers();
-        $this->groupedContainers = $this->groupByPrefix($this->containers);
+        $this->composeProjects = $docker->listComposeProjects();
+        $this->groupedContainers = $this->groupByProject($this->containers, $this->composeProjects);
     }
 
     /**
-     * Group containers by their name prefix (everything before the first dash).
-     * e.g. orbit-app, orbit-web → ['orbit' => [...]]
-     * Containers with no dash go into 'otros'.
+     * Group containers by their Compose project, falling back to name prefix.
      */
-    protected function groupByPrefix(array $containers): array
+    protected function groupByProject(array $containers, array $projects): array
     {
+        $projectNames = collect($projects)
+            ->pluck('name')
+            ->filter()
+            ->sortByDesc(fn($name) => strlen($name))
+            ->values()
+            ->all();
+
         $groups = [];
         foreach ($containers as $c) {
-            $prefix = str_contains($c['name'], '-')
-                ? explode('-', $c['name'])[0]
-                : 'otros';
-            $groups[$prefix][] = $c;
+            $name = (string) ($c['name'] ?? '');
+            $group = trim((string) ($c['project'] ?? ''));
+
+            if ($group === '' || $group === '-') {
+                $group = collect($projectNames)->first(
+                    fn($project) => str_starts_with($name, $project . '_') || str_starts_with($name, $project . '-')
+                ) ?: (str_contains($name, '-') ? explode('-', $name)[0] : 'otros');
+            }
+
+            $groups[$group][] = $c;
         }
         ksort($groups);
         return $groups;
@@ -361,6 +374,43 @@ class DockerIndex extends Component
         $this->composeOutput = $docker->composeLogs($this->composeName, $this->logLines);
     }
 
+    public function startProject(string $project, DockerService $docker): void
+    {
+        try {
+            $this->actionOutput = $docker->projectCommand($project, 'start');
+            $this->loadContainers($docker);
+        } catch (\Throwable $e) {
+            $this->actionOutput = "❌ Error: " . $e->getMessage();
+        }
+    }
+
+    public function stopProject(string $project, DockerService $docker): void
+    {
+        try {
+            $this->actionOutput = $docker->projectCommand($project, 'stop');
+            $this->loadContainers($docker);
+        } catch (\Throwable $e) {
+            $this->actionOutput = "❌ Error: " . $e->getMessage();
+        }
+    }
+
+    public function restartProject(string $project, DockerService $docker): void
+    {
+        try {
+            $this->actionOutput = $docker->projectCommand($project, 'restart');
+            $this->loadContainers($docker);
+        } catch (\Throwable $e) {
+            $this->actionOutput = "❌ Error: " . $e->getMessage();
+        }
+    }
+
+    public function logsProject(string $project, DockerService $docker): void
+    {
+        $this->composeName = $project;
+        $this->composeOutput = $docker->projectCommand($project, 'logs', ['--tail', (string) $this->logLines, '--timestamps']);
+        $this->activeTab = 'compose';
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
 
     public function selectMarketplaceTemplate(string $key): void
@@ -429,7 +479,8 @@ class DockerIndex extends Component
 
         return view('livewire.docker.docker-index', [
             'availableDomains'     => $availableDomains,
-            'marketplaceTemplates' => $this->getMarketplaceTemplates()
+            'marketplaceTemplates' => $this->getMarketplaceTemplates(),
+            'composeProjectsByName' => collect($this->composeProjects)->keyBy('name')->all(),
         ])->layout('layouts.app', [
             'title'      => 'Docker',
             'breadcrumb' => '<span>Avanzado</span> / <strong>Docker</strong>',

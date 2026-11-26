@@ -131,5 +131,101 @@
                 </div>
             @endif
         </div>
+
+        @if(\Laravel\Fortify\Features::enabled(\Laravel\Fortify\Features::passkeys()))
+            <div class="glass-elevated" style="padding:var(--sp-6);border-radius:var(--radius);">
+                <h3 style="font-size:var(--text-lg);font-weight:600;margin:0 0 var(--sp-4);">Passkeys (WebAuthn)</h3>
+                <p style="color:var(--text-muted);font-size:var(--text-base);margin-bottom:var(--sp-6);">Inicia sesión con huella, Face ID o una llave de seguridad sin escribir tu contraseña.</p>
+
+                <div class="alert alert-danger" style="display:{{ $passkeyError ? 'block' : 'none' }};">{{ $passkeyError }}</div>
+
+                <div style="display:flex;gap:var(--sp-3);align-items:flex-end;flex-wrap:wrap;max-width:500px;margin-bottom:var(--sp-6);">
+                    <div style="flex:1;min-width:220px;">
+                        <label class="form-label" for="passkey-name">Nombre de la passkey</label>
+                        <input id="passkey-name" type="text" class="form-input" wire:model="passkeyName" placeholder="Ej. MacBook Touch ID">
+                    </div>
+                    <button type="button" id="passkey-register" class="btn btn-primary">
+                        <i class="fa-solid fa-fingerprint"></i> Registrar passkey
+                    </button>
+                </div>
+
+                @if(count($passkeys))
+                    <div style="overflow-x:auto;">
+                        <table class="lp-table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Creada</th>
+                                    <th>Último uso</th>
+                                    <th style="text-align:right;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($passkeys as $passkey)
+                                    <tr>
+                                        <td style="color:var(--text-primary);font-weight:600;">{{ $passkey['name'] }}</td>
+                                        <td style="color:var(--text-muted);font-size:var(--text-sm);">{{ $passkey['created_at'] }}</td>
+                                        <td style="color:var(--text-muted);font-size:var(--text-sm);">{{ $passkey['last_used_at'] ?? 'Nunca' }}</td>
+                                        <td style="text-align:right;">
+                                            <button type="button" class="btn btn-ghost btn-sm passkey-delete" data-id="{{ $passkey['id'] }}" style="color:var(--danger);" title="Eliminar passkey">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <p style="color:var(--text-muted);font-size:var(--text-sm);margin:0;">Todavía no tienes passkeys registradas.</p>
+                @endif
+            </div>
+
+            @push('scripts')
+                <script src="{{ asset('js/passkeys.js') }}"></script>
+                <script>
+                    const passkeyRegister = document.getElementById('passkey-register');
+
+                    if (passkeyRegister) {
+                        passkeyRegister.addEventListener('click', async () => {
+                            const button = passkeyRegister;
+                            button.disabled = true;
+                            @this.set('passkeyError', '');
+
+                            try {
+                                await window.LaraPanelPasskeys.register({
+                                    optionsUrl: '{{ route('passkey.registration-options') }}',
+                                    storeUrl: '{{ route('passkey.store') }}',
+                                    csrf: '{{ csrf_token() }}',
+                                    name: @this.get('passkeyName') || 'Passkey',
+                                });
+                                @this.call('loadPasskeys');
+                                @this.dispatch('toast', { message: 'Passkey registrada correctamente.', type: 'success' });
+                            } catch (error) {
+                                @this.set('passkeyError', error.message);
+                            } finally {
+                                button.disabled = false;
+                            }
+                        });
+
+                        document.addEventListener('click', async (event) => {
+                            const button = event.target.closest('.passkey-delete');
+                            if (!button) return;
+                            if (!confirm('¿Eliminar esta passkey?')) return;
+
+                            try {
+                                await window.LaraPanelPasskeys.remove({
+                                    url: '{{ route('passkey.destroy', ['passkey' => '__ID__']) }}'.replace('__ID__', button.dataset.id),
+                                    csrf: '{{ csrf_token() }}',
+                                });
+                                @this.call('loadPasskeys');
+                            } catch (error) {
+                                @this.set('passkeyError', error.message);
+                            }
+                        });
+                    }
+                </script>
+            @endpush
+        @endif
     </div>
 </div>

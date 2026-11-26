@@ -253,6 +253,9 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/plans',   PlanIndex::class)->name('plans.index');
             Route::get('/api-tokens', ApiTokens::class)->name('api-tokens');
             Route::get('/settings',   \App\Livewire\Admin\Settings::class)->name('settings');
+            Route::get('/audit/export', [\App\Http\Controllers\Admin\AuditExportController::class, 'export'])
+                ->name('audit.export')
+                ->middleware('2fa');
         });
     });
 

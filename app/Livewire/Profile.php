@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\AuditLog;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Fortify\Actions\EnableTwoFactorAuthentication;
@@ -22,7 +23,11 @@ class Profile extends Component
     public string $password_confirmation = '';
     
     public string $code = '';
-    
+
+    public string $passkeyName = '';
+    public string $passkeyError = '';
+    public array $passkeys = [];
+
     public bool $showingQrCode = false;
     public bool $showingConfirmation = false;
     public bool $showingRecoveryCodes = false;
@@ -31,6 +36,32 @@ class Profile extends Component
     {
         $this->name = Auth::user()->name;
         $this->email = Auth::user()->email;
+        $this->loadPasskeys();
+    }
+
+    public function loadPasskeys(): void
+    {
+        $this->passkeys = Auth::user()->passkeys()
+            ->latest()
+            ->get(['id', 'name', 'last_used_at', 'created_at'])
+            ->map(fn ($passkey) => [
+                'id' => $passkey->id,
+                'name' => $passkey->name,
+                'last_used_at' => $passkey->last_used_at?->diffForHumans(),
+                'created_at' => $passkey->created_at?->format('Y-m-d H:i'),
+            ])
+            ->all();
+    }
+
+    public function deletePasskey(int $id): void
+    {
+        $passkey = Auth::user()->passkeys()->findOrFail($id);
+        $name = $passkey->name;
+        $passkey->delete();
+
+        AuditLog::record('security.passkey.deleted', $name, ['passkey_id' => $id], 'warning');
+        $this->loadPasskeys();
+        $this->dispatch('toast', message: 'Passkey eliminada.', type: 'success');
     }
 
     public function updateProfileInformation(UpdateUserProfileInformation $updater)

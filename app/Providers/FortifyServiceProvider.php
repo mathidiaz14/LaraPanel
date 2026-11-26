@@ -6,13 +6,18 @@ use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Actions\Fortify\UpdateUserPassword;
 use App\Actions\Fortify\UpdateUserProfileInformation;
+use App\Models\AuditLog;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Fortify;
+use Laravel\Passkeys\Events\PasskeyDeleted;
+use Laravel\Passkeys\Events\PasskeyRegistered;
+use Laravel\Passkeys\Events\PasskeyVerified;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -56,6 +61,24 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by(
                 ($credentialId ?: $request->session()->getId()).'|'.$request->ip()
             );
+        });
+
+        Event::listen(PasskeyRegistered::class, function (PasskeyRegistered $event) {
+            AuditLog::record('security.passkey.created', $event->passkey->name, [
+                'passkey_id' => $event->passkey->id,
+            ], 'warning', $event->user->getAuthIdentifier());
+        });
+
+        Event::listen(PasskeyDeleted::class, function (PasskeyDeleted $event) {
+            AuditLog::record('security.passkey.deleted', $event->passkey->name, [
+                'passkey_id' => $event->passkey->id,
+            ], 'warning', $event->user->getAuthIdentifier());
+        });
+
+        Event::listen(PasskeyVerified::class, function (PasskeyVerified $event) {
+            AuditLog::record('security.passkey.verified', $event->passkey->name, [
+                'passkey_id' => $event->passkey->id,
+            ], 'info', $event->user->getAuthIdentifier());
         });
     }
 }

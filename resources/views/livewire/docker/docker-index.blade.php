@@ -41,14 +41,30 @@
 
                     <div style="display:flex;flex-direction:column;gap:8px;max-height:600px;overflow-y:auto;padding-right:4px;">
                         @forelse($groupedContainers as $prefix => $group)
+                            @php
+                                $projectInfo = $composeProjectsByName[$prefix] ?? null;
+                            @endphp
+
                             {{-- Group header --}}
-                            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;margin-bottom:4px;padding:0 4px;">
-                                <i class="fa-brands fa-docker" style="font-size:11px;color:var(--info);opacity:0.8;"></i>
-                                <span style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">
-                                    {{ $prefix }}
-                                </span>
-                                <div style="flex:1;height:1px;background:var(--glass-border);opacity:0.5;"></div>
-                                <span style="font-size:10px;color:var(--text-muted);opacity:0.7;">{{ count($group) }}</span>
+                            <div class="lp-compose-group" style="border:1px solid var(--glass-border);border-radius:var(--radius-sm);padding:10px;background:rgba(255,255,255,0.02);margin-top:8px;">
+                                <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                                    <i class="fa-brands fa-docker" style="font-size:11px;color:var(--info);opacity:0.8;flex-shrink:0;"></i>
+                                    <span style="font-size:11px;font-weight:700;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;" title="{{ $projectInfo['configFiles'] ?? $prefix }}">
+                                        {{ $prefix }}
+                                    </span>
+                                    @if($projectInfo)
+                                        <span class="badge badge-info" style="font-size:9px;padding:2px 6px;margin-left:auto;flex-shrink:0;">{{ $projectInfo['status'] }}</span>
+                                    @endif
+                                </div>
+                                <div style="display:flex;align-items:center;gap:4px;margin-top:8px;">
+                                    <span style="font-size:9px;color:var(--text-muted);flex:1;">{{ count($group) }} contenedor(es)</span>
+                                    @if($projectInfo)
+                                        <button wire:click="startProject('{{ $prefix }}')" class="btn btn-ghost btn-sm" style="padding:3px 7px;" title="Iniciar proyecto"><i class="fa-solid fa-play"></i></button>
+                                        <button wire:click="stopProject('{{ $prefix }}')" class="btn btn-ghost btn-sm" style="padding:3px 7px;" title="Detener proyecto" onclick="return confirm('¿Detener el proyecto {{ $prefix }}?')"><i class="fa-solid fa-stop"></i></button>
+                                        <button wire:click="restartProject('{{ $prefix }}')" class="btn btn-ghost btn-sm" style="padding:3px 7px;" title="Reiniciar proyecto"><i class="fa-solid fa-rotate-right"></i></button>
+                                        <button wire:click="logsProject('{{ $prefix }}')" class="btn btn-ghost btn-sm" style="padding:3px 7px;" title="Ver logs del proyecto"><i class="fa-solid fa-file-lines"></i></button>
+                                    @endif
+                                </div>
                             </div>
 
                             @foreach($group as $c)
@@ -58,8 +74,7 @@
                                     $isSelected = $selectedContainer && $selectedContainer['name'] === $c['name'];
                                     $borderColor = $isSelected ? 'rgba(99,102,241,0.5)' : 'var(--glass-border)';
                                     $bgColor     = $isSelected ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.02)';
-                                    // Show only the suffix (strip the prefix-)
-                                    $suffix = str_contains($c['name'], '-')
+                                    $suffix = (str_starts_with($c['name'], $prefix . '-') || str_starts_with($c['name'], $prefix . '_'))
                                         ? substr($c['name'], strlen($prefix) + 1)
                                         : $c['name'];
                                 @endphp

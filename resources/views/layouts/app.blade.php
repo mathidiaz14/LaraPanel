@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" data-theme="dark">
 
 <head>
     <meta charset="utf-8">
@@ -7,6 +7,21 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') — LaraPanel</title>
     <meta name="description" content="@yield('meta_description', 'LaraPanel — Servidor web management panel')">
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem('larapanel-theme');
+                document.documentElement.dataset.theme = stored === 'light' || stored === 'dark' ? stored : 'dark';
+            } catch (error) {
+                document.documentElement.dataset.theme = 'dark';
+            }
+        })();
+    </script>
+    <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ asset('favicon-192x192.png') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="apple-touch-icon" href="{{ asset('favicon-192x192.png') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -55,8 +70,11 @@
 
         {{-- ── Sidebar ─────────────────────────────────── --}}
         <aside class="sidebar" id="sidebar">
+            <button class="sidebar-close-btn" id="sidebar-close" title="Cerrar menú" aria-label="Cerrar menú">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
             <div class="sidebar-logo">
-                <div class="logo-icon">LP</div>
+                <img src="{{ asset('favicon.svg') }}" alt="LaraPanel" class="logo-mark">
                 <div>
                     <div class="logo-text">LaraPanel</div>
                     <div class="logo-version">v{{ config('larapanel.version') }}</div>
@@ -349,6 +367,11 @@
                         <span class="nav-icon"><i class="fa-solid fa-key"></i></span>
                         Tokens API
                     </a>
+                    <a href="{{ route('admin.audit.export') }}"
+                        class="nav-item {{ request()->routeIs('admin.audit.export') ? 'active' : '' }}">
+                        <span class="nav-icon"><i class="fa-solid fa-file-export"></i></span>
+                        Exportar Auditoría
+                    </a>
                 @endif
             </nav>
 
@@ -381,6 +404,14 @@
                         <livewire:servers.server-selector />
                     </div>
                 @endif
+                <button class="topbar-btn command-palette-trigger" id="command-palette-open" title="Buscar y navegar (Ctrl+K)">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span class="hide-mobile">Buscar</span>
+                    <kbd class="hide-mobile">Ctrl K</kbd>
+                </button>
+                <button class="topbar-btn" id="theme-toggle" title="Cambiar tema">
+                    <i class="fa-solid fa-moon" id="theme-icon"></i>
+                </button>
                 <button class="topbar-btn" title="Notificaciones">
                     <i class="fa-solid fa-bell"></i>
                 </button>
@@ -410,6 +441,21 @@
         </main>
     </div>
 
+    <div id="command-palette" class="lp-modal-backdrop" hidden>
+        <div class="lp-modal glass-elevated command-palette" role="dialog" aria-modal="true" aria-label="Paleta de comandos">
+            <div class="command-palette-search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input id="command-palette-input" type="text" placeholder="Buscar sección o acción..." autocomplete="off" spellcheck="false">
+                <kbd>ESC</kbd>
+            </div>
+            <div id="command-palette-results" class="command-palette-results"></div>
+            <div class="command-palette-footer">
+                <span><kbd>↑</kbd><kbd>↓</kbd> Navegar</span>
+                <span><kbd>Enter</kbd> Abrir</span>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     @livewireScripts
     @stack('scripts')
@@ -433,6 +479,11 @@
         if (toggle) toggle.addEventListener('click', toggleSidebar);
         if (overlay) overlay.addEventListener('click', toggleSidebar);
 
+        const sidebarClose = document.getElementById('sidebar-close');
+        if (sidebarClose) sidebarClose.addEventListener('click', () => {
+            if (sidebar && sidebar.classList.contains('open')) toggleSidebar();
+        });
+
         // Also close on any nav link click on mobile
         document.querySelectorAll('.nav-item').forEach(link => {
             link.addEventListener('click', () => {
@@ -450,6 +501,138 @@
                 document.body.style.overflow = '';
             }
         });
+
+        (() => {
+            const button = document.getElementById('theme-toggle');
+            const icon = document.getElementById('theme-icon');
+            if (!button || !icon) return;
+
+            const apply = (theme) => {
+                document.documentElement.dataset.theme = theme;
+                icon.className = theme === 'light' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+                button.title = theme === 'light' ? 'Activar tema oscuro' : 'Activar tema claro';
+                button.setAttribute('aria-label', button.title);
+            };
+
+            apply(document.documentElement.dataset.theme || 'dark');
+
+            button.addEventListener('click', () => {
+                const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+                apply(next);
+                try {
+                    localStorage.setItem('larapanel-theme', next);
+                } catch (error) {
+                    icon.setAttribute('data-storage-error', '1');
+                }
+            });
+        })();
+
+        (() => {
+            const palette = document.getElementById('command-palette');
+            const input = document.getElementById('command-palette-input');
+            const results = document.getElementById('command-palette-results');
+            const trigger = document.getElementById('command-palette-open');
+            if (!palette || !input || !results || !trigger) return;
+
+            const normalize = (value) => (value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+            const items = Array.from(document.querySelectorAll('.sidebar-nav a.nav-item, .sidebar-footer a.nav-item, .sidebar-footer button.nav-item')).map((el) => {
+                let section = el.closest('.sidebar-footer') ? 'Cuenta' : 'Navegación';
+                let previous = el.previousElementSibling;
+                while (previous) {
+                    if (previous.classList?.contains('nav-section-title')) {
+                        section = previous.textContent.trim();
+                        break;
+                    }
+                    previous = previous.previousElementSibling;
+                }
+                return {
+                    label: el.textContent.trim(),
+                    group: section,
+                    icon: el.querySelector('.nav-icon i')?.className || 'fa-solid fa-arrow-right',
+                    href: el.getAttribute('href'),
+                    element: el,
+                };
+            }).filter((item) => item.label);
+
+            let active = 0;
+            let previousOverflow = '';
+            let visible = [];
+
+            const render = () => {
+                const query = normalize(input.value.trim());
+                visible = query ? items.filter((item) => normalize(item.label + ' ' + item.group).includes(query)) : items;
+                if (active >= visible.length) active = 0;
+
+                results.innerHTML = visible.length
+                    ? visible.map((item, index) => `
+                        <button type="button" class="command-palette-item ${index === active ? 'active' : ''}" data-index="${index}">
+                            <span class="command-palette-item-icon"><i class="${escapeHtml(item.icon)}"></i></span>
+                            <span class="command-palette-item-label">${escapeHtml(item.label)}</span>
+                            <span class="command-palette-item-group">${escapeHtml(item.group)}</span>
+                        </button>`).join('')
+                    : '<div class="command-palette-empty">No se encontraron resultados.</div>';
+
+                results.querySelector('.active')?.scrollIntoView({ block: 'nearest' });
+            };
+
+            const open = () => {
+                previousOverflow = document.body.style.overflow;
+                palette.hidden = false;
+                input.value = '';
+                active = 0;
+                render();
+                document.body.style.overflow = 'hidden';
+                requestAnimationFrame(() => input.focus());
+            };
+
+            const close = () => {
+                palette.hidden = true;
+                document.body.style.overflow = previousOverflow;
+            };
+
+            const activate = (item) => {
+                if (!item) return;
+                close();
+                if (item.href) window.location.href = item.href;
+                else item.element.click();
+            };
+
+            trigger.addEventListener('click', open);
+            palette.addEventListener('click', (event) => {
+                if (event.target === palette) close();
+            });
+            input.addEventListener('input', () => {
+                active = 0;
+                render();
+            });
+            input.addEventListener('keydown', (event) => {
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    active = visible.length ? (active + 1) % visible.length : 0;
+                    render();
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    active = visible.length ? (active - 1 + visible.length) % visible.length : 0;
+                    render();
+                } else if (event.key === 'Enter') {
+                    event.preventDefault();
+                    activate(visible[active]);
+                }
+            });
+            results.addEventListener('click', (event) => {
+                const button = event.target.closest('.command-palette-item');
+                if (button) activate(visible[Number(button.dataset.index)]);
+            });
+            document.addEventListener('keydown', (event) => {
+                if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+                    event.preventDefault();
+                    if (palette.hidden) open(); else close();
+                } else if (event.key === 'Escape' && !palette.hidden) {
+                    close();
+                }
+            });
+        })();
     </script>
 </body>
 

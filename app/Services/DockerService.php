@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 class DockerService
 {
     // Docker Go template for JSON output — safe for parsing
-    private const CONTAINER_FORMAT = '{"id":"{{.ID}}","name":"{{.Names}}","image":"{{.Image}}","status":"{{.Status}}","state":"{{.State}}","ports":"{{.Ports}}","created":"{{.CreatedAt}}","size":"{{.Size}}"}';
+    private const CONTAINER_FORMAT = '{"id":"{{.ID}}","name":"{{.Names}}","image":"{{.Image}}","status":"{{.Status}}","state":"{{.State}}","ports":"{{.Ports}}","created":"{{.CreatedAt}}","size":"{{.Size}}","project":"{{.Label "com.docker.compose.project"}}"}';
     private const IMAGE_FORMAT     = '{"id":"{{.ID}}","repo":"{{.Repository}}","tag":"{{.Tag}}","size":"{{.Size}}","created":"{{.CreatedAt}}"}';
 
     public function __construct(
@@ -270,6 +270,63 @@ class DockerService
         } catch (\Throwable $e) {
             return "Error: " . $e->getMessage();
         }
+    }
+
+    public function listComposeProjects(): array
+    {
+        try {
+            $result = $this->docker(['compose', 'ls', '--format', 'json']);
+            $raw = trim($result->output());
+
+            if ($raw === '') {
+                return [];
+            }
+
+            if (str_starts_with($raw, '[')) {
+                $decoded = json_decode($raw, true);
+                $items = is_array($decoded) ? $decoded : [];
+            } else {
+                $items = $this->parseJsonLines($raw);
+            }
+
+            return collect($items)
+                ->filter(fn ($item) => is_array($item))
+                ->map(fn (array $item) => [
+                    'name'        => (string) ($item['Name'] ?? $item['name'] ?? ''),
+                    'status'      => (string) ($item['Status'] ?? $item['status'] ?? ''),
+                    'configFiles' => (string) ($item['ConfigFiles'] ?? $item['configFiles'] ?? ''),
+                ])
+                ->filter(fn (array $item) => $item['name'] !== '')
+                ->values()
+                ->all();
+        } catch (\Throwable $e) {
+            Log::error('DockerService::listComposeProjects failed', ['error' => $e->getMessage()]);
+            return [];
+        }
+    }
+
+    public function projectCommand(string $project, string $command, array $args = []): string
+    {
+        $this->validateName($project);
+
+        $path = null;
+        foreach ($this->listComposeProjects() as $item) {
+            if (($item['name'] ?? null) !== $project) {
+                continue;
+            }
+
+            $files = preg_split('/\s*,\s*/', (string) ($item['configFiles'] ?? '')) ?: [];
+            if (!empty($files[0])) {
+                $path = dirname($files[0]);
+            }
+            break;
+        }
+
+        if (!$path) {
+            return "No se encontró la ruta del proyecto '{$project}'.";
+        }
+
+        return $this->runComposeInPath($path, $command, $args, $project);
     }
 
     public function getComposeContent(string $stackName): string

@@ -4,9 +4,7 @@
 @section('content')
 <div class="glass-elevated auth-card" x-data="{ recovery: false }">
     <div class="auth-logo">
-        <div class="logo-icon" style="width:52px;height:52px;border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:var(--text-xl);font-weight:700;color:#fff;box-shadow:0 0 30px var(--accent-glow);margin:0 auto var(--sp-3);">
-            <i class="fa-solid fa-shield-halved"></i>
-        </div>
+        <img src="{{ asset('favicon.svg') }}" alt="LaraPanel" class="auth-logo-mark">
         <div class="auth-title">Seguridad 2FA</div>
         <div class="auth-sub" x-show="!recovery">Confirma acceso con tu app de autenticación</div>
         <div class="auth-sub" x-show="recovery" style="display: none;">Confirma acceso usando un código de recuperación</div>
