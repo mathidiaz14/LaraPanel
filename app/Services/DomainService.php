@@ -298,6 +298,7 @@ class DomainService
                     $tmpFile = tempnam(sys_get_temp_dir(), 'lp_ssl_');
                     file_put_contents($tmpFile, $config);
                     $this->sudo->run(['cp', $tmpFile, "{$sitesAvail}/{$domain->name}"]);
+                    $this->sudo->run(['chmod', '644', "{$sitesAvail}/{$domain->name}"]);
                     $this->sudo->run(['ln', '-sf', "{$sitesAvail}/{$domain->name}", "{$sitesEnabled}/{$domain->name}"]);
                     @unlink($tmpFile);
                 }
@@ -507,6 +508,7 @@ class DomainService
         $tmpFile = tempnam(sys_get_temp_dir(), 'lp_vhost_');
         file_put_contents($tmpFile, $config);
         $this->sudo->run(['cp', $tmpFile, $confPath]);
+        $this->sudo->run(['chmod', '644', $confPath]);
         $this->sudo->run(['ln', '-sf', $confPath, "{$sitesEnabled}/{$filename}"]);
         @unlink($tmpFile);
 
@@ -523,6 +525,7 @@ class DomainService
         $tmpFile = tempnam(sys_get_temp_dir(), 'lp_apache_');
         file_put_contents($tmpFile, $config);
         $this->sudo->run(['cp', $tmpFile, $path]);
+        $this->sudo->run(['chmod', '644', $path]);
         $this->sudo->run(['a2ensite', $domain->name . '.conf']);
         @unlink($tmpFile);
     }

@@ -701,6 +701,20 @@ class SslService
             return;
         }
 
+        // Legacy vhosts may have been deployed as 0600 root:root via tempnam()+cp.
+        // Make them readable before inspecting so www-data does not throw here.
+        if (!is_readable($configFile)) {
+            $availableFile = config('larapanel.paths.nginx_sites') . '/' . $domain->name;
+            $target = is_file($availableFile) ? $availableFile : $configFile;
+            $this->sudo->run(['chmod', '644', $target], checkExit: false);
+            clearstatcache(true, $configFile);
+        }
+
+        if (!is_readable($configFile)) {
+            Log::warning('SSL: cannot read vhost for ACME check', ['domain' => $domain->name, 'file' => $configFile]);
+            return;
+        }
+
         $config = (string) file_get_contents($configFile);
 
         // Already fine, or not managed by LaraPanel (never touch manual configs).
@@ -741,6 +755,7 @@ class SslService
         $tmp = tempnam(sys_get_temp_dir(), 'lp_vhost_');
         file_put_contents($tmp, $config);
         $this->sudo->run(['cp', $tmp, "{$sitesAvail}/{$domain->name}"]);
+        $this->sudo->run(['chmod', '644', "{$sitesAvail}/{$domain->name}"]);
         @unlink($tmp);
         $this->sudo->run(['ln', '-sf', "{$sitesAvail}/{$domain->name}", "{$sitesEnabled}/{$domain->name}"]);
 
